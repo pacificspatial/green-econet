@@ -1,0 +1,16 @@
+*.json
+node_modules
+.vscode
+.env
+./*/.env
+cicd
+*.sql
+.gitignore
+*.md
+coverage/
+
+GruntFile.js
+test_results.txt
+models/
+xth-cli/**
+.eslintrc.js
