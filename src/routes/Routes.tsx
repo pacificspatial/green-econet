@@ -26,14 +26,6 @@ const routes = (): Route[] => [
       </MainLayout>
     ),
   },
-  {
-    path: "/project",
-    element: (
-      <MainLayout>
-        <div>Project Page</div>
-      </MainLayout>
-    ),
-  }
 ];
 
 export default routes;

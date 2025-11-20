@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "concurrently \"vite\" \"cd server && npm run monitor\"",
+    "start": "vite",
     "application": "vite --host 0.0.0.0 --open false",
     "build": "tsc -b && vite build",
     "lint": "eslint .",

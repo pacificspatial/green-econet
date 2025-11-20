@@ -177,7 +177,7 @@ const Header = () => {
               cursor: "pointer",
             }}
           >
-            Rain Garden
+            Eco-Net
           </Typography>
         </Box>
         <RightContainer>
