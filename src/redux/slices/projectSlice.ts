@@ -17,13 +17,11 @@ interface ProjectState {
   loading: boolean;
   error: string | null;
   currentProject: Project | null;
-  currentUsageType: UsageType | null;
 }
 
 export interface Project {
   project_id?: string;
   name: string;
-  usage_type: string;
   description: string;
   date_created?: string;
   date_modified?: string;
@@ -37,7 +35,7 @@ const initialState: ProjectState = {
   loading: false,
   error: null,
   currentProject: null,
-  currentUsageType: null,
+
 };
 
 const projectSlice = createSlice({
@@ -60,11 +58,6 @@ const projectSlice = createSlice({
     },
     setCurrentProject(state, action: PayloadAction<Project | null>) {
       state.currentProject = action.payload;
-      if (action.payload?.usage_type) {
-        state.currentUsageType = usageTypes[action.payload?.usage_type];
-      } else {
-        state.currentUsageType = null;
-      }
     },
   },
   extraReducers: (builder) => {
