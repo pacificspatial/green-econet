@@ -5,7 +5,7 @@ type MapInstance = mapboxgl.Map | null;
 type DrawInstance = MapboxDraw | null;
 
 interface CleanupDrawToolParams {
-  mapInstance: MapInstance;
+  mapRef: MapInstance;
   drawInstance: DrawInstance;
   handleDrawCreate: (e: MapboxDraw.DrawCreateEvent) => void;
   handleDrawUpdate: (e: MapboxDraw.DrawUpdateEvent) => void;
@@ -14,7 +14,7 @@ interface CleanupDrawToolParams {
 
 // Clean up draw tool and event listeners
 export const cleanupDrawTool = ({
-  mapInstance,
+  mapRef,
   drawInstance,
   handleDrawCreate,
   handleDrawUpdate,
@@ -22,21 +22,21 @@ export const cleanupDrawTool = ({
 }: CleanupDrawToolParams) => {
   try {
 
-    // Ensure mapInstance is valid
-    if (!mapInstance || !(mapInstance instanceof mapboxgl.Map)) {
+    // Ensure mapRef is valid
+    if (!mapRef || !(mapRef instanceof mapboxgl.Map)) {
       return;
     }
 
     // Ensure drawInstance is valid before removing
-     if (drawInstance && mapInstance.hasControl(drawInstance)) {
-      mapInstance.removeControl(drawInstance);
+     if (drawInstance && mapRef.hasControl(drawInstance)) {
+      mapRef.removeControl(drawInstance);
     }
 
     // Remove event listeners safely
-    if (typeof mapInstance.off === "function") {
-      mapInstance.off("draw.create", handleDrawCreate);
-      mapInstance.off("draw.update", handleDrawUpdate);
-      mapInstance.off("draw.delete", handleDrawDelete);
+    if (typeof mapRef.off === "function") {
+      mapRef.off("draw.create", handleDrawCreate);
+      mapRef.off("draw.update", handleDrawUpdate);
+      mapRef.off("draw.delete", handleDrawDelete);
     }
     
   } catch (error) {
