@@ -32,13 +32,14 @@ const StyledBox = styled(Box)(({ theme }) => ({
 const AoiStatistics = () => {
   const { t } = useTranslation();
   const theme = useTheme();
-  const aoiStatistics = useAppSelector((state) => state.aoiStatistics);
-  const selectedAoi = useAppSelector((state) => state.selectedAoi.aoiSelected);
   // Get current AOI status
-  const currentAoiStats = aoiStatistics[selectedAoi];
-  const loading = currentAoiStats?.loading || false;
-  const error = currentAoiStats?.error || null;
-  const statsDatas = currentAoiStats?.data || null;
+
+  // const loading = currentAoiStats?.loading || false;
+  // const error = currentAoiStats?.error || null;
+  // const statsDatas = currentAoiStats?.data || null;
+  const loading =  false;
+  const error =  null;
+  const statsDatas =  null;
 
   // Transform the data if it exists and is not "no_stats"
   const transformedData =
