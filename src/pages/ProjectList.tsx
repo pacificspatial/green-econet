@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { Box, Grid, Paper, IconButton, Tooltip } from "@mui/material";
+import { Box, Paper, IconButton, Tooltip } from "@mui/material";
+import Grid from "@mui/material/Grid";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import { useTheme } from "@mui/material/styles";
 import { useTranslation } from "react-i18next";
@@ -19,9 +20,7 @@ const ProjectsList = () => {
         {/* Left Panel */}
         {!collapsed && (
           <Grid
-            item
-            xs={12}
-            md={3}
+            size={{ xs: 12, md: 3 }}
             sx={{ display: "flex", flexDirection: "column", height: "100%" }}
           >
             <Paper
@@ -38,9 +37,7 @@ const ProjectsList = () => {
         )}
         {/* Map Component */}
         <Grid
-          item
-          xs={12}
-          md={collapsed ? 12 : 9}
+          size={{ xs: 12, md: collapsed ? 12 : 9 }}
           sx={{
             display: "flex",
             flexDirection: "column",

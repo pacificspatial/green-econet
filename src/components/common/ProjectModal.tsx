@@ -7,13 +7,6 @@ import {
   Button,
   Grid,
   useTheme,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  FormHelperText,
-  SelectChangeEvent,
-
 } from "@mui/material";
 
 import { Project } from "@/types/ProjectData";
@@ -22,7 +15,6 @@ import { addProject, updateProject } from "@/api/project";
 import { useTranslation } from "react-i18next";
 import { AlertState } from "@/types/AlertState";
 import { useAppDispatch, useAppSelector } from "@/hooks/reduxHooks";
-import { usageTypes } from "@/constants/usageTypes";
 
 interface ProjectModalProps {
   isOpen: boolean;
@@ -45,16 +37,14 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
 
   const loading = useAppSelector((state) => state.projects.loading);
   const [formData, setFormData] = useState<
-    Pick<Project, "name" | "description" | "note" | "usage_type">
+    Pick<Project, "name" | "description" | "note">
   >({
     name: "",
     description: "",
     note: "",
-    usage_type: ""
   });
 
   const [nameError, setNameError] = useState<boolean>(false);
-  const [usageTypeTouched, setUsageTypeTouched] = useState(false);
 
   const { t } = useTranslation();
   const theme = useTheme();
@@ -67,14 +57,12 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
         name: initialData.name || "",
         description: initialData.description || "",
         note: initialData.note || "",
-        usage_type: initialData.usage_type || "",
       });
     } else {
       setFormData({
         name: "",
         description: "",
         note: "",
-        usage_type: "",
       });
     }
   }, [initialData]);
@@ -82,12 +70,6 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
       const { name, value } = e.target;
-
-      // const fieldMapping: { [key: string]: keyof typeof formData } = {
-      //   projectName: "name",
-      //   projectDescription: "description",
-      //   note: "note",
-      // };
 
       // const fieldName = fieldMapping[name] || name;
       setFormData((prev) => ({ ...prev, [name]: value }));
@@ -100,19 +82,13 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
     []
   );
 
-  const handleUsageChange = (e: SelectChangeEvent<string>) => {
-    setFormData((prev) => ({ ...prev, usage_type: e.target.value as string }));
-  };
-
   const handleModalClose = useCallback(() => {
     setFormData({
       name: "",
       description: "",
       note: "",
-      usage_type: ""
     });
     setNameError(false);
-    setUsageTypeTouched(false);
     onClose();
   }, [onClose]);
 
@@ -193,9 +169,8 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
   const isSubmitDisabled = useMemo(
     () =>
       formData.name.trim() === "" ||
-      formData.usage_type.trim() === "" ||
       loading,
-    [formData.name, formData.usage_type, loading]
+    [formData.name, loading]
   );
 
   return (
@@ -232,38 +207,8 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
           </Typography>
 
           <Grid container spacing={2} >
-            {/* Usage type */}
-            <Grid item xs={12}>
-              <FormControl
-                fullWidth
-                required
-                error={usageTypeTouched && formData.usage_type.trim() === ""}
-                disabled={isEditMode}
-              >
-                <InputLabel id="usage-type-label">{t("app.usageType")}</InputLabel>
-                <Select
-                  labelId="usage-type-label"
-                  id="usage_type"
-                  value={formData.usage_type}
-                  onChange={handleUsageChange}
-                  onBlur={() => setUsageTypeTouched(true)}
-                  label={t("app.usageType")}
-                  disabled={isEditMode}
-                >
-                  {
-                    usageTypes && Object.entries(usageTypes).map(([key, { value, langKey }]) => (
-                      <MenuItem key={key} value={value}>{t(`app.${langKey}`)}</MenuItem>
-                    ))
-                  }
-                </Select>
-                {usageTypeTouched && formData.usage_type.trim() === "" && (
-                  <FormHelperText>{t("app.usageTypeRequired")}</FormHelperText>
-                )}
-              </FormControl>
-            </Grid>
-
             {/* Project Name */}
-            <Grid item xs={12}>
+            <Grid size={{xs: 12}}>
               <TextField
                 fullWidth
                 // autoFocus
@@ -283,7 +228,7 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
             </Grid>
 
             {/* Project Description */}
-            <Grid item xs={12}>
+            <Grid size={{xs: 12}}>
               <TextField
                 fullWidth
                 label={t("app.projectDescription")}
@@ -310,7 +255,7 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
             </Grid>
 
             {/* Note */}
-            <Grid item xs={12}>
+            <Grid size={{xs: 12}}>
               <TextField
                 fullWidth
                 label={t("app.note")}
@@ -339,7 +284,7 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
             {/* Display additional info when in edit mode */}
             {isEditMode && initialData && (
               <>
-                <Grid item xs={12}>
+                <Grid size={{xs: 12}}>
                   <Typography
                     variant="body2"
                     component="div"
@@ -351,7 +296,7 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
                     {initialData.owner}
                   </Typography>
                 </Grid>
-                <Grid item xs={12}>
+                <Grid size={{xs: 12}}>
                   <Typography
                     variant="body2"
                     component="div"
@@ -363,7 +308,7 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
                     {formatDate(initialData.date_created || "")}
                   </Typography>
                 </Grid>
-                <Grid item xs={12}>
+                <Grid size={{xs: 12}}>
                   <Typography
                     variant="body2"
                     component="div"
@@ -402,14 +347,6 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
           </Box>
         </Box>
       </Modal>
-
-      {/* Alert Box */}
-      {/* <AlertBox
-                open={alertState.open}
-                onClose={() => setAlertState((prev) => ({ ...prev, open: false }))}
-                message={alertState.message}
-                severity={alertState.severity}
-            /> */}
     </>
   );
 };

@@ -136,7 +136,6 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ collapsed, setCollapsed }) => {
   const [projectJobStatuses, setProjectJobStatuses] = useState<Record<string, string>>({});
 
   const { projects, loading, error } = useAppSelector((state) => state.projects);
-  const isAdmin = useAppSelector((state) => state.auth.isAdmin);
 
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
@@ -163,7 +162,7 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ collapsed, setCollapsed }) => {
     });
 
     socket.on("newProject", (project) => {
-      if (project.clientId !== socket.id && isAdmin) {
+      if (project.clientId !== socket.id) {
         dispatch(addProjectDirect(project.newProject));
       }
     });
