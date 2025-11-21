@@ -1,18 +1,17 @@
 import MapboxDraw from "@mapbox/mapbox-gl-draw";
 import type { AppDispatch } from "@/redux/store";
 import type { AlertColor } from "@mui/material";
-import type { TFunction } from "i18next";
 import { validatePolygonGeometry } from "../geometery/validatePolygonGeometry";
-import { MAX_AOI_POLYGON_COUNT } from "@/constants/numberConstants";
+import { MAX_AOI_POLYGON_COUNT, MIN_AOI_POLYGON_COUNT } from "@/constants/numberConstants";
 import { addAoiPolygon, deleteAoiPolygon, updateAoiPolygon } from "@/redux/slices/aoiSlice";
 import { store } from "@/redux/store"
+import i18n from "@/i18n/i18n";
 
 export interface DrawCreateHandlerParams {
   event: MapboxDraw.DrawCreateEvent;
   projectId: string;
   drawInstance: React.RefObject<MapboxDraw | null>;
   dispatch: AppDispatch;
-  t: TFunction;
   handleSetAlert: (message: string, severity: AlertColor) => void;
   setLoading: (loading: boolean) => void;
   setLoadingText: (text: string) => void;
@@ -24,7 +23,6 @@ export interface DrawUpdateHandlerParams {
   drawInstance: React.RefObject<MapboxDraw | null>;
   mapRef: React.RefObject<mapboxgl.Map | null>;
   dispatch: AppDispatch;
-  t: TFunction;
   handleSetAlert: (message: string, severity: AlertColor) => void;
   setLoading: (loading: boolean) => void;
   setLoadingText: (text: string) => void;
@@ -36,7 +34,6 @@ export interface DrawDeleteHandlerParams {
   drawInstance: React.RefObject<MapboxDraw | null>;
   mapRef: React.RefObject<mapboxgl.Map | null>;
   dispatch: AppDispatch;
-  t: TFunction;
   handleSetAlert: (message: string, severity: AlertColor) => void;
   setLoading: (loading: boolean) => void;
   setLoadingText: (text: string) => void;
@@ -57,10 +54,8 @@ const detectEditedVertex = (
 export const handleDrawCreate = async (params: DrawCreateHandlerParams) => {
   const {
     event,
-    projectId,
     dispatch,
     drawInstance,
-    t,
     handleSetAlert,
   } = params;
   const aoiPolygons = store.getState().aoi.polygons; 
@@ -70,7 +65,10 @@ export const handleDrawCreate = async (params: DrawCreateHandlerParams) => {
   // If user exceeded max shapes, reject and delete drawn shape
   if (aoiPolygons.length >= MAX_AOI_POLYGON_COUNT) {
     handleSetAlert(
-      t("app.maxPolygonLimitReached", { count: MAX_AOI_POLYGON_COUNT }),
+      i18n.t("app.aoiPolygonsLimitMessage", {
+        minCount: MIN_AOI_POLYGON_COUNT,
+        maxCount: MAX_AOI_POLYGON_COUNT,
+      }),
       "error"
     );
 
@@ -86,7 +84,7 @@ export const handleDrawCreate = async (params: DrawCreateHandlerParams) => {
   const isValidPolygon = validatePolygonGeometry(feature);
   if (!isValidPolygon) {
     if (featureId) drawInstance.current?.delete(featureId as string);
-    handleSetAlert(t("app.invalidPolygonMessage"), "error");
+    handleSetAlert(i18n.t("app.invalidPolygonMessage"), "error");
     return;
   }
 };
