@@ -1,9 +1,9 @@
 import { configureStore } from "@reduxjs/toolkit";
+import aoiReducer from "./slices/aoiSlice";
 
-const dummyReducer = (state = {}, action: any) => state;
 export const store = configureStore({
   reducer: {
-    dummy: dummyReducer,
+    aoi: aoiReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
