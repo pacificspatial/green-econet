@@ -21,14 +21,13 @@ export const cleanupDrawTool = ({
   handleDrawDelete,
 }: CleanupDrawToolParams) => {
   try {
-
     // Ensure mapRef is valid
     if (!mapRef || !(mapRef instanceof mapboxgl.Map)) {
       return;
     }
 
     // Ensure drawInstance is valid before removing
-     if (drawInstance && mapRef.hasControl(drawInstance)) {
+    if (drawInstance && mapRef.hasControl(drawInstance)) {
       mapRef.removeControl(drawInstance);
     }
 
@@ -38,7 +37,6 @@ export const cleanupDrawTool = ({
       mapRef.off("draw.update", handleDrawUpdate);
       mapRef.off("draw.delete", handleDrawDelete);
     }
-    
   } catch (error) {
     console.error("Draw tool cleanup error:", error);
   }

@@ -2,12 +2,12 @@ import MapboxDraw from "@mapbox/mapbox-gl-draw";
 import { AppDispatch } from "@/redux/store";
 import { AlertColor } from "@mui/material";
 import { TFunction } from "i18next";
-import { validatePolygonGeometry } from "../validatePolygonGeometry";
+import { validatePolygonGeometry } from "../geometery/validatePolygonGeometry";
 
 export interface DrawCreateHandlerParams {
   event: MapboxDraw.DrawCreateEvent;
   projectId: string;
-  drawInstance: React.RefObject <MapboxDraw | null>;
+  drawInstance: React.RefObject<MapboxDraw | null>;
   dispatch: AppDispatch;
   t: TFunction;
   handleSetAlert: (message: string, severity: AlertColor) => void;
@@ -18,8 +18,8 @@ export interface DrawCreateHandlerParams {
 export interface DrawUpdateHandlerParams {
   event: MapboxDraw.DrawUpdateEvent;
   projectId: string;
-  drawInstance: React.RefObject <MapboxDraw | null>;
-  mapRef: React.RefObject <mapboxgl.Map | null>;
+  drawInstance: React.RefObject<MapboxDraw | null>;
+  mapRef: React.RefObject<mapboxgl.Map | null>;
   dispatch: AppDispatch;
   t: TFunction;
   handleSetAlert: (message: string, severity: AlertColor) => void;
@@ -30,8 +30,8 @@ export interface DrawUpdateHandlerParams {
 export interface DrawDeleteHandlerParams {
   event: MapboxDraw.DrawDeleteEvent;
   projectId: string;
-  drawInstance: React.RefObject <MapboxDraw | null>;
-  mapRef: React.RefObject <mapboxgl.Map | null>;
+  drawInstance: React.RefObject<MapboxDraw | null>;
+  mapRef: React.RefObject<mapboxgl.Map | null>;
   dispatch: AppDispatch;
   t: TFunction;
   handleSetAlert: (message: string, severity: AlertColor) => void;
@@ -52,8 +52,7 @@ const detectEditedVertex = (
 };
 
 export const handleDrawCreate = async (params: DrawCreateHandlerParams) => {
-  const { event, projectId, drawInstance, dispatch, t, handleSetAlert } =
-    params;
+  const { event, projectId, drawInstance, t, handleSetAlert } = params;
 
   const feature = event.features[0];
   const geometry = feature.geometry;
@@ -69,17 +68,7 @@ export const handleDrawCreate = async (params: DrawCreateHandlerParams) => {
 };
 
 export const handleDrawUpdate = async (params: DrawUpdateHandlerParams) => {
-  const {
-    event,
-    projectId,
-    drawInstance,
-    mapRef,
-    dispatch,
-    t,
-    handleSetAlert,
-    setLoading,
-    setLoadingText,
-  } = params;
+  const { event, projectId, drawInstance } = params;
   const feature = event.features[0];
   const geometry = feature.geometry;
   const featureId = feature.id;
@@ -96,17 +85,7 @@ export const handleDrawUpdate = async (params: DrawUpdateHandlerParams) => {
 };
 
 export const handleDrawDelete = async (params: DrawDeleteHandlerParams) => {
-  const {
-    event,
-    projectId,
-    drawInstance,
-    mapRef,
-    dispatch,
-    t,
-    handleSetAlert,
-    setLoading,
-    setLoadingText,
-  } = params;
+  const { event, drawInstance, t, handleSetAlert } = params;
   drawInstance.current?.delete(event?.features[0]?.id as string);
   handleSetAlert(t("app.shapeDeletionSuccessMessage"), "success");
 };

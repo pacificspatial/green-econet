@@ -1,4 +1,4 @@
-import * as turf from '@turf/turf';
+import * as turf from "@turf/turf";
 
 export const validateGeometryOverlap = (
   geometry: GeoJSON.Geometry,
@@ -7,22 +7,24 @@ export const validateGeometryOverlap = (
   t: (key: string) => string
 ): { isValid: boolean; message?: string } => {
   const isGeomValid =
-    geometry.type === 'Polygon' ||
-    geometry.type === 'Point' ||
-    geometry.type === 'LineString';
+    geometry.type === "Polygon" ||
+    geometry.type === "Point" ||
+    geometry.type === "LineString";
   if (!isGeomValid) {
     return { isValid: false, message: t("app.invalidGeometryType") };
   }
 
-  const hasOverlap = existingFeatures.some(existingFeature => {
+  const hasOverlap = existingFeatures.some((existingFeature) => {
     if (existingFeature.id === featureId) return false;
     const geomType = geometry.type;
     const existingType = existingFeature.geometry.type;
 
     // Polygon ↔ Polygon
-    if (geomType === 'Polygon' && existingType === 'Polygon') {
+    if (geomType === "Polygon" && existingType === "Polygon") {
       const newPolygon = turf.polygon(geometry.coordinates);
-      const existingPolygon = turf.polygon(existingFeature.geometry.coordinates);
+      const existingPolygon = turf.polygon(
+        existingFeature.geometry.coordinates
+      );
       return (
         turf.booleanOverlap(newPolygon, existingPolygon) ||
         turf.booleanContains(newPolygon, existingPolygon) ||
@@ -31,7 +33,7 @@ export const validateGeometryOverlap = (
     }
 
     // Point ↔ Point
-    if (geomType === 'Point' && existingType === 'Point') {
+    if (geomType === "Point" && existingType === "Point") {
       return turf.booleanEqual(
         turf.point(geometry.coordinates),
         turf.point(existingFeature.geometry.coordinates)
@@ -39,7 +41,7 @@ export const validateGeometryOverlap = (
     }
 
     // Point ↔ Polygon
-    if (geomType === 'Point' && existingType === 'Polygon') {
+    if (geomType === "Point" && existingType === "Polygon") {
       return turf.booleanPointInPolygon(
         turf.point(geometry.coordinates),
         turf.polygon(existingFeature.geometry.coordinates)
@@ -47,7 +49,7 @@ export const validateGeometryOverlap = (
     }
 
     // Polygon ↔ Point
-    if (geomType === 'Polygon' && existingType === 'Point') {
+    if (geomType === "Polygon" && existingType === "Point") {
       return turf.booleanPointInPolygon(
         turf.point(existingFeature.geometry.coordinates),
         turf.polygon(geometry.coordinates)
@@ -55,9 +57,11 @@ export const validateGeometryOverlap = (
     }
 
     // LineString ↔ LineString
-    if (geomType === 'LineString' && existingType === 'LineString') {
+    if (geomType === "LineString" && existingType === "LineString") {
       const newLine = turf.lineString(geometry.coordinates);
-      const existingLine = turf.lineString(existingFeature.geometry.coordinates);
+      const existingLine = turf.lineString(
+        existingFeature.geometry.coordinates
+      );
       return (
         turf.booleanEqual(newLine, existingLine) ||
         turf.booleanIntersects(newLine, existingLine)
@@ -65,7 +69,7 @@ export const validateGeometryOverlap = (
     }
 
     // LineString ↔ Polygon
-    if (geomType === 'LineString' && existingType === 'Polygon') {
+    if (geomType === "LineString" && existingType === "Polygon") {
       return turf.booleanIntersects(
         turf.lineString(geometry.coordinates),
         turf.polygon(existingFeature.geometry.coordinates)
@@ -73,7 +77,7 @@ export const validateGeometryOverlap = (
     }
 
     // Polygon ↔ LineString
-    if (geomType === 'Polygon' && existingType === 'LineString') {
+    if (geomType === "Polygon" && existingType === "LineString") {
       return turf.booleanIntersects(
         turf.polygon(geometry.coordinates),
         turf.lineString(existingFeature.geometry.coordinates)
@@ -81,7 +85,7 @@ export const validateGeometryOverlap = (
     }
 
     // LineString ↔ Point
-    if (geomType === 'LineString' && existingType === 'Point') {
+    if (geomType === "LineString" && existingType === "Point") {
       return turf.booleanPointOnLine(
         turf.point(existingFeature.geometry.coordinates),
         turf.lineString(geometry.coordinates)
@@ -89,7 +93,7 @@ export const validateGeometryOverlap = (
     }
 
     // Point ↔ LineString
-    if (geomType === 'Point' && existingType === 'LineString') {
+    if (geomType === "Point" && existingType === "LineString") {
       return turf.booleanPointOnLine(
         turf.point(geometry.coordinates),
         turf.lineString(existingFeature.geometry.coordinates)
