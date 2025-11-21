@@ -15,18 +15,34 @@ const aoiSlice = createSlice({
   name: 'aoi',
   initialState,
   reducers: {
-    addAoiPolygon: (state, action: PayloadAction<Feature>) => {
-      const nextIndex = state.polygons.length + 1;
-      const polygonWithName = {
-        ...action.payload,
-        id: action.payload.id, 
-        properties: {
-          ...(action.payload.properties || {}),
-          name: `Shape ${nextIndex}`,
-        },
-      };
-      state.polygons.push(polygonWithName);
-    },
+  addAoiPolygon: (state, action: PayloadAction<Feature>) => {
+    // Extract all numbers from existing shape names
+    const existingNumbers = state.polygons
+      .map(p => {
+        const name = p.properties?.name;
+        const parts = name?.split(" ");
+        const num = Number(parts?.[1]);
+        return isNaN(num) ? 0 : num;
+      });
+
+    // Find max number so far
+    const maxNumber = existingNumbers.length > 0 ? Math.max(...existingNumbers) : 0;
+
+    // Next number
+    const nextIndex = maxNumber + 1;
+
+    // Build new polygon
+    const polygonWithName = {
+      ...action.payload,
+      id: action.payload.id,
+      properties: {
+        ...(action.payload.properties || {}),
+        name: `shape ${nextIndex}`,
+      },
+    };
+
+    state.polygons.push(polygonWithName);
+  },
     updateAoiPolygon: (state, action: PayloadAction<Feature>) => {
       const feature = action.payload;
       const id = feature.id;
