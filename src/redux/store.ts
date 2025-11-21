@@ -1,8 +1,10 @@
 import { configureStore } from "@reduxjs/toolkit";
-import { persistStore } from "redux-persist";
 
+const dummyReducer = (state = {}, action: any) => state;
 export const store = configureStore({
-  reducer: {},
+  reducer: {
+    dummy: dummyReducer,
+  },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
       serializableCheck: {
@@ -10,8 +12,6 @@ export const store = configureStore({
       },
     }),
 });
-
-export const persistor = persistStore(store);
 
 export type RootState = ReturnType<typeof store.getState>;
 export type AppDispatch = typeof store.dispatch;
