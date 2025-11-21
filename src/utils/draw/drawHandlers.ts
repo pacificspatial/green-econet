@@ -3,6 +3,9 @@ import type { AppDispatch } from "@/redux/store";
 import type { AlertColor } from "@mui/material";
 import type { TFunction } from "i18next";
 import { validatePolygonGeometry } from "../geometery/validatePolygonGeometry";
+import { MAX_AOI_POLYGON_COUNT } from "@/constants/numberConstants";
+import { addAoiPolygon, deleteAoiPolygon, updateAoiPolygon } from "@/redux/slices/aoiSlice";
+import { store } from "@/redux/store"
 
 export interface DrawCreateHandlerParams {
   event: MapboxDraw.DrawCreateEvent;
@@ -52,11 +55,33 @@ const detectEditedVertex = (
 };
 
 export const handleDrawCreate = async (params: DrawCreateHandlerParams) => {
-  const { event, projectId, drawInstance, t, handleSetAlert } = params;
-
+  const {
+    event,
+    projectId,
+    dispatch,
+    drawInstance,
+    t,
+    handleSetAlert,
+  } = params;
+  const aoiPolygons = store.getState().aoi.polygons; 
   const feature = event.features[0];
-  const geometry = feature.geometry;
   const featureId = feature.id;
+  
+  // If user exceeded max shapes, reject and delete drawn shape
+  if (aoiPolygons.length >= MAX_AOI_POLYGON_COUNT) {
+    handleSetAlert(
+      t("app.maxPolygonLimitReached", { count: MAX_AOI_POLYGON_COUNT }),
+      "error"
+    );
+
+    if (featureId) {
+      drawInstance.current?.delete(featureId as string);
+    }
+
+    return; 
+  } else {
+    dispatch(addAoiPolygon(feature));
+  }
 
   const isValidPolygon = validatePolygonGeometry(feature);
   if (!isValidPolygon) {
@@ -64,28 +89,27 @@ export const handleDrawCreate = async (params: DrawCreateHandlerParams) => {
     handleSetAlert(t("app.invalidPolygonMessage"), "error");
     return;
   }
-  console.log("Polygon drawn", { geometry, featureId, projectId });
 };
 
 export const handleDrawUpdate = async (params: DrawUpdateHandlerParams) => {
-  const { event, projectId, drawInstance } = params;
+  const { event, drawInstance, dispatch } = params;
   const feature = event.features[0];
-  const geometry = feature.geometry;
   const featureId = feature.id;
-
-  // Create a deep copy of the geometry to work with
-  let updatedGeometry = JSON.parse(JSON.stringify(geometry));
 
   const isValid = validatePolygonGeometry(feature);
   if (!isValid) {
     if (featureId) drawInstance.current?.delete(featureId as string);
     return;
   }
-  console.log("Polygon updated", { updatedGeometry, featureId, projectId });
+  
+  // Update polygon in Redux
+  dispatch(updateAoiPolygon(feature));
 };
 
 export const handleDrawDelete = async (params: DrawDeleteHandlerParams) => {
-  const { event, drawInstance, t, handleSetAlert } = params;
+  const { event, drawInstance, dispatch } = params;
   drawInstance.current?.delete(event?.features[0]?.id as string);
-  handleSetAlert(t("app.shapeDeletionSuccessMessage"), "success");
+  if(event?.features[0]?.id){
+    dispatch(deleteAoiPolygon(event?.features[0]?.id));
+  }
 };
