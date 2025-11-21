@@ -1,7 +1,7 @@
 import MapboxDraw from "@mapbox/mapbox-gl-draw";
-import { AppDispatch } from "@/redux/store";
-import { AlertColor } from "@mui/material";
-import { TFunction } from "i18next";
+import type { AppDispatch } from "@/redux/store";
+import type { AlertColor } from "@mui/material";
+import type { TFunction } from "i18next";
 import { validatePolygonGeometry } from "../geometery/validatePolygonGeometry";
 
 export interface DrawCreateHandlerParams {

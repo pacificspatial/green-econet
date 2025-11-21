@@ -1,5 +1,6 @@
 import React from "react";
-import { Snackbar, Alert, AlertColor } from "@mui/material";
+import { Snackbar, Alert } from "@mui/material";
+import type { AlertColor } from "@mui/material";
 
 interface AlertBoxProps {
   open: boolean;

@@ -1,4 +1,5 @@
-import { MenuItem, Select, SelectChangeEvent } from "@mui/material";
+import { MenuItem, Select } from "@mui/material";
+import type { SelectChangeEvent } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "@mui/material/styles";
 

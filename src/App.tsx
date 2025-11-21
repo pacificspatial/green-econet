@@ -1,5 +1,5 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import routes from "@/routes/Routes";
 
 import { I18n } from "aws-amplify/utils";
@@ -8,7 +8,7 @@ import enTranslation from "@/i18n/locales/en/translation.json";
 import jaTranslation from "@/i18n/locales/ja/translation.json";
 
 import { useTranslation } from "react-i18next";
-import { TFunction } from "i18next";
+import type { TFunction } from "i18next";
 
 I18n.putVocabularies(translations);
 

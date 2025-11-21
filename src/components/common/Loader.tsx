@@ -3,10 +3,8 @@ import {
   Box,
   CircularProgress,
   Typography,
-  SxProps,
-  Theme,
 } from "@mui/material";
-
+import type { SxProps, Theme } from "@mui/material/styles";
 interface LoaderProps {
   text?: string;
   sx?: SxProps<Theme>;

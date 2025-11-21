@@ -5,7 +5,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button, Typography } from "@mui/material";
 import AlertBox from "../utils/AlertBox";
-import { AlertState } from "@/types/AlertState";
+import type { AlertState } from "@/types/AlertState";
 
 const StyledBox = styled(Box)(({ theme }) => ({
   backgroundColor:

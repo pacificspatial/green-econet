@@ -8,9 +8,9 @@ import {
   Select,
   styled,
   useTheme,
-  SelectChangeEvent,
   IconButton,
 } from "@mui/material";
+import type { SelectChangeEvent } from '@mui/material';
 import { useTranslation } from "react-i18next";
 import NavDrawer from "./NavDrawer";
 import { useBasemap } from "@/hooks/useBasemap";
@@ -18,8 +18,6 @@ import { basemapStyles } from "@/constants/basemapStyles";
 import { useThemeContext } from "@/hooks/useThemeContext";
 import MenuIcon from "@mui/icons-material/Menu";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
-import { useAppSelector } from "@/hooks/reduxHooks";
-import { Project } from "@/types/ProjectData";
 // import { logout } from "@/utils/authUtils/logout";
 // import { useAuthenticator } from "@aws-amplify/ui-react";
 
@@ -89,7 +87,6 @@ const Header = () => {
   const theme = useTheme();
   const { basemap, setBasemap } = useBasemap();
   const { theme: currentTheme, toggleTheme } = useThemeContext();
-  const { projectId } = useParams();
   // const { signOut } = useAuthenticator((context) => [context.user]);
 
   const isDarkMode = currentTheme === "dark";

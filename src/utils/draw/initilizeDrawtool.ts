@@ -1,5 +1,5 @@
 import MapboxDraw from "@mapbox/mapbox-gl-draw";
-import { Theme } from "@mui/system";
+import type { Theme } from "@mui/system";
 
 export const initializeDrawTool = (
   map: mapboxgl.Map,

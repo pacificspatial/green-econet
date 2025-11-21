@@ -1,8 +1,7 @@
 import { formatValue } from "@/utils/statistics/formatValue";
 import { getSuffix } from "@/utils/statistics/getSuffix";
 import { Box, styled, Typography } from "@mui/material";
-import React, { FC } from "react";
-import { useTranslation } from "react-i18next";
+import React from "react";
 
 const StyledTypography = styled(Typography)(({ theme }) => ({
   color: theme.palette.text.primary,
@@ -14,7 +13,7 @@ interface AOIStatsDataProps {
   count?: number;
 }
 
-const AOIStatsData: FC<AOIStatsDataProps> = ({ title, value, count }) => {
+const AOIStatsData: React.FC<AOIStatsDataProps> = ({ title, value, count }) => {
   const suffix = getSuffix(title);
   const formattedValue = formatValue(value);
 
@@ -35,7 +34,7 @@ const AOIStatsData: FC<AOIStatsDataProps> = ({ title, value, count }) => {
   );
 };
 
-const AOIStatsDataWrapper: FC<{
+const AOIStatsDataWrapper: React.FC<{
   items: Array<{ title: string; value: number }>;
 }> = ({ items }) => {
   return (

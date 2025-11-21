@@ -11,8 +11,8 @@ import {
   Box,
   Divider,
   styled,
-  Theme,
 } from "@mui/material";
+import type { Theme } from "@mui/material"
 import HomeIcon from "@mui/icons-material/Home";
 // import DashboardIcon from "@mui/icons-material/Dashboard";
 import InfoIcon from "@mui/icons-material/Info";

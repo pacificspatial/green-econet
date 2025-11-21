@@ -1,5 +1,5 @@
 import { kinks } from "@turf/turf";
-import { Feature, Geometry, MultiPolygon, Polygon } from "geojson";
+import type { Feature, Geometry, MultiPolygon, Polygon } from "geojson";
 
 export function validatePolygonGeometry(
   feature: Feature<Geometry> | null | undefined

@@ -1,29 +1,31 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
-import { AlertColor, Box, SxProps, Theme } from "@mui/material";
+import { Box } from "@mui/material";
+import type { AlertColor, SxProps, Theme } from "@mui/material";
 import { useBasemap } from "@/hooks/useBasemap";
 import MapboxDraw from "@mapbox/mapbox-gl-draw";
 import "@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css";
 import { initializeMap } from "@/utils/map/mapUtils";
-import { useAppDispatch, useAppSelector } from "@/hooks/reduxHooks";
+import { useAppDispatch } from "@/hooks/reduxHooks";
 import { useParams } from "react-router-dom";
 import Loader from "../common/Loader";
 import { useTranslation } from "react-i18next";
 import AlertBox from "../utils/AlertBox";
-import { AlertState } from "@/types/AlertState";
+import type { AlertState } from "@/types/AlertState";
 import { useTheme } from "@mui/system";
 import { cleanupDrawTool } from "@/utils/draw/drawToolCleanUp";
 import { initializeDrawTool } from "@/utils/draw/initilizeDrawtool";
 import {
-  DrawCreateHandlerParams,
-  DrawDeleteHandlerParams,
-  DrawUpdateHandlerParams,
   handleDrawCreate,
   handleDrawDelete,
   handleDrawUpdate,
 } from "@/utils/draw/drawHandlers";
-
+import type {
+  DrawCreateHandlerParams,
+  DrawDeleteHandlerParams,
+  DrawUpdateHandlerParams,
+} from "@/utils/draw/drawHandlers";
 // Declare mapbox-gl module augmentation for the accessToken
 declare global {
   interface Window {

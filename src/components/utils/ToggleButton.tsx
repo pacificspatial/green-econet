@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Button } from "@mui/material";
-import { styled, Theme } from "@mui/material/styles";
+import { styled } from "@mui/material/styles";
+import type { Theme } from "@mui/material/styles";
 
 interface ToggleButtonProps {
   buttons: {

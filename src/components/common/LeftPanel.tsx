@@ -29,10 +29,10 @@ import { styled, useTheme } from "@mui/material/styles";
 import { useTranslation } from "react-i18next";
 import DialogueBox from "../utils/DialogueBox";
 import ProjectModal from "./ProjectModal";
-import { Project } from "@/types/ProjectData";
+import type { Project } from "@/types/ProjectData";
 import AlertBox from "../utils/AlertBox";
-import { AlertState } from "@/types/AlertState";
-import { useAppDispatch, useAppSelector } from "@/hooks/reduxHooks";
+import type { AlertState } from "@/types/AlertState";
+import { useAppDispatch } from "@/hooks/reduxHooks";
 import { useNavigate } from "react-router-dom";
 import { io, Socket } from "socket.io-client";
 
