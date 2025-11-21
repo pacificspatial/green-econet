@@ -1,16 +1,11 @@
-import React, {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { AlertColor, Box, SxProps, Theme } from "@mui/material";
 import { useBasemap } from "@/hooks/useBasemap";
 import MapboxDraw from "@mapbox/mapbox-gl-draw";
 import "@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css";
-import { initializeMap } from "@/utils/mapUtils";
+import { initializeMap } from "@/utils/map/mapUtils";
 import { useAppDispatch, useAppSelector } from "@/hooks/reduxHooks";
 import { useParams } from "react-router-dom";
 import Loader from "../common/Loader";
@@ -18,8 +13,8 @@ import { useTranslation } from "react-i18next";
 import AlertBox from "../utils/AlertBox";
 import { AlertState } from "@/types/AlertState";
 import { useTheme } from "@mui/system";
-import { cleanupDrawTool } from "@/utils/map/drawToolCleanUp";
-import { initializeDrawTool } from "@/utils/map/initilizeDrawtool";
+import { cleanupDrawTool } from "@/utils/draw/drawToolCleanUp";
+import { initializeDrawTool } from "@/utils/draw/initilizeDrawtool";
 import {
   DrawCreateHandlerParams,
   DrawDeleteHandlerParams,
@@ -27,8 +22,7 @@ import {
   handleDrawCreate,
   handleDrawDelete,
   handleDrawUpdate,
-} from "@/utils/map/drawHandlers";
-import { setCurrentProject } from "@/redux/slices/projectSlice";
+} from "@/utils/draw/drawHandlers";
 
 // Declare mapbox-gl module augmentation for the accessToken
 declare global {
@@ -52,7 +46,7 @@ const Map: React.FC<MapProps> = ({
   highResolution = false,
   collapsed = false,
   sx = {},
-  zoom =  12,
+  zoom = 12,
   center = [139.652424, 35.652423],
 }) => {
   const [loading, setLoading] = useState(false);
@@ -62,10 +56,6 @@ const Map: React.FC<MapProps> = ({
     message: "",
     severity: "info",
   });
-
-  const { projects } = useAppSelector(
-    (state) => state?.projects
-  );
 
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
@@ -83,20 +73,6 @@ const Map: React.FC<MapProps> = ({
     },
     []
   );
-
-  useEffect(() => {
-    if (projectId) {
-      dispatch(
-        setCurrentProject(
-          projects.find((p) => String(p.project_id) === String(projectId)) ||
-            null
-        )
-      );
-    }
-    return () => {
-      dispatch(setCurrentProject(null));
-    };
-  }, [projects, projectId, dispatch]);
 
   const handleDrawCreateSync = useCallback(
     (e: MapboxDraw.DrawCreateEvent) => {

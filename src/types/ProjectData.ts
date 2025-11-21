@@ -1,4 +1,4 @@
-import { Geometry } from "./Region";
+import { Geometry } from "geojson";
 
 export interface Project {
   project_id?: string;
@@ -8,5 +8,5 @@ export interface Project {
   date_modified?: string;
   owner?: string;
   note: string;
-  geom?: Geometry,
+  geom?: Geometry;
 }

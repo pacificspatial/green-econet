@@ -10,8 +10,7 @@ import {
 } from "@mui/material";
 
 import { Project } from "@/types/ProjectData";
-import { formatDate } from "@/utils/formateDate";
-import { addProject, updateProject } from "@/api/project";
+import { formatDate } from "@/utils/common/formateDate";
 import { useTranslation } from "react-i18next";
 import { AlertState } from "@/types/AlertState";
 import { useAppDispatch, useAppSelector } from "@/hooks/reduxHooks";
@@ -22,7 +21,7 @@ interface ProjectModalProps {
   initialData: Project | null;
   onSuccess: () => void;
   setAlertState: React.Dispatch<React.SetStateAction<AlertState>>;
-  socketId: string
+  socketId: string;
 }
 
 const ProjectModal: React.FC<ProjectModalProps> = ({
@@ -31,11 +30,11 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
   initialData,
   onSuccess,
   setAlertState,
-  socketId
 }) => {
   const isEditMode = !!initialData;
 
-  const loading = useAppSelector((state) => state.projects.loading);
+  // const loading = useAppSelector((state) => state.projects.loading);
+  const loading = false;
   const [formData, setFormData] = useState<
     Pick<Project, "name" | "description" | "note">
   >({
@@ -100,49 +99,15 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
       };
 
       if (isEditMode) {
-        const response = await dispatch(
-          updateProject({
-            cartodb_id: initialData!.project_id as string,
-            projectData: updatedData,
-          })
-        );
-        if (response.type === "projects/update/rejected") {
-          if (response.payload === "EXISTING_PROJECT") {
-            throw new Error(`${t("app.alreadyExistError")}`);
-          } else {
-            throw new Error(`${t("app.updateProjectFailed")}`);
-          }
-        } else if (response.type === "projects/update/fulfilled") {
-          setAlertState({
-            open: true,
-            message: `${t("app.updateProjectSuccess")}`,
-            severity: "success",
-          });
-          // Refresh the project list
-          onSuccess();
-          handleModalClose();
-        }
+        // call api to update project
+        // Refresh the project list
+        onSuccess();
+        handleModalClose();
       } else {
-        const response = await dispatch(addProject({
-          project:  updatedData,
-          socketId: socketId,
-        }));
-        if (response.type === "projects/create/rejected") {
-          if (response.payload === "EXISTING_PROJECT") {
-            throw new Error(`${t("app.alreadyExistError")}`);
-          } else {
-            throw new Error(`${t("app.createProjectFailed")}`);
-          }
-        } else if (response.type === "projects/create/fulfilled") {
-          setAlertState({
-            open: true,
-            message: `${t("app.createProjectSuccess")}`,
-            severity: "success",
-          });
-          // Refresh the project list
-          onSuccess();
-          handleModalClose();
-        }
+        // call api to create project
+        // Refresh the project list
+        onSuccess();
+        handleModalClose();
       }
     } catch (err) {
       setAlertState({
@@ -167,9 +132,7 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
   }, [formData.name]);
 
   const isSubmitDisabled = useMemo(
-    () =>
-      formData.name.trim() === "" ||
-      loading,
+    () => formData.name.trim() === "" || loading,
     [formData.name, loading]
   );
 
@@ -206,9 +169,9 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
             {isEditMode ? `${t("app.editProject")}` : `${t("app.addProject")}`}
           </Typography>
 
-          <Grid container spacing={2} >
+          <Grid container spacing={2}>
             {/* Project Name */}
-            <Grid size={{xs: 12}}>
+            <Grid size={{ xs: 12 }}>
               <TextField
                 fullWidth
                 // autoFocus
@@ -228,7 +191,7 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
             </Grid>
 
             {/* Project Description */}
-            <Grid size={{xs: 12}}>
+            <Grid size={{ xs: 12 }}>
               <TextField
                 fullWidth
                 label={t("app.projectDescription")}
@@ -245,7 +208,8 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
                     resize: "none",
                     height: "70px",
                     overflow: "auto",
-                  }}}
+                  },
+                }}
                 slotProps={{
                   input: {
                     inputComponent: "textarea",
@@ -255,7 +219,7 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
             </Grid>
 
             {/* Note */}
-            <Grid size={{xs: 12}}>
+            <Grid size={{ xs: 12 }}>
               <TextField
                 fullWidth
                 label={t("app.note")}
@@ -272,7 +236,8 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
                     resize: "none",
                     height: "70px",
                     overflow: "auto",
-                  }}}
+                  },
+                }}
                 slotProps={{
                   input: {
                     inputComponent: "textarea",
@@ -284,7 +249,7 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
             {/* Display additional info when in edit mode */}
             {isEditMode && initialData && (
               <>
-                <Grid size={{xs: 12}}>
+                <Grid size={{ xs: 12 }}>
                   <Typography
                     variant="body2"
                     component="div"
@@ -296,7 +261,7 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
                     {initialData.owner}
                   </Typography>
                 </Grid>
-                <Grid size={{xs: 12}}>
+                <Grid size={{ xs: 12 }}>
                   <Typography
                     variant="body2"
                     component="div"
@@ -308,7 +273,7 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
                     {formatDate(initialData.date_created || "")}
                   </Typography>
                 </Grid>
-                <Grid size={{xs: 12}}>
+                <Grid size={{ xs: 12 }}>
                   <Typography
                     variant="body2"
                     component="div"

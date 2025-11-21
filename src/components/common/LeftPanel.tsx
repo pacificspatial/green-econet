@@ -28,17 +28,11 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import { styled, useTheme } from "@mui/material/styles";
 import { useTranslation } from "react-i18next";
 import DialogueBox from "../utils/DialogueBox";
-import { removeProject, fetchProjects } from "@/api/project";
 import ProjectModal from "./ProjectModal";
 import { Project } from "@/types/ProjectData";
 import AlertBox from "../utils/AlertBox";
 import { AlertState } from "@/types/AlertState";
 import { useAppDispatch, useAppSelector } from "@/hooks/reduxHooks";
-import {
-  addProjectDirect,
-  clearError,
-  removeProjectDirect,
-} from "@/redux/slices/projectSlice";
 import { useNavigate } from "react-router-dom";
 import { io, Socket } from "socket.io-client";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
@@ -133,9 +127,9 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ collapsed, setCollapsed }) => {
     severity: "success",
   });
   // New state to track job status per project
-  const [projectJobStatuses, setProjectJobStatuses] = useState<Record<string, string>>({});
-
-  const { projects, loading, error } = useAppSelector((state) => state.projects);
+  const [projectJobStatuses, setProjectJobStatuses] = useState<
+    Record<string, string>
+  >({});
 
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
@@ -161,17 +155,17 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ collapsed, setCollapsed }) => {
       }
     });
 
-    socket.on("newProject", (project) => {
-      if (project.clientId !== socket.id) {
-        dispatch(addProjectDirect(project.newProject));
-      }
-    });
+    // socket.on("newProject", (project) => {
+    //   if (project.clientId !== socket.id) {
+    //     dispatch(addProjectDirect(project.newProject));
+    //   }
+    // });
 
-    socket.on("deleteProject", (data) => {
-      if (data.clientId !== socket.id) {
-        dispatch(removeProjectDirect(data.projectId));
-      }
-    });
+    // socket.on("deleteProject", (data) => {
+    //   if (data.clientId !== socket.id) {
+    //     dispatch(removeProjectDirect(data.projectId));
+    //   }
+    // });
 
     return () => {
       socket.disconnect();
@@ -192,7 +186,7 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ collapsed, setCollapsed }) => {
   useEffect(() => {
     const fetchProjectsData = async () => {
       try {
-        await dispatch(fetchProjects()).unwrap();
+        // call api to fetch projects
       } catch (err) {
         handleAlert(
           err instanceof Error ? err.message : t("app.fetchProjectsFailed"),
@@ -205,12 +199,7 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ collapsed, setCollapsed }) => {
 
   const handleDeleteConfirm = useCallback(async () => {
     try {
-      await dispatch(
-        removeProject({
-          cartodb_id: selectedProject?.project_id || "",
-          socketId: socketRef.current?.id || "",
-        })
-      ).unwrap();
+      // call api to delete project
       handleAlert(t("app.deleteProjectSuccess"), "success");
       setSelectedProject(null);
     } catch (err) {
@@ -224,24 +213,24 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ collapsed, setCollapsed }) => {
     }
   }, [dispatch, handleAlert, selectedProject, t]);
 
-  useEffect(() => {
-    if (error) {
-      handleAlert(error, "error");
-      dispatch(clearError());
-    }
-  }, [error, dispatch, handleAlert]);
+  // useEffect(() => {
+  //   if (error) {
+  //     handleAlert(error, "error");
+  //     dispatch(clearError());
+  //   }
+  // }, [error, dispatch, handleAlert]);
 
-  const filteredProjects = useMemo(() => {
-    const lowerCaseSearchTerm = searchTerm.toLowerCase();
-    return (
-      projects?.filter(
-        (project) =>
-          project &&
-          project.name &&
-          project.name.toLowerCase().includes(lowerCaseSearchTerm)
-      ) || []
-    );
-  }, [projects, searchTerm]);
+  // const filteredProjects = useMemo(() => {
+  //   const lowerCaseSearchTerm = searchTerm.toLowerCase();
+  //   return (
+  //     projects?.filter(
+  //       (project) =>
+  //         project &&
+  //         project.name &&
+  //         project.name.toLowerCase().includes(lowerCaseSearchTerm)
+  //     ) || []
+  //   );
+  // }, [projects, searchTerm]);
 
   const handleSearch = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -362,7 +351,7 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ collapsed, setCollapsed }) => {
         )}
       </StyledActionContainer>
 
-      {loading ? (
+      {false ? ( // loading state would go here
         <Box
           sx={{
             display: "flex",
@@ -373,31 +362,19 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ collapsed, setCollapsed }) => {
         >
           <CircularProgress />
         </Box>
-      ) : !collapsed && filteredProjects.length > 0 ? (
+      ) : !collapsed && [].length > 0 ? (
         <StyledList sx={{ mx: 1 }}>
-          {filteredProjects?.map((project) => {
-            // Determine status indicator for this project (if any)
-            const status = project.project_id
-              ? projectJobStatuses[project.project_id]
-              : undefined;
-            let statusIndicator = null;
-            if (status === "initiating" || status === "running") {
-              statusIndicator = <CircularProgress size={20} />;
-            } else if (status === "success") {
-              statusIndicator = (
-                <CheckCircleIcon style={{ color: "green", fontSize: 20 }} />
-              );
-            }
+          {[]?.map((project) => {
             return (
               <ListItem
-                key={project.project_id}
+                key={"project.project_id"}
                 component="li"
                 sx={{ marginBottom: "5px" }}
-                onClick={() => handleListItemClick(project.project_id || "")}
+                onClick={() => handleListItemClick("project.project_id")}
               >
-                <Tooltip title={project.name} arrow>
+                <Tooltip title={"project.name"} arrow>
                   <ListItemText
-                    primary={project.name}
+                    primary={"project.name"}
                     sx={{
                       width: "100%",
                       "& .MuiTypography-root": {
@@ -409,11 +386,6 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ collapsed, setCollapsed }) => {
                     }}
                   />
                 </Tooltip>
-                {statusIndicator && (
-                  <Box sx={{ ml: 1, display: "flex", alignItems: "center" }}>
-                    {statusIndicator}
-                  </Box>
-                )}
                 <ButtonGroup sx={{ display: "flex", alignItems: "center" }}>
                   <Tooltip title={t("app.editProject")} arrow>
                     <span>
@@ -481,7 +453,7 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ collapsed, setCollapsed }) => {
         })}
         onCancel={handleDialogClose}
         onOk={handleDeleteConfirm}
-        isLoading={loading}
+        // isLoading={loading}
         cancelText={t("app.cancel")}
         okText={t("app.delete")}
       />
