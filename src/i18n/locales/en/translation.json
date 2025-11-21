@@ -41,7 +41,7 @@
     "serverErrorMessage": "Something went wrong! Please try again later.",
     "setAOI": "Set AOI",
     "loading": "Loading...",
-    "staticsticsAreNotAvailable": "Statistics are not available",
+    "statsAreNotAvailable": "Statistics are not available",
     "legendTitle": "Legend",
     "aoiStatisticsHeading": "Current Status",
     "osm": "OpenStreetMap (Cyclo)",
@@ -55,6 +55,12 @@
     "accessDeniedMessage": "You are not authorized to view this page. Please wait for admin approval or contact support if you think this is an error.",
     "errorFetchingStatistics": "Error fetching statistics...",
     "shapeOverlapError": "Shapes cannot overlap. Please ensure your new shape doesn't overlap with existing ones.",
-    "invalidPolygonMessage": "The drawn polygon is invalid (self-intersecting). Please redraw a valid polygon."
+    "invalidPolygonMessage": "The drawn polygon is invalid (self-intersecting). Please redraw a valid polygon.",
+    "area": "Area",
+    "perimeter": "Perimeter",
+    "shapeStatistics": "Stats",
+    "total": "Total",
+    "aoiPolygonsLimitMessage": "Only {{minCount}} - {{maxCount}} shapes are allowed",
+    "shape": "Shape"
   }
 }

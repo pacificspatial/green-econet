@@ -32,9 +32,8 @@ const StyledConfirmBox = styled(Box)(() => ({
   justifyContent: "center",
   alignItems: "center",
   width: "100%",
-  maxHeight: "80px",
   position: "relative",
-  bottom: 5,
+  paddingBottom: 20
 }));
 
 const AoiRightPanel = () => {
@@ -75,7 +74,7 @@ const AoiRightPanel = () => {
           title={
             aoiPolygons.length < MIN_AOI_POLYGON_COUNT ||
             aoiPolygons.length > MAX_AOI_POLYGON_COUNT
-              ? "Please draw"
+              ? t("app.aoiPolygonsLimitMessage", { minCount: MIN_AOI_POLYGON_COUNT, maxCount: MAX_AOI_POLYGON_COUNT })
               : ""
           }
           disableHoverListener={
@@ -96,7 +95,7 @@ const AoiRightPanel = () => {
                 aoiPolygons.length > MAX_AOI_POLYGON_COUNT
               }
             >
-              {t("app.confirmAOI")}
+              {t("app.setAOI")}
             </Button>
           </span>
         </Tooltip>

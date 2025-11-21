@@ -77,14 +77,16 @@ const AoiStatistics = () => {
             pt={10}
           >
             <StyledTypography>
-              {t("app.staticsticsAreNotAvailable")}
+              {t("app.statsAreNotAvailable")}
             </StyledTypography>
           </Box>
         ) : (
           aoiPolygons.map((polygon, idx) => {
             const area = calculateArea(polygon);
-            const perimeter = calculatePerimeter(polygon);            
-
+            const perimeter = calculatePerimeter(polygon);  
+            const rawName = polygon?.properties?.name; 
+            const [label, number] = rawName.split(" ");          
+            const translatedLabel = t(`app.${label.toLowerCase()}`); 
             return (
               <Box 
                 key={polygon.id || idx} 
@@ -94,21 +96,21 @@ const AoiStatistics = () => {
                 }}
               >
                 <StyledTypography fontWeight="bold" fontSize={17} pb={1}>
-                  {polygon?.properties?.name}
+                  {translatedLabel} {number}
                 </StyledTypography>
                 <List disablePadding>
                   <ListItem disableGutters sx={{ py: 0.3 }}>
                     <ListItemIcon sx={{ minWidth: 24 }}>
                       <CircleIcon sx={{ fontSize: 8 }} />
                     </ListItemIcon>
-                    <ListItemText primary={`Area: ${area.toFixed(2)} m²`} />
+                    <ListItemText primary={`${t("app.area")}: ${area.toFixed(2)} m²`} />
                   </ListItem>
 
                   <ListItem disableGutters sx={{ py: 0.3 }}>
                     <ListItemIcon sx={{ minWidth: 24 }}>
                       <CircleIcon sx={{ fontSize: 8 }} />
                     </ListItemIcon>
-                    <ListItemText primary={`Perimeter: ${perimeter.toFixed(2)} m`} />
+                    <ListItemText primary={`${t("app.perimeter")}: ${perimeter.toFixed(2)} m`} />
                   </ListItem>
                 </List>
                 {idx !== aoiPolygons.length - 1 && <Divider sx={{ mt: 3}}/>}
@@ -122,11 +124,9 @@ const AoiStatistics = () => {
       {aoiPolygons.length > 0 && (
         <Box
           sx={{
-            display: "flex",
-            flexDirection: "column",
             width: "100%",
             px: 3,
-            py: 4,
+            py: 3,
             background:
               theme.palette.mode === "light"
                 ? "#fff"
@@ -134,17 +134,31 @@ const AoiStatistics = () => {
             borderTop: `1px solid ${theme.palette.divider}`,
           }}
         >
-          <StyledTypography fontWeight="bold" fontSize={17}>
-            Total
+          {/* Total heading */}
+          <StyledTypography fontWeight="bold" fontSize={17} pb={1}>
+            {t("app.total")}
           </StyledTypography>
 
-          <StyledTypography mt={0.5}>
-            <strong>Area:</strong> {totalArea.toFixed(2)} m²
-          </StyledTypography>
+          {/* Make it like list items */}
+          <List disablePadding>
+            <ListItem disableGutters sx={{ py: 0.3 }}>
+              <ListItemIcon sx={{ minWidth: 24 }}>
+                <CircleIcon sx={{ fontSize: 8 }} />
+              </ListItemIcon>
+              <ListItemText
+                primary={`${t("app.area")}: ${totalArea.toFixed(2)} m²`}
+              />
+            </ListItem>
 
-          <StyledTypography mt={0.5}>
-            <strong>Perimeter:</strong> {totalPerimeter.toFixed(2)} m
-          </StyledTypography>
+            <ListItem disableGutters sx={{ py: 0.3 }}>
+              <ListItemIcon sx={{ minWidth: 24 }}>
+                <CircleIcon sx={{ fontSize: 8 }} />
+              </ListItemIcon>
+              <ListItemText
+                primary={`${t("app.perimeter")}: ${totalPerimeter.toFixed(2)} m`}
+              />
+            </ListItem>
+          </List>
         </Box>
       )}
     </Box>
