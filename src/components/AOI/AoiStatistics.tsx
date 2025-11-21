@@ -1,14 +1,16 @@
-import { Box, styled, Typography, useTheme, Skeleton } from "@mui/material";
+import { Box, styled, Typography, useTheme, Divider } from "@mui/material";
 import { useTranslation } from "react-i18next";
-import AOIStatsDataWrapper from "./AOIStatsData";
+import { useAppSelector } from "@/hooks/reduxHooks";
+import { calculateArea } from "@/utils/geometery/calculateArea";
+import { calculatePerimeter } from "@/utils/geometery/calculatePerimeter";
+import { List, ListItem, ListItemIcon, ListItemText } from "@mui/material";
+import CircleIcon from "@mui/icons-material/Circle";
 
 const StyledTypography = styled(Typography)(({ theme }) => ({
   color: theme.palette.text.primary,
-  textAlign: "center",
-  padding: theme.spacing(0),
 }));
 
-const StyledBox = styled(Box)(({ theme }) => ({
+const ScrollBox = styled(Box)(({ theme }) => ({
   "&::-webkit-scrollbar": {
     width: "2px",
     backgroundColor: "transparent",
@@ -23,152 +25,128 @@ const StyledBox = styled(Box)(({ theme }) => ({
   "&:hover::-webkit-scrollbar-thumb": {
     backgroundColor: theme.palette.primary.light,
   },
-  height: "100%",
-  overflowY: "scroll",
+  height: "calc(100% - 100px)", 
+  overflowY: "auto",
   overflowX: "hidden",
 }));
 
 const AoiStatistics = () => {
   const { t } = useTranslation();
   const theme = useTheme();
-  // Get current AOI status
+  const aoiPolygons = useAppSelector((state) => state.aoi.polygons);
 
-  // const loading = currentAoiStats?.loading || false;
-  // const error = currentAoiStats?.error || null;
-  // const statsDatas = currentAoiStats?.data || null;
-  const loading = false;
-  const error = null;
-  const statsDatas = null;
+  const totalArea = aoiPolygons.reduce(
+    (sum, p) => sum + calculateArea(p),
+    0
+  );
 
-  // Transform the data if it exists and is not "no_stats"
-  const transformedData =
-    statsDatas && statsDatas !== "no_stats"
-      ? Object.entries(statsDatas).map(([title, value]) => ({
-          title,
-          value: value as number,
-        }))
-      : [];
+  const totalPerimeter = aoiPolygons.reduce(
+    (sum, p) => sum + calculatePerimeter(p),
+    0
+  );
 
   return (
     <Box
       sx={{
         maxWidth: "400px",
-        height: "90%",
+        height: "100%",
         margin: "0 auto",
         padding: "20px",
-        color: theme.palette.mode === "light" ? "#333" : "#fff",
+        pb: "100px",
+        position: "relative",
       }}
     >
+      {/* Heading */}
       <StyledTypography
         variant="h6"
         fontSize={20}
+        fontWeight="bold"
+        textAlign="center"
         gutterBottom
-        fontWeight={"bold"}
       >
-        {t("app.aoiStatisticsHeading")}
+        {t("app.shapeStatistics")}
       </StyledTypography>
-      <StyledBox>
-        {loading ? (
-          <Box
-            display="flex"
-            flexDirection="column"
-            alignItems="start"
-            paddingLeft={3}
-          >
-            <Skeleton variant="text" width="30%" height={30} />
-            <Skeleton
-              variant="text"
-              width="80%"
-              height={30}
-              sx={{ marginTop: 2 }}
-            />
-            <Skeleton
-              variant="text"
-              width="30%"
-              height={30}
-              sx={{ marginTop: 2 }}
-            />
-            <Skeleton
-              variant="text"
-              width="80%"
-              height={30}
-              sx={{ marginTop: 2 }}
-            />
-            <Skeleton
-              variant="text"
-              width="30%"
-              height={30}
-              sx={{ marginTop: 2 }}
-            />
-            <Skeleton
-              variant="text"
-              width="80%"
-              height={30}
-              sx={{ marginTop: 2 }}
-            />
-            <Skeleton
-              variant="text"
-              width="30%"
-              height={30}
-              sx={{ marginTop: 2 }}
-            />
-            <Skeleton
-              variant="text"
-              width="80%"
-              height={30}
-              sx={{ marginTop: 2 }}
-            />
-            <Skeleton
-              variant="text"
-              width="30%"
-              height={30}
-              sx={{ marginTop: 2 }}
-            />
-            <Skeleton
-              variant="text"
-              width="80%"
-              height={30}
-              sx={{ marginTop: 2 }}
-            />
-            <Skeleton
-              variant="text"
-              width="30%"
-              height={30}
-              sx={{ marginTop: 2 }}
-            />
-            <Skeleton
-              variant="text"
-              width="80%"
-              height={30}
-              sx={{ marginTop: 2 }}
-            />
-          </Box>
-        ) : error ? (
+
+      {/* Scrollable shape list */}
+      <ScrollBox>
+        {aoiPolygons.length === 0 ? (
           <Box
             display="flex"
             justifyContent="center"
             alignItems="center"
-            pt={15}
+            pt={10}
           >
-            <StyledTypography textAlign="center" color="error">
-              {t("app.errorFetchingStatistics")}
-            </StyledTypography>
-          </Box>
-        ) : statsDatas && statsDatas !== "no_stats" ? (
-          <AOIStatsDataWrapper items={transformedData} />
-        ) : (
-          <Box
-            display="flex"
-            justifyContent="center"
-            alignItems="center"
-            pt={15}
-          >
-            <StyledTypography textAlign="center">
+            <StyledTypography>
               {t("app.staticsticsAreNotAvailable")}
             </StyledTypography>
           </Box>
+        ) : (
+          aoiPolygons.map((polygon, idx) => {
+            const area = calculateArea(polygon);
+            const perimeter = calculatePerimeter(polygon);            
+
+            return (
+              <Box 
+                key={polygon.id || idx} 
+                sx={{
+                  px: 3,
+                  py: 2,
+                }}
+              >
+                <StyledTypography fontWeight="bold" fontSize={17} pb={1}>
+                  {polygon?.properties?.name}
+                </StyledTypography>
+                <List disablePadding>
+                  <ListItem disableGutters sx={{ py: 0.3 }}>
+                    <ListItemIcon sx={{ minWidth: 24 }}>
+                      <CircleIcon sx={{ fontSize: 8 }} />
+                    </ListItemIcon>
+                    <ListItemText primary={`Area: ${area.toFixed(2)} m²`} />
+                  </ListItem>
+
+                  <ListItem disableGutters sx={{ py: 0.3 }}>
+                    <ListItemIcon sx={{ minWidth: 24 }}>
+                      <CircleIcon sx={{ fontSize: 8 }} />
+                    </ListItemIcon>
+                    <ListItemText primary={`Perimeter: ${perimeter.toFixed(2)} m`} />
+                  </ListItem>
+                </List>
+                {idx !== aoiPolygons.length - 1 && <Divider sx={{ mt: 3}}/>}
+              </Box>
+            );
+          })
         )}
-      </StyledBox>
+      </ScrollBox>
+
+      {/* Fixed TOTAL section */}
+      {aoiPolygons.length > 0 && (
+        <Box
+          sx={{
+            display: "flex",
+            flexDirection: "column",
+            width: "100%",
+            px: 3,
+            py: 4,
+            background:
+              theme.palette.mode === "light"
+                ? "#fff"
+                : theme.palette.background.paper,
+            borderTop: `1px solid ${theme.palette.divider}`,
+          }}
+        >
+          <StyledTypography fontWeight="bold" fontSize={17}>
+            Total
+          </StyledTypography>
+
+          <StyledTypography mt={0.5}>
+            <strong>Area:</strong> {totalArea.toFixed(2)} m²
+          </StyledTypography>
+
+          <StyledTypography mt={0.5}>
+            <strong>Perimeter:</strong> {totalPerimeter.toFixed(2)} m
+          </StyledTypography>
+        </Box>
+      )}
     </Box>
   );
 };
