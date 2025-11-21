@@ -76,7 +76,7 @@ const AoiRightPanel = () => {
           onClick={handleConfirmClick}
           disabled={false}
         >
-          {t("app.confirmAOI")}
+          {t("app.setAOI")}
         </Button>
       </StyledConfirmBox>
     </StyledBox>
