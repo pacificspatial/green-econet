@@ -1,11 +1,9 @@
 import { Box } from "@mui/system";
 import AoiStatistics from "./AoiStatistics";
-import { styled, useTheme } from "@mui/material/styles";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { styled } from "@mui/material/styles";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button, Typography } from "@mui/material";
-import { useAppDispatch } from "@/hooks/reduxHooks";
-import { useParams } from "react-router-dom";
 import AlertBox from "../utils/AlertBox";
 import { AlertState } from "@/types/AlertState";
 
@@ -19,31 +17,6 @@ const StyledBox = styled(Box)(({ theme }) => ({
   height: "100%",
   width: "100%",
   position: "relative",
-}));
-
-const StyledGrid = styled("div")(({ theme }) => ({
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  width: "100%",
-  minHeight: "70px",
-  maxHeight: "75px",
-  paddingTop: theme.spacing(0),
-  paddingBottom: theme.spacing(0),
-}));
-
-const StyledTypography = styled(Typography)(({ theme }) => ({
-  backgroundColor: theme.palette.info.light + "22", // subtle tint (added transparency)
-  borderLeft: `4px solid ${theme.palette.info.main}`,
-  padding: theme.spacing(1.5, 2),
-  borderRadius: theme.shape.borderRadius,
-  fontSize: "0.9rem",
-  color: theme.palette.text.secondary,
-  lineHeight: 1.5,
-  marginTop: theme.spacing(2),
-  marginBottom: theme.spacing(1),
-  marginLeft: theme.spacing(1),
-  marginRight: theme.spacing(1),
 }));
 
 const StyledGridBottom = styled("div")(() => ({
@@ -70,19 +43,7 @@ const AoiRightPanel = () => {
     severity: "info",
   });
   const [emptyAoiMessage, setEmptyAoiMessage] = useState("");
-  
-  const dispatch = useAppDispatch();
-  const { projectId } = useParams();
   const { t } = useTranslation();
-  const theme = useTheme();
-
-  const handleSetAlert = useCallback(
-    (message: string, severity: "success" | "error" | "info") => {
-      setAlert({ open: true, message, severity });
-    },
-    []
-  );
-
 
   const handleConfirmClick = async () => {
     console.log("Confirm clicked");

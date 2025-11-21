@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
   AppBar,
   Toolbar,
@@ -79,8 +79,10 @@ const StyledSelect = styled(Select)(({ theme }) => ({
 const Header = () => {
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [selectedProject, setSelectedProject] = useState<string | undefined>("");
-  
+  const [selectedProject, setSelectedProject] = useState<string | undefined>(
+    ""
+  );
+
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const { t } = useTranslation();
@@ -88,7 +90,6 @@ const Header = () => {
   const { basemap, setBasemap } = useBasemap();
   const { theme: currentTheme, toggleTheme } = useThemeContext();
   const { projectId } = useParams();
-  const projects = useAppSelector((state) => state.projects.projects);
   // const { signOut } = useAuthenticator((context) => [context.user]);
 
   const isDarkMode = currentTheme === "dark";
@@ -108,15 +109,6 @@ const Header = () => {
     setAnchorEl(event.currentTarget);
     setDrawerOpen(!drawerOpen);
   };
-
-  useEffect(() => {
-    if (projectId) {
-      const selectedProject = projects.find(
-        (project: Project) => project.project_id == projectId
-      );
-      setSelectedProject(selectedProject?.name);
-    }
-  }, [projects, projectId]);
 
   const handleMenuItemClick = (item: string) => {
     switch (item) {

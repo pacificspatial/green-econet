@@ -58,10 +58,10 @@ const Project = () => {
     >
       <Container>
         <MapGrid>
-          <Map center={center} zoom={zoom}/>
+          <Map center={center} zoom={zoom} />
         </MapGrid>
         <PanelGrid sx={{ height: "85vh" }}>
-          <RightPanel/>
+          <RightPanel />
         </PanelGrid>
       </Container>
     </Box>

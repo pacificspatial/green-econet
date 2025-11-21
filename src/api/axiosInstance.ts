@@ -36,14 +36,14 @@ axiosInstance.interceptors.response.use(
     ) {
       originalRequest._retry = true;
       // try {
-        // const session = await fetchAuthSession({ forceRefresh: true });
-        // const newAccessToken = session?.tokens?.accessToken?.toString();
-        // if (newAccessToken) {
-        //   originalRequest.headers["Authorization"] = `Bearer ${newAccessToken}`;
-        //   return axiosInstance(originalRequest);
-        // } else {
-        //   throw new Error("Session is empty. Logging out.");
-        // }
+      // const session = await fetchAuthSession({ forceRefresh: true });
+      // const newAccessToken = session?.tokens?.accessToken?.toString();
+      // if (newAccessToken) {
+      //   originalRequest.headers["Authorization"] = `Bearer ${newAccessToken}`;
+      //   return axiosInstance(originalRequest);
+      // } else {
+      //   throw new Error("Session is empty. Logging out.");
+      // }
       // } catch (authError) {
       //   console.error("Error refreshing token:", authError);
       // }

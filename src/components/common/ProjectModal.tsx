@@ -8,12 +8,11 @@ import {
   Grid,
   useTheme,
 } from "@mui/material";
-
 import { Project } from "@/types/ProjectData";
 import { formatDate } from "@/utils/common/formateDate";
 import { useTranslation } from "react-i18next";
 import { AlertState } from "@/types/AlertState";
-import { useAppDispatch, useAppSelector } from "@/hooks/reduxHooks";
+import { useAppDispatch } from "@/hooks/reduxHooks";
 
 interface ProjectModalProps {
   isOpen: boolean;

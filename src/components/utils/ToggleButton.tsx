@@ -115,7 +115,9 @@ const ToggleButtons: React.FC<ToggleButtonProps> = ({
         {buttons.map((button) => (
           <div
             key={button.value}
-            className={`tab-item ${selectedValue === button.value ? "active" : ""}`}
+            className={`tab-item ${
+              selectedValue === button.value ? "active" : ""
+            }`}
             onClick={() => handleClick(button.value)}
             title={button.label}
           >

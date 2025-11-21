@@ -1,7 +1,6 @@
 import { Box, styled, Typography, useTheme, Skeleton } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import AOIStatsDataWrapper from "./AOIStatsData";
-import { useAppSelector } from "@/hooks/reduxHooks";
 
 const StyledTypography = styled(Typography)(({ theme }) => ({
   color: theme.palette.text.primary,
@@ -37,9 +36,9 @@ const AoiStatistics = () => {
   // const loading = currentAoiStats?.loading || false;
   // const error = currentAoiStats?.error || null;
   // const statsDatas = currentAoiStats?.data || null;
-  const loading =  false;
-  const error =  null;
-  const statsDatas =  null;
+  const loading = false;
+  const error = null;
+  const statsDatas = null;
 
   // Transform the data if it exists and is not "no_stats"
   const transformedData =

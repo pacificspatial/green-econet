@@ -35,7 +35,6 @@ import { AlertState } from "@/types/AlertState";
 import { useAppDispatch, useAppSelector } from "@/hooks/reduxHooks";
 import { useNavigate } from "react-router-dom";
 import { io, Socket } from "socket.io-client";
-import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 
 interface LeftPanelProps {
   collapsed: boolean;
@@ -126,10 +125,6 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ collapsed, setCollapsed }) => {
     message: "",
     severity: "success",
   });
-  // New state to track job status per project
-  const [projectJobStatuses, setProjectJobStatuses] = useState<
-    Record<string, string>
-  >({});
 
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
@@ -146,14 +141,14 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ collapsed, setCollapsed }) => {
     const socket = io(process.env.REACT_APP_RG_SOCKET_PORT);
     socketRef.current = socket;
 
-    socket.on("jobStatus", (data) => {
-      if (data && data.projectId && data.status) {
-        setProjectJobStatuses((prev) => ({
-          ...prev,
-          [data.projectId]: data.status,
-        }));
-      }
-    });
+    // socket.on("jobStatus", (data) => {
+    //   if (data && data.projectId && data.status) {
+    //     setProjectJobStatuses((prev) => ({
+    //       ...prev,
+    //       [data.projectId]: data.status,
+    //     }));
+    //   }
+    // });
 
     // socket.on("newProject", (project) => {
     //   if (project.clientId !== socket.id) {

@@ -1,6 +1,6 @@
-import { MenuItem, Select, SelectChangeEvent } from '@mui/material';
-import { useTranslation } from 'react-i18next';
-import { useTheme } from '@mui/material/styles';
+import { MenuItem, Select, SelectChangeEvent } from "@mui/material";
+import { useTranslation } from "react-i18next";
+import { useTheme } from "@mui/material/styles";
 
 const LanguageSwitcher = () => {
   const { i18n } = useTranslation();
@@ -11,24 +11,28 @@ const LanguageSwitcher = () => {
 
   return (
     <Select
-    id='lang-switcher'
+      id="lang-switcher"
       value={i18n.language}
       onChange={handleChange}
       displayEmpty
-      inputProps={{ 'aria-label': 'language',id: 'lang-switcher-input', }}
+      inputProps={{ "aria-label": "language", id: "lang-switcher-input" }}
       sx={{
-        '& .MuiSelect-select': {
+        "& .MuiSelect-select": {
           // Use theme text color
-          color: theme.palette.text.primary, 
+          color: theme.palette.text.primary,
         },
-        '& .MuiSelect-icon': {
+        "& .MuiSelect-icon": {
           // Set the arrow color to black
           color: theme.palette.text.primary,
         },
       }}
     >
-      <MenuItem  value="en" sx={{ color: theme.palette.text.primary }}>English</MenuItem>
-      <MenuItem  value="ja" sx={{ color: theme.palette.text.primary }}>日本語</MenuItem>
+      <MenuItem value="en" sx={{ color: theme.palette.text.primary }}>
+        English
+      </MenuItem>
+      <MenuItem value="ja" sx={{ color: theme.palette.text.primary }}>
+        日本語
+      </MenuItem>
     </Select>
   );
 };

@@ -15,7 +15,6 @@ interface AOIStatsDataProps {
 }
 
 const AOIStatsData: FC<AOIStatsDataProps> = ({ title, value, count }) => {
-  const { t } = useTranslation();
   const suffix = getSuffix(title);
   const formattedValue = formatValue(value);
 

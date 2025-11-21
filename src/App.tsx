@@ -26,17 +26,15 @@ function App() {
   }, []);
 
   useEffect(() => {
-    const translations = currentLanguage === "en" ? enTranslation.auth : jaTranslation.auth;
+    const translations =
+      currentLanguage === "en" ? enTranslation.auth : jaTranslation.auth;
     I18n.putVocabularies({ [currentLanguage]: translations });
     I18n.setLanguage(currentLanguage);
   }, [currentLanguage]);
 
   return (
     <Router>
-      <MyAppRoutes
-        loading={loading}
-        t={t}
-      />
+      <MyAppRoutes loading={loading} t={t} />
     </Router>
   );
 }
@@ -46,10 +44,7 @@ interface MyAppRoutesProps {
   t: TFunction<"translation", undefined>;
 }
 
-function MyAppRoutes({
-  loading,
-  t,
-}: MyAppRoutesProps) {
+function MyAppRoutes({ loading, t }: MyAppRoutesProps) {
   if (loading) {
     return <div>{t("app.loading")}...</div>;
   }
