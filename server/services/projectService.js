@@ -8,7 +8,6 @@ const createProject = async ({ name, description }) => {
     const project = await Projects.create({
       name,
       description,
-      
     });
     
     return project;
