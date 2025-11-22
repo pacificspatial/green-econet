@@ -58,6 +58,18 @@ const createProjectPolygon = async (req, res, next) => {
   }
 };
 
+const updateProjectPolygon = async (req, res, next) => {
+  try {
+    const updatedPolygon = await projectService.updateProjectPolygon(
+      req.params.polygonId,
+      req.body
+    );
+    return success(res, "Project polygon updated successfully", updatedPolygon);
+  } catch (err) {
+    next(err);
+  }
+};
+
 export default {
   createProject,
   updateProject,
@@ -65,5 +77,6 @@ export default {
   getAllProjects,
   getProject,
   createProjectPolygon,
+  updateProjectPolygon,
 };
 

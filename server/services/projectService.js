@@ -68,17 +68,17 @@ const getProject = async (projectId) => {
 };
 
 // Project Polygon Service
-const createProjectPolygon = async ({ project_id, geom, }) => {
+const createProjectPolygon = async ({ projectId, geom, }) => {
   try {
     const existing = await ProjectPolygons.findOne({
-      where: { project_id: project_id },
+      where: { project_id: projectId },
       order: [["polygon_index", "DESC"]],
     });
 
     const nextIndex = existing ? existing.polygon_index + 1 : 0;
 
     const polygon = await ProjectPolygons.create({
-      project_id: project_id,
+      project_id: projectId,
       polygon_index: nextIndex,
       geom: toGeography(geom),
       area_m2: calcArea(geom),
@@ -92,6 +92,27 @@ const createProjectPolygon = async ({ project_id, geom, }) => {
   }
 };
 
+const updateProjectPolygon = async (polygonId, updateData) => {
+  try {
+    const polygon = await ProjectPolygons.findByPk(polygonId);
+    if (!polygon) {
+      throw new Error("Project polygon not found");
+    }
+
+    if (updateData.geom) {
+      const geojson = updateData.geom; 
+
+      updateData.geom = toGeography(geojson);
+      updateData.area_m2 = calcArea(geojson);
+      updateData.perimeter_m = calcPerimeter(geojson);
+    }
+    await polygon.update(updateData, { returning: true });
+    return polygon;
+  } catch (error) {
+    console.log("Error updating project polygon", error.message);
+    throw error;
+  }
+};
 
 export default {
   createProject,
@@ -100,4 +121,5 @@ export default {
   getAllProjects,
   getProject,
   createProjectPolygon,
+  updateProjectPolygon,
 };
