@@ -15,39 +15,23 @@ const aoiSlice = createSlice({
   name: 'aoi',
   initialState,
   reducers: {
-  addAoiPolygon: (state, action: PayloadAction<Feature>) => {
-    // Extract all numbers from existing shape names
-    const existingNumbers = state.polygons
-      .map(p => {
-        const name = p.properties?.name;
-        const parts = name?.split(" ");
-        const num = Number(parts?.[1]);
-        return isNaN(num) ? 0 : num;
-      });
+    addAoiPolygon: (state, action: PayloadAction<Feature>) => {
+      const nextIndex = state.polygons.length + 1;
 
-    // Find max number so far
-    const maxNumber = existingNumbers.length > 0 ? Math.max(...existingNumbers) : 0;
+      const newPolygon = {
+        ...action.payload,
+        properties: {
+          ...(action.payload.properties || {}),
+          name: `Shape ${nextIndex}`,
+        },
+      };
 
-    // Next number
-    const nextIndex = maxNumber + 1;
-
-    // Build new polygon
-    const polygonWithName = {
-      ...action.payload,
-      id: action.payload.id,
-      properties: {
-        ...(action.payload.properties || {}),
-        name: `shape ${nextIndex}`,
-      },
-    };
-
-    state.polygons.push(polygonWithName);
-  },
+      state.polygons.push(newPolygon);
+    },
     updateAoiPolygon: (state, action: PayloadAction<Feature>) => {
       const feature = action.payload;
       const id = feature.id;
-
-      if (!id) return; // safety
+      if (!id) return;
 
       const index = state.polygons.findIndex(p => p.id === id);
       if (index !== -1) {
@@ -56,14 +40,31 @@ const aoiSlice = createSlice({
           properties: {
             ...feature.properties,
             name: state.polygons[index].properties?.name, 
-          }
+          },
         };
       }
     },
     deleteAoiPolygon: (state, action: PayloadAction<string | number>) => {
-      state.polygons = state.polygons.filter(
-        (polygon) => polygon.id !== action.payload
+      // Find the index of the polygon being deleted
+      const deleteIndex = state.polygons.findIndex(
+        polygon => polygon.id === action.payload
       );
+
+      if (deleteIndex === -1) return;
+
+      // Remove the polygon
+      state.polygons.splice(deleteIndex, 1);
+
+      // Only rename polygons AFTER the deleted index
+      for (let i = deleteIndex; i < state.polygons.length; i++) {
+        state.polygons[i] = {
+          ...state.polygons[i],
+          properties: {
+            ...(state.polygons[i].properties || {}),
+            name: `Shape ${i + 1}`,
+          },
+        };
+      }
     },
     clearAoiPolygons: (state) => {
       state.polygons = [];
