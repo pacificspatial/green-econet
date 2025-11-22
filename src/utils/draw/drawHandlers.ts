@@ -2,9 +2,7 @@ import MapboxDraw from "@mapbox/mapbox-gl-draw";
 import type { AppDispatch } from "@/redux/store";
 import type { AlertColor } from "@mui/material";
 import { validatePolygonGeometry } from "../geometery/validatePolygonGeometry";
-import { MAX_AOI_POLYGON_COUNT, MIN_AOI_POLYGON_COUNT } from "@/constants/numberConstants";
 import { addAoiPolygon, deleteAoiPolygon, updateAoiPolygon } from "@/redux/slices/aoiSlice";
-import { store } from "@/redux/store"
 import i18n from "@/i18n/i18n";
 
 export interface DrawCreateHandlerParams {
@@ -39,18 +37,6 @@ export interface DrawDeleteHandlerParams {
   setLoadingText: (text: string) => void;
 }
 
-const detectEditedVertex = (
-  oldCoords: number[][],
-  newCoords: number[][]
-): number | null => {
-  for (let i = 0; i < oldCoords.length; i++) {
-    if (JSON.stringify(oldCoords[i]) !== JSON.stringify(newCoords[i])) {
-      return i;
-    }
-  }
-  return null;
-};
-
 export const handleDrawCreate = async (params: DrawCreateHandlerParams) => {
   const {
     event,
@@ -58,28 +44,8 @@ export const handleDrawCreate = async (params: DrawCreateHandlerParams) => {
     drawInstance,
     handleSetAlert,
   } = params;
-  const aoiPolygons = store.getState().aoi.polygons; 
   const feature = event.features[0];
   const featureId = feature.id;
-  
-  // If user exceeded max shapes, reject and delete drawn shape
-  if (aoiPolygons.length >= MAX_AOI_POLYGON_COUNT) {
-    handleSetAlert(
-      i18n.t("app.aoiPolygonsLimitMessage", {
-        minCount: MIN_AOI_POLYGON_COUNT,
-        maxCount: MAX_AOI_POLYGON_COUNT,
-      }),
-      "error"
-    );
-
-    if (featureId) {
-      drawInstance.current?.delete(featureId as string);
-    }
-
-    return; 
-  } else {
-    dispatch(addAoiPolygon(feature));
-  }
 
   const isValidPolygon = validatePolygonGeometry(feature);
   if (!isValidPolygon) {
@@ -87,6 +53,9 @@ export const handleDrawCreate = async (params: DrawCreateHandlerParams) => {
     handleSetAlert(i18n.t("app.invalidPolygonMessage"), "error");
     return;
   }
+  // Add polygon to Redux
+  dispatch(addAoiPolygon(feature));
+
 };
 
 export const handleDrawUpdate = async (params: DrawUpdateHandlerParams) => {
@@ -108,6 +77,7 @@ export const handleDrawDelete = async (params: DrawDeleteHandlerParams) => {
   const { event, drawInstance, dispatch } = params;
   drawInstance.current?.delete(event?.features[0]?.id as string);
   if(event?.features[0]?.id){
+    // Delete polygon in Redux
     dispatch(deleteAoiPolygon(event?.features[0]?.id));
   }
 };
