@@ -1,3 +1,4 @@
+import { Op } from "sequelize";
 import { ProjectPolygons, Projects } from "../db/models/index.js";
 import CustomError from "../utils/customError.js";
 import { calcArea, calcPerimeter, toGeography } from "../utils/geoUtil.js";
@@ -7,6 +8,10 @@ import { reorderPolygonIndexes } from "../utils/reorderPolygonIndexes.js";
  * Create a new project
  */
 const createProject = async ({ name, description }) => {
+  const existing = await Projects.findOne({ where: { name } });
+  if (existing) {
+    throw new CustomError("Project name already exists", 400, "PROJECT_NAME_DUPLICATE");
+  }
   const project = await Projects.create({
     name,
     description,
@@ -22,6 +27,18 @@ const updateProject = async (projectId, updateData) => {
   const project = await Projects.findByPk(projectId);
   if (!project) {
     throw new CustomError("Project not found", 404, "PROJECT_NOT_FOUND");
+  }
+  if (updateData.name) {
+    const existing = await Projects.findOne({
+      where: {
+        name: updateData.name,
+        id: { [Op.ne]: projectId } 
+      }
+    });
+
+    if (existing) {
+      throw new CustomError("Project name already exists", 400, "PROJECT_NAME_DUPLICATE");
+    }
   }
   await project.update(updateData);
   return project;throw error;
