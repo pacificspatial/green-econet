@@ -49,11 +49,21 @@ const getProject = async (req, res, next) => {
   }
 };
 
+const createProjectPolygon = async (req, res, next) => {
+  try {
+    const polygon = await projectService.createProjectPolygon(req.body);
+    return success(res, "Project polygon created successfully", polygon, 201);
+  } catch (err) {
+    next(err);
+  }
+};
+
 export default {
   createProject,
   updateProject,
   deleteProject,
   getAllProjects,
   getProject,
+  createProjectPolygon,
 };
 

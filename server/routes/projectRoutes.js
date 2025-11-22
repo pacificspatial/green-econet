@@ -18,5 +18,7 @@ router
   .get("/", projectController.getAllProjects)
   .get("/:projectId", projectController.getProject);
 
+router.post("/polygon", projectController.createProjectPolygon);
+
 
 export default router;

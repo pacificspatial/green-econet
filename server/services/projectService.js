@@ -1,5 +1,7 @@
-import { Projects } from "../db/models/index.js";
+import { ProjectPolygons, Projects } from "../db/models/index.js";
+import { calcArea, calcPerimeter, toGeography } from "../utils/geoUtil.js";
 
+// Project Service
 const createProject = async ({ name, description }) => {
   try {
     const project = await Projects.create({
@@ -65,10 +67,37 @@ const getProject = async (projectId) => {
   }
 };
 
+// Project Polygon Service
+const createProjectPolygon = async ({ project_id, geom, }) => {
+  try {
+    const existing = await ProjectPolygons.findOne({
+      where: { project_id: project_id },
+      order: [["polygon_index", "DESC"]],
+    });
+
+    const nextIndex = existing ? existing.polygon_index + 1 : 0;
+
+    const polygon = await ProjectPolygons.create({
+      project_id: project_id,
+      polygon_index: nextIndex,
+      geom: toGeography(geom),
+      area_m2: calcArea(geom),
+      perimeter_m: calcPerimeter(geom),
+    });
+
+    return polygon;
+  } catch (error) {
+    console.log("Error creating project polygon", error.message);
+    throw error;
+  }
+};
+
+
 export default {
   createProject,
   updateProject,
   deleteProject,
   getAllProjects,
   getProject,
+  createProjectPolygon,
 };
