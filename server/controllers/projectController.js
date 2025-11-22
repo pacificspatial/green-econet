@@ -70,6 +70,15 @@ const updateProjectPolygon = async (req, res, next) => {
   }
 };
 
+const deleteProjectPolygon = async (req, res, next) => {
+  try {
+    await projectService.deleteProjectPolygon(req.params.polygonId);
+    return success(res, "Project polygon deleted successfully", null);
+  } catch (err) {
+    next(err);
+  }
+};
+
 export default {
   createProject,
   updateProject,
@@ -78,5 +87,6 @@ export default {
   getProject,
   createProjectPolygon,
   updateProjectPolygon,
+  deleteProjectPolygon,
 };
 

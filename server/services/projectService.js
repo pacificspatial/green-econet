@@ -1,5 +1,6 @@
 import { ProjectPolygons, Projects } from "../db/models/index.js";
 import { calcArea, calcPerimeter, toGeography } from "../utils/geoUtil.js";
+import { reorderPolygonIndexes } from "../utils/reorderPolygonIndexes.js";
 
 // Project Service
 const createProject = async ({ name, description }) => {
@@ -114,6 +115,26 @@ const updateProjectPolygon = async (polygonId, updateData) => {
   }
 };
 
+const deleteProjectPolygon = async (polygonId) => {
+  try {
+    const polygon = await ProjectPolygons.findByPk(polygonId);
+    if (!polygon) {
+      throw new Error("Project polygon not found");
+    }
+
+    const projectId = polygon.project_id;
+    const deletedIndex = polygon.polygon_index;
+
+    await polygon.destroy();
+
+    // Reorder after delete
+    await reorderPolygonIndexes(projectId, deletedIndex);
+  } catch (error) {
+    console.log("Error deleting project polygon", error.message);
+    throw error;
+  }
+};
+
 export default {
   createProject,
   updateProject,
@@ -122,4 +143,5 @@ export default {
   getProject,
   createProjectPolygon,
   updateProjectPolygon,
+  deleteProjectPolygon,
 };
