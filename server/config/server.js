@@ -31,7 +31,7 @@ app.get("/ping", (req, res) => {
 
 app.use(authorizer);
 
-app.use("/api/v1", projectApiRoutes);
+app.use("/api/v1/projects", projectApiRoutes);
 
 app.use(errorHandler);
 
