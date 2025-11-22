@@ -22,6 +22,7 @@ router
   .post("/polygon", projectController.createProjectPolygon)
   .patch("/polygon/:polygonId", projectController.updateProjectPolygon)
   .delete("/polygon/:polygonId", projectController.deleteProjectPolygon)
+  .get("/:projectId/polygon", projectController.getPolygonsByProject);
 
 
 export default router;

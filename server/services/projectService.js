@@ -135,6 +135,24 @@ const deleteProjectPolygon = async (polygonId) => {
   }
 };
 
+const getPolygonsByProject = async (projectId) => {
+  try {
+    const result = await ProjectPolygons.findAndCountAll({
+      where: { project_id: projectId },
+      order: [["polygon_index", "ASC"]],
+      raw: true
+    });
+
+    return {
+      total: result.count,
+      polygons: result.rows
+    };
+  } catch (error) {
+    console.log("Error fetching polygons by project", error.message);
+    throw error;
+  }
+};
+
 export default {
   createProject,
   updateProject,
@@ -144,4 +162,5 @@ export default {
   createProjectPolygon,
   updateProjectPolygon,
   deleteProjectPolygon,
+  getPolygonsByProject
 };

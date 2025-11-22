@@ -79,6 +79,17 @@ const deleteProjectPolygon = async (req, res, next) => {
   }
 };
 
+const getPolygonsByProject = async (req, res, next) => {
+  try {
+    const polygons = await projectService.getPolygonsByProject(
+      req.params.projectId
+    );
+    return success(res, "Project polygons fetched successfully", polygons);
+  } catch (err) {
+    next(err);
+  }
+};
+
 export default {
   createProject,
   updateProject,
@@ -88,5 +99,6 @@ export default {
   createProjectPolygon,
   updateProjectPolygon,
   deleteProjectPolygon,
+  getPolygonsByProject
 };
 
