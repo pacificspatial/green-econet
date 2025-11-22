@@ -1,0 +1,2 @@
+export const MIN_PROJECT_POLYGON_COUNT = 2;
+export const MAX_PROJECT_POLYGON_COUNT = 5;
