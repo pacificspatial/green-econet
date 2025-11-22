@@ -3,7 +3,9 @@ import CustomError from "../utils/customError.js";
 import { calcArea, calcPerimeter, toGeography } from "../utils/geoUtil.js";
 import { reorderPolygonIndexes } from "../utils/reorderPolygonIndexes.js";
 
-// Project Service
+/**
+ * Create a new project
+ */
 const createProject = async ({ name, description }) => {
   const project = await Projects.create({
     name,
@@ -13,6 +15,9 @@ const createProject = async ({ name, description }) => {
   return project;
 };
 
+/**
+ * Update an existing project
+ */
 const updateProject = async (projectId, updateData) => {
   const project = await Projects.findByPk(projectId);
   if (!project) {
@@ -22,6 +27,9 @@ const updateProject = async (projectId, updateData) => {
   return project;throw error;
 };
 
+/**
+ * Delete a project
+ */
 const deleteProject = async (projectId) => {
   const project = await Projects.findByPk(projectId);
   if (!project) {
@@ -30,11 +38,17 @@ const deleteProject = async (projectId) => {
   await project.destroy();
 };
 
+/**
+ * Fetch all projects
+ */
 const getAllProjects = async () => {
   const projects = await Projects.findAll({ raw: true });    
   return projects;
 };
 
+/**
+ * Fetch a project by ID
+ */
 const getProject = async (projectId) => {
   const project = await Projects.findByPk(projectId, { raw: true });
   if (!project) {
@@ -43,7 +57,9 @@ const getProject = async (projectId) => {
   return project;
 };
 
-// Project Polygon Service
+/**
+ * Create a polygon for a project
+ */
 const createProjectPolygon = async ({ projectId, geom, }) => {
   const project = await Projects.findByPk(projectId);
   if (!project) {
@@ -68,6 +84,9 @@ const createProjectPolygon = async ({ projectId, geom, }) => {
   return polygon;
 };
 
+/**
+ * Update a project polygon
+ */
 const updateProjectPolygon = async (polygonId, updateData) => {
   const polygon = await ProjectPolygons.findByPk(polygonId);
   if (!polygon) {
@@ -85,6 +104,9 @@ const updateProjectPolygon = async (polygonId, updateData) => {
   return polygon;
 };
 
+/**
+ * Delete a project polygon and reorder indexes
+ */
 const deleteProjectPolygon = async (polygonId) => {
   const polygon = await ProjectPolygons.findByPk(polygonId);
   if (!polygon) {
@@ -100,6 +122,9 @@ const deleteProjectPolygon = async (polygonId) => {
   await reorderPolygonIndexes(projectId, deletedIndex);
 };
 
+/**
+ * Get all polygons for a project along with count
+ */
 const getPolygonsByProject = async (projectId) => {
   const project = await Projects.findByPk(projectId);
   if (!project) {

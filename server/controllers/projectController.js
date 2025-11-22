@@ -1,6 +1,12 @@
 import projectService from "../services/projectService.js";
 import { success } from "../utils/response.js";
 
+/**
+ * Create a new project
+ * @route POST /projects
+ * @body { name: string, description: string }
+ * @returns Newly created project object
+ */
 const createProject = async (req, res, next) => {
   try {
     const newProject = await projectService.createProject(req.body);
@@ -11,6 +17,13 @@ const createProject = async (req, res, next) => {
   }
 };
 
+/**
+ * Update an existing project
+ * @route PUT /projects/:projectId
+ * @params projectId - UUID of the project to update
+ * @body Fields to update (name, description, etc.)
+ * @returns Updated project object
+ */
 const updateProject = async (req, res, next) => {
   try {
     const updatedProject = await projectService.updateProject(
@@ -24,6 +37,12 @@ const updateProject = async (req, res, next) => {
   }
 }
 
+/**
+ * Delete a project
+ * @route DELETE /projects/:projectId
+ * @params projectId - UUID of the project to delete
+ * @returns Success message
+ */
 const deleteProject = async (req, res, next) => {
   try {
     await projectService.deleteProject(req.params.projectId);
@@ -35,6 +54,11 @@ const deleteProject = async (req, res, next) => {
   }
 };
 
+/**
+ * Fetch all projects
+ * @route GET /projects
+ * @returns Array of all projects
+ */
 const getAllProjects = async (req, res, next) => {
   try {
     const projects = await projectService.getAllProjects();
@@ -45,6 +69,12 @@ const getAllProjects = async (req, res, next) => {
   }
 };
 
+/**
+ * Fetch a single project by ID
+ * @route GET /projects/:projectId
+ * @params projectId - UUID of the project to fetch
+ * @returns Project object
+ */
 const getProject = async (req, res, next) => {
   try {
     const project = await projectService.getProject(req.params.projectId);
@@ -55,6 +85,12 @@ const getProject = async (req, res, next) => {
   }
 };
 
+/**
+ * Create a polygon for a project
+ * @route POST /projects/polygon
+ * @body { project_id: UUID, geom: GeoJSON Polygon, ... }
+ * @returns Newly created polygon object
+ */
 const createProjectPolygon = async (req, res, next) => {
   try {
     const polygon = await projectService.createProjectPolygon(req.body);
@@ -65,6 +101,13 @@ const createProjectPolygon = async (req, res, next) => {
   }
 };
 
+/**
+ * Update a project polygon
+ * @route PUT /projects/polygon/:polygonId
+ * @params polygonId - UUID of the polygon to update
+ * @body Fields to update (geom, etc.)
+ * @returns Updated polygon object
+ */
 const updateProjectPolygon = async (req, res, next) => {
   try {
     const updatedPolygon = await projectService.updateProjectPolygon(
@@ -78,6 +121,12 @@ const updateProjectPolygon = async (req, res, next) => {
   }
 };
 
+/**
+ * Delete a project polygon
+ * @route DELETE /projects/polygons/:polygonId
+ * @params polygonId - UUID of the polygon to delete
+ * @returns Success message
+ */
 const deleteProjectPolygon = async (req, res, next) => {
   try {
     await projectService.deleteProjectPolygon(req.params.polygonId);
@@ -88,6 +137,12 @@ const deleteProjectPolygon = async (req, res, next) => {
   }
 };
 
+/**
+ * Fetch all polygons of a specific project
+ * @route GET /projects/:projectId/polygons
+ * @params projectId - UUID of the project
+ * @returns Array of polygons for the project
+ */
 const getPolygonsByProject = async (req, res, next) => {
   try {
     const polygons = await projectService.getPolygonsByProject(
