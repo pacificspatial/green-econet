@@ -1,23 +1,16 @@
-import CustomError from "../utils/customError.js";
-
 const errorMiddleware = (err, req, res, next) => {
-  console.error("Error middleware", err?.error);
+  console.error("Error middleware:", err.message);
 
-  if (err instanceof CustomError) {
-    return res.status(err.statusCode).json({
-      success: false,
-      message: err.message,
-      statusCode: err.statusCode,
-      errorCode: err.errorCode,
-    });
-  }
+  // Use properties if they exist, otherwise fallback to defaults
+  const statusCode = err.statusCode || 500;
+  const errorCode = err.errorCode || "INTERNAL_SERVER_ERROR";
+  const message = err.message || "Internal Server Error";
 
-  // If the error is not a CustomError, send a generic error response
-  return res.status(500).json({
+  return res.status(statusCode).json({
     success: false,
-    message: "Internal Server Error",
-    statusCode: 500,
-    errorCode: "INTERNAL_SERVER_ERROR",
+    message,
+    statusCode,
+    errorCode,
   });
 };
 
