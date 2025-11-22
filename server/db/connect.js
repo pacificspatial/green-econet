@@ -1,6 +1,7 @@
 import sequelize from "../config/dbConfig.js";
 import {
   EnGreen,
+  Projects
 } from "./models/index.js";
 
 async function connectDB() {
