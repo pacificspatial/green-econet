@@ -41,7 +41,7 @@
     "serverErrorMessage": "不具合が発生しました！少し待ってからお試しください。",
     "setAOI": "AOIを設定する",
     "loading": "読込中...",
-    "staticsticsAreNotAvailable": "KPIが計算できません",
+    "statsAreNotAvailable": "KPIが計算できません",
     "legendTitle": "凡例",
     "aoiStatisticsHeading": "現況",
     "osm": "OpenStreetMap",
@@ -55,6 +55,12 @@
     "accessDeniedMessage": "管理者があなたのリクエストを処理するまでお待ち下さい。",
     "errorFetchingStatistics": "KPIの取得に問題が生じました...",
     "shapeOverlapError": "図形を重ね合わせることはできません。新しい図形が既存の図形と重ならないようにしてください。",
-    "invalidPolygonMessage": "描画されたポリゴンは無効です（自己交差しています）。有効なポリゴンを再描画してください。"
+    "invalidPolygonMessage": "描画されたポリゴンは無効です（自己交差しています）。有効なポリゴンを再描画してください。",
+    "area": "面積",
+    "perimeter": "周囲長",
+    "shapeStatistics": "統計",
+    "total": "合計",
+    "aoiPolygonsLimitMessage": "{{minCount}} - {{maxCount}} 個のシェイプのみ使用できます",
+    "shape": "シェイプ"
   }
 }

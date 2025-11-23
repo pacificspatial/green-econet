@@ -3,9 +3,11 @@ import AoiStatistics from "./AoiStatistics";
 import { styled } from "@mui/material/styles";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Button, Typography } from "@mui/material";
+import { Button, Tooltip, Typography } from "@mui/material";
 import AlertBox from "../utils/AlertBox";
 import type { AlertState } from "@/types/AlertState";
+import { useAppSelector } from "@/hooks/reduxHooks";
+import { MAX_AOI_POLYGON_COUNT, MIN_AOI_POLYGON_COUNT } from "@/constants/numberConstants";
 
 const StyledBox = styled(Box)(({ theme }) => ({
   backgroundColor:
@@ -30,10 +32,8 @@ const StyledConfirmBox = styled(Box)(() => ({
   justifyContent: "center",
   alignItems: "center",
   width: "100%",
-  minHeight: "50px",
-  maxHeight: "70px",
   position: "relative",
-  bottom: 5,
+  paddingBottom: 20
 }));
 
 const AoiRightPanel = () => {
@@ -43,6 +43,7 @@ const AoiRightPanel = () => {
     severity: "info",
   });
   const [emptyAoiMessage, setEmptyAoiMessage] = useState("");
+  const aoiPolygons = useAppSelector((state) => state.aoi.polygons)
   const { t } = useTranslation();
 
   const handleConfirmClick = async () => {
@@ -69,15 +70,35 @@ const AoiRightPanel = () => {
         {emptyAoiMessage}
       </Typography>
       <StyledConfirmBox>
-        <Button
-          sx={{ position: "fixed", bottom: 5 }}
-          color="primary"
-          variant="contained"
-          onClick={handleConfirmClick}
-          disabled={false}
+        <Tooltip
+          title={
+            aoiPolygons.length < MIN_AOI_POLYGON_COUNT ||
+            aoiPolygons.length > MAX_AOI_POLYGON_COUNT
+              ? t("app.aoiPolygonsLimitMessage", { minCount: MIN_AOI_POLYGON_COUNT, maxCount: MAX_AOI_POLYGON_COUNT })
+              : ""
+          }
+          disableHoverListener={
+            !(
+              aoiPolygons.length < MIN_AOI_POLYGON_COUNT ||
+              aoiPolygons.length > MAX_AOI_POLYGON_COUNT
+            )
+          }
         >
-          {t("app.setAOI")}
-        </Button>
+          <span>
+            <Button
+              sx={{ px: 4, py: 2 }}
+              color="primary"
+              variant="contained"
+              onClick={handleConfirmClick}
+              disabled={
+                aoiPolygons.length < MIN_AOI_POLYGON_COUNT ||
+                aoiPolygons.length > MAX_AOI_POLYGON_COUNT
+              }
+            >
+              {t("app.setAOI")}
+            </Button>
+          </span>
+        </Tooltip>
       </StyledConfirmBox>
     </StyledBox>
   );
