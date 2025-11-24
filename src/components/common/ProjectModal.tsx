@@ -29,9 +29,9 @@ interface ProjectModalProps {
 const ProjectModal: React.FC<ProjectModalProps> = ({
   isOpen,
   onClose,
-  initialData,
   onSuccess,
   setAlertState,
+  initialData,
 }) => {
   const isEditMode = !!initialData;
 

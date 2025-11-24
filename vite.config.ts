@@ -1,8 +1,6 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tsconfigPaths from 'vite-tsconfig-paths';
-import dotenv from 'dotenv';
-dotenv.config();
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -13,8 +11,5 @@ export default defineConfig({
         allowedHosts: ["localhost", ".econet.com"], // Replace with your domain
         // open: true, // Open in browser
         strictPort: true, // Exit if port is in use
-    },
-    define: {
-        'process.env': process.env
     },
 })

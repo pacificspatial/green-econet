@@ -17,9 +17,7 @@ import { useBasemap } from "@/hooks/useBasemap";
 import { basemapStyles } from "@/constants/basemapStyles";
 import { useThemeContext } from "@/hooks/useThemeContext";
 import MenuIcon from "@mui/icons-material/Menu";
-import { useLocation, useNavigate, useParams } from "react-router-dom";
-// import { logout } from "@/utils/authUtils/logout";
-// import { useAuthenticator } from "@aws-amplify/ui-react";
+import { useLocation, useNavigate } from "react-router-dom";
 
 const StyledAppBar = styled(AppBar)(({ theme }) => ({
   backgroundColor:
@@ -77,9 +75,6 @@ const StyledSelect = styled(Select)(({ theme }) => ({
 const Header = () => {
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [selectedProject, setSelectedProject] = useState<string | undefined>(
-    ""
-  );
 
   const navigate = useNavigate();
   const { pathname } = useLocation();
@@ -87,7 +82,6 @@ const Header = () => {
   const theme = useTheme();
   const { basemap, setBasemap } = useBasemap();
   const { theme: currentTheme, toggleTheme } = useThemeContext();
-  // const { signOut } = useAuthenticator((context) => [context.user]);
 
   const isDarkMode = currentTheme === "dark";
 
@@ -137,7 +131,7 @@ const Header = () => {
       pathname.includes("/project") &&
       pathname.split("/").length > 2
     ) {
-      return selectedProject;
+      return ""; //selected project name can be set here
     }
     return "";
   };

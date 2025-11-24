@@ -148,8 +148,9 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ collapsed, setCollapsed }) => {
 
   // Set up socket connection to listen for jobStatus events
   useEffect(() => {
-    const socket = io(process.env.REACT_APP_RG_SOCKET_PORT);
+    const socket = io(import.meta.env.VITE_EP_SOCKET_PORT);
     socketRef.current = socket;
+    // socket event listeners can be added here
     return () => {
       socket.disconnect();
     };

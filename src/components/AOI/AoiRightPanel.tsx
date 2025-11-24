@@ -3,7 +3,7 @@ import AoiStatistics from "./AoiStatistics";
 import { styled } from "@mui/material/styles";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Button, Tooltip, Typography } from "@mui/material";
+import { Button, Tooltip } from "@mui/material";
 import AlertBox from "../utils/AlertBox";
 import type { AlertState } from "@/types/AlertState";
 import { useAppSelector } from "@/hooks/reduxHooks";
@@ -42,12 +42,11 @@ const AoiRightPanel = () => {
     message: "",
     severity: "info",
   });
-  const [emptyAoiMessage, setEmptyAoiMessage] = useState("");
   const aoiPolygons = useAppSelector((state) => state.aoi.polygons)
   const { t } = useTranslation();
 
   const handleConfirmClick = async () => {
-    console.log("Confirm clicked");
+    // Here handle the set AOI action
   };
 
   return (
@@ -66,9 +65,6 @@ const AoiRightPanel = () => {
         <AoiStatistics />
       </StyledGridBottom>
 
-      <Typography color="red" fontSize={14}>
-        {emptyAoiMessage}
-      </Typography>
       <StyledConfirmBox>
         <Tooltip
           title={

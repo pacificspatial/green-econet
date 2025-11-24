@@ -7,7 +7,7 @@ import { useTranslation } from "react-i18next";
 import Map from "@/components/maps/Map";
 import LeftPanel from "@/components/common/LeftPanel";
 
-const ProjectsList = () => {
+const ProjectsList: React.FC = () => {
   const [collapsed, setCollapsed] = useState<boolean>(false);
   const theme = useTheme();
   const { t } = useTranslation();
