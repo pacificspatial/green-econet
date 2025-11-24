@@ -34,7 +34,7 @@ jobs:
     env:
       BRANCH_NAME: ${{ github.ref_name }}
       ENV_NAME: ${{ github.ref_name == 'aws-infrastructure-1' && 'stg' || 'skip' }}
-      S3_BUCKET: ${{ github.ref_name == 'aws-infrastructure-1' && secrets.STG_S3_BUCKET || '' }}
+      S3_BUCKET: ${{ secrets.STG_S3_BUCKET }}
       AWS_REGION: ${{ secrets.STG_AWS_REGION }}
       CLOUDFRONT_DISTRIBUTION_ID: ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID || '' }}
 
