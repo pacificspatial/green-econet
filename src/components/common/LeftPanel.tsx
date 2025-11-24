@@ -29,17 +29,21 @@ import { styled, useTheme } from "@mui/material/styles";
 import { useTranslation } from "react-i18next";
 import DialogueBox from "../utils/DialogueBox";
 import ProjectModal from "./ProjectModal";
-import type { Project } from "@/types/ProjectData";
-import AlertBox from "../utils/AlertBox";
 import type { AlertState } from "@/types/AlertState";
-import { useAppDispatch } from "@/hooks/reduxHooks";
+import { useAppDispatch, useAppSelector } from "@/hooks/reduxHooks";
 import { useNavigate } from "react-router-dom";
 import { io, Socket } from "socket.io-client";
+import type { ProjectData } from "@/types/ProjectData";
+import { deleteProject } from "@/api/project";
+import { deleteProjectById, setSelectedProject } from "@/redux/slices/projectSlice";
 
 interface LeftPanelProps {
   collapsed: boolean;
   setCollapsed: (collapsed: boolean) => void;
+  isProjectListLoading: boolean;
+  setAlertState: React.Dispatch<React.SetStateAction<AlertState>>;
 }
+
 
 const StyledBox = styled(Box)(() => ({
   flex: 1,
@@ -115,16 +119,18 @@ const StyledList = styled(List)(({ theme }) => ({
   },
 }));
 
-const LeftPanel: React.FC<LeftPanelProps> = ({ collapsed, setCollapsed }) => {
+const LeftPanel: React.FC<LeftPanelProps> = ({
+  collapsed,
+  setCollapsed,
+  isProjectListLoading,
+  setAlertState
+}) => {
+  const { projects, selectedProject } = useAppSelector((state) => state.project);
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [dialogOpen, setDialogOpen] = useState<boolean>(false);
-  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [isModalOpen, setModalOpen] = useState<boolean>(false);
-  const [alertState, setAlertState] = useState<AlertState>({
-    open: false,
-    message: "",
-    severity: "success",
-  });
+  const [loading, setLoading] = useState<boolean>(false);
+
 
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
@@ -135,6 +141,12 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ collapsed, setCollapsed }) => {
     [theme.palette.mode]
   );
   const socketRef = useRef<Socket | null>(null);
+  
+  const filteredProjects = useMemo(() => {
+    return projects.filter((p) =>
+      p.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [projects, searchTerm]);
 
   // Set up socket connection to listen for jobStatus events
   useEffect(() => {
@@ -157,54 +169,24 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ collapsed, setCollapsed }) => {
     []
   );
 
-  useEffect(() => {
-    const fetchProjectsData = async () => {
-      try {
-        // call api to fetch projects
-      } catch (err) {
-        handleAlert(
-          err instanceof Error ? err.message : t("app.fetchProjectsFailed"),
-          "error"
-        );
-      }
-    };
-    fetchProjectsData();
-  }, [dispatch]);
-
   const handleDeleteConfirm = useCallback(async () => {
     try {
-      // call api to delete project
+      setLoading(true);
+      await deleteProject(selectedProject!.id);
+      dispatch(deleteProjectById(selectedProject!.id));
       handleAlert(t("app.deleteProjectSuccess"), "success");
-      setSelectedProject(null);
+      dispatch(setSelectedProject(null));
     } catch (err) {
       handleAlert(
         err instanceof Error ? err.message : t("app.deleteProjectFailed"),
         "error"
       );
     } finally {
+      setLoading(false);
       setDialogOpen(false);
-      setSelectedProject(null);
+      dispatch(setSelectedProject(null));
     }
   }, [dispatch, handleAlert, selectedProject, t]);
-
-  // useEffect(() => {
-  //   if (error) {
-  //     handleAlert(error, "error");
-  //     dispatch(clearError());
-  //   }
-  // }, [error, dispatch, handleAlert]);
-
-  // const filteredProjects = useMemo(() => {
-  //   const lowerCaseSearchTerm = searchTerm.toLowerCase();
-  //   return (
-  //     projects?.filter(
-  //       (project) =>
-  //         project &&
-  //         project.name &&
-  //         project.name.toLowerCase().includes(lowerCaseSearchTerm)
-  //     ) || []
-  //   );
-  // }, [projects, searchTerm]);
 
   const handleSearch = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -223,22 +205,22 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ collapsed, setCollapsed }) => {
 
   const handleModalClose = useCallback(() => {
     setModalOpen(false);
-    setSelectedProject(null);
+    dispatch(setSelectedProject(null));
   }, []);
 
   const handleEditProject = useCallback(
-    (e: React.MouseEvent<HTMLButtonElement>, project: Project) => {
+    (e: React.MouseEvent<HTMLButtonElement>, project: ProjectData) => {
       e.stopPropagation();
-      setSelectedProject(project);
+      dispatch(setSelectedProject(project));
       setModalOpen(true);
     },
     []
   );
 
   const handleDeleteIconClick = useCallback(
-    (e: React.MouseEvent<HTMLButtonElement>, project: Project) => {
+    (e: React.MouseEvent<HTMLButtonElement>, project: ProjectData) => {
       e.stopPropagation();
-      setSelectedProject(project);
+      dispatch(setSelectedProject(project));
       setDialogOpen(true);
     },
     []
@@ -246,7 +228,7 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ collapsed, setCollapsed }) => {
 
   const handleDialogClose = useCallback(() => {
     setDialogOpen(false);
-    setSelectedProject(null);
+    dispatch(setSelectedProject(null));
   }, []);
 
   const toggleCollapse = useCallback(() => {
@@ -325,7 +307,7 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ collapsed, setCollapsed }) => {
         )}
       </StyledActionContainer>
 
-      {false ? ( // loading state would go here
+      {isProjectListLoading ? (
         <Box
           sx={{
             display: "flex",
@@ -336,19 +318,19 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ collapsed, setCollapsed }) => {
         >
           <CircularProgress />
         </Box>
-      ) : !collapsed && [].length > 0 ? (
+      ) : !collapsed && filteredProjects.length > 0 ? (
         <StyledList sx={{ mx: 1 }}>
-          {[]?.map((project) => {
+          {filteredProjects?.map((project) => {
             return (
               <ListItem
-                key={"project.project_id"}
+                key={project.id}
                 component="li"
                 sx={{ marginBottom: "5px" }}
-                onClick={() => handleListItemClick("project.project_id")}
+                onClick={() => handleListItemClick(project.id)}
               >
-                <Tooltip title={"project.name"} arrow>
+                <Tooltip title={project.name} arrow>
                   <ListItemText
-                    primary={"project.name"}
+                    primary={project.name}
                     sx={{
                       width: "100%",
                       "& .MuiTypography-root": {
@@ -427,7 +409,7 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ collapsed, setCollapsed }) => {
         })}
         onCancel={handleDialogClose}
         onOk={handleDeleteConfirm}
-        // isLoading={loading}
+        isLoading={loading}
         cancelText={t("app.cancel")}
         okText={t("app.delete")}
       />
@@ -436,18 +418,11 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ collapsed, setCollapsed }) => {
         isOpen={isModalOpen}
         onClose={handleModalClose}
         initialData={selectedProject || null}
-        onSuccess={() => {}}
+        onSuccess={(project) => {          
+          navigate(`/project/${project.id}`);
+        }}
         setAlertState={setAlertState}
         socketId={socketRef.current?.id || ""}
-      />
-
-      <AlertBox
-        open={alertState.open}
-        onClose={() =>
-          setAlertState((prev) => ({ ...prev, open: false, message: "" }))
-        }
-        message={alertState.message}
-        severity={alertState.severity}
       />
     </StyledBox>
   );

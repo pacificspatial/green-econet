@@ -14,12 +14,10 @@ const io = new SocketServer(server, {
 
 async function initApp() {
   try {
-    // await connectDB();
-
-    const port = process.env.PORT || 3000;
-
+    await connectDB();
+    const port = process.env.PORT || 4000;
     server.listen(port, () => {
-      console.log("Habitat API listening on port:", port);
+      console.log("Econet plateau API listening on port:", port);
     });
   } catch (error) {
     console.log("Failed to start server...", error);

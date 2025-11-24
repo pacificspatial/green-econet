@@ -1,11 +1,2 @@
-//usagetypes that has multiple region geom
-const smallRegionUsageTypes = [
-  "park_management",
-  "land_readjustment",
-  "public_facility_planning",
-  "housing_deployment"
-];
-
-export {
-  smallRegionUsageTypes,
-}
+export const MIN_PROJECT_POLYGON_COUNT = 2;
+export const MAX_PROJECT_POLYGON_COUNT = 5;
