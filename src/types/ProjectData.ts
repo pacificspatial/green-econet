@@ -11,3 +11,10 @@ export interface ProjectData {
   createdAt?: string;
   updatedAt?: string;
 }
+
+export interface ProjectPolygon {
+  id: string;
+  geom: Geometry;
+  area_m2: number;
+  perimeter_m: number;
+}
