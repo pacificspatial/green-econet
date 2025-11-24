@@ -1,6 +1,6 @@
-name: Frontend CI/CD -> S3 
+name: Frontend CI/CD -> S3
 
-# Trigger only when frontend files or workflow changes
+# Trigger only when frontend files or workflow changes (aws-infrastructure-1)
 on:
   push:
     branches:
@@ -12,7 +12,7 @@ on:
       - '**/*.jsx'
       - 'vite.config.*'
       - '.github/workflows/stg-deploy-frontend.yml'
-  workflow_dispatch: # optional manual trigger
+  workflow_dispatch: {} # optional manual trigger
 
 permissions:
   id-token: write
@@ -25,18 +25,18 @@ env:
 
 jobs:
   build-and-deploy:
-    name: Build (tsc + vite) and Deploy to S3
+    name: Build (tsc + vite) and Deploy to S3 (aws-infrastructure-1)
     runs-on: ubuntu-latest
+
+    # ensure the job only runs for the exact branch
+    if: ${{ github.ref_name == 'aws-infrastructure-1' }}
 
     env:
       BRANCH_NAME: ${{ github.ref_name }}
-      ENV_NAME: ${{ github.ref_name == 'main' && 'prd' || github.ref_name == 'development' && 'stg' || 'skip' }}
-      S3_BUCKET: ${{ github.ref_name == 'main' && secrets.PRD_S3_BUCKET || github.ref_name == 'development' && secrets.STG_S3_BUCKET || '' }}
-      AWS_REGION: ${{ github.ref_name == 'main' && secrets.PRD_AWS_REGION || github.ref_name == 'development' && secrets.STG_AWS_REGION || 'ap-northeast-1' }}
+      ENV_NAME: ${{ github.ref_name == 'aws-infrastructure-1' && 'stg' || 'skip' }}
+      S3_BUCKET: ${{ github.ref_name == 'aws-infrastructure-1' && secrets.STG_S3_BUCKET || '' }}
+      AWS_REGION: ${{ github.ref_name == 'aws-infrastructure-1' && (secrets.STG_AWS_REGION || env.DEFAULT_AWS_REGION) || env.DEFAULT_AWS_REGION }}
       CLOUDFRONT_DISTRIBUTION_ID: ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID || '' }}
-
-    # SKIP job for branches other than main/development/aws-infrastructure
-    if: ${{ contains('mains,developments,aws-infrastructure-1', github.ref_name) }}
 
     defaults:
       run:
@@ -63,9 +63,7 @@ jobs:
       - name: Install dependencies (generate lock file)
         working-directory: ${{ env.FRONTEND_DIR }}
         run: |
-          npm install
-          echo "Installed packages:"
-          npm list --depth=0
+          npm ci
 
       - name: Build (tsc + vite)
         working-directory: ${{ env.FRONTEND_DIR }}
@@ -97,6 +95,11 @@ jobs:
         working-directory: ${{ env.FRONTEND_DIR }}
         run: |
           set -euo pipefail
+          # safety checks
+          if [[ "${ENV_NAME}" != "stg" ]]; then
+            echo "ENV_NAME is not 'stg' (value: ${ENV_NAME}) — aborting deploy"
+            exit 1
+          fi
           if [[ -z "$S3_BUCKET" ]]; then
             echo "S3_BUCKET is empty — aborting deploy"
             exit 1
@@ -104,7 +107,7 @@ jobs:
           echo "Syncing ${{ env.FRONTEND_BUILD_DIR }} -> s3://$S3_BUCKET/"
           aws s3 sync "${{ env.FRONTEND_BUILD_DIR }}" "s3://$S3_BUCKET/" --delete --acl private
 
-      # Optional CloudFront invalidation
+      # Optional CloudFront invalidation (uncomment if you want it)
       # - name: Invalidate CloudFront cache
       #   if: ${{ env.CLOUDFRONT_DISTRIBUTION_ID != '' }}
       #   run: |
@@ -112,4 +115,5 @@ jobs:
       #     aws cloudfront create-invalidation --distribution-id ${{ env.CLOUDFRONT_DISTRIBUTION_ID }} --paths "/*"
 
       - name: Final status
-        run: echo "Frontend deployed to s3://$S3_BUCKET on $ENV_NAME"
+        run: |
+          echo "Frontend deployed to s3://$S3_BUCKET on $ENV_NAME"
