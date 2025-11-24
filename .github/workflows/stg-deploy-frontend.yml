@@ -37,6 +37,10 @@ jobs:
       S3_BUCKET: ${{ secrets.STG_S3_BUCKET }}
       AWS_REGION: ${{ secrets.STG_AWS_REGION }}
       CLOUDFRONT_DISTRIBUTION_ID: ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID || '' }}
+      VITE_PORT: ${{ secrets.VITE_PORT }}
+      VITE_MAPBOX_TOKEN: ${{ secrets.VITE_MAPBOX_TOKEN }}
+      VITE_BACKEND_URL: ${{ secrets.VITE_BACKEND_URL }}
+      VITE_EP_SOCKET_PORT: ${{ secrets.VITE_EP_SOCKET_PORT }}
 
     defaults:
       run:
@@ -71,6 +75,11 @@ jobs:
           set -euo pipefail
           echo "Running build..."
           npm run build
+        env:
+          VITE_PORT: ${{ secrets.VITE_PORT }}
+          VITE_MAPBOX_TOKEN: ${{ secrets.VITE_MAPBOX_TOKEN }}
+          VITE_BACKEND_URL: ${{ secrets.VITE_BACKEND_URL }}
+          VITE_EP_SOCKET_PORT: ${{ secrets.VITE_EP_SOCKET_PORT }} 
 
       - name: Debug list build output
         run: |
