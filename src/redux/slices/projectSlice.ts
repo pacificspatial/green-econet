@@ -7,7 +7,6 @@ export interface Project {
   description?: string;
   created_at?: string;
   updated_at?: string;
-  // add more fields based on your backend
 }
 
 interface ProjectState {
