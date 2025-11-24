@@ -4,7 +4,7 @@ name: Frontend CI/CD -> S3
 on:
   push:
     branches:
-      - aws-infrastructure-1
+      - aws-infrastructure-12
     paths:
       - '**/*.ts'
       - '**/*.tsx'
