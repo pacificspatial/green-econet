@@ -1,12 +1,13 @@
 import type { Geometry } from "geojson";
 
-export interface Project {
-  project_id?: string;
+// PROJECT TYPES
+export interface ProjectData {
+  id: string;
   name: string;
-  description: string;
-  date_created?: string;
-  date_modified?: string;
-  owner?: string;
-  note: string;
+  description?: string;
+  config?: Object;
+  aoi_centroid?: Geometry;
   geom?: Geometry;
+  createdAt?: string;
+  updatedAt?: string;
 }
