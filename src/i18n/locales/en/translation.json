@@ -61,6 +61,17 @@
     "shapeStatistics": "Stats",
     "total": "Total",
     "aoiPolygonsLimitMessage": "Only {{minCount}} - {{maxCount}} shapes are allowed",
-    "shape": "Shape"
+    "shape": "Shape",
+    "loadingProjectPolygons": "Loading project polygons...",
+    "errorFetchingPolygons": "Error fetching polygons",
+    "creatingPolygon": "Creating project polygon...",
+    "polygonCreatedSuccessfully": "Polygon created successfully!",
+    "errorCreatingPolygon": "Error creating polygon",
+    "updatingPolygon": "Updating project polygon...",
+    "errorUpdatingPolygon": "Error updating polygon",
+    "polygonUpdatedSuccessfully": "Polygon updated successfully!",
+    "deletingPolygon": "Deleting project polygon...",
+    "errorDeletingPolygon": "Error deleting polygon",
+    "polygonDeletedSuccessfully": "Polygon deleted successfully!"
   }
 }
