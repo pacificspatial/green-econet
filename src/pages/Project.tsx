@@ -1,8 +1,11 @@
 import RightPanel from "@/components/common/RightPanel";
 import Map from "@/components/maps/Map";
+import { useAppDispatch, useAppSelector } from "@/hooks/reduxHooks";
+import { setSelectedProject } from "@/redux/slices/projectSlice";
 import Grid from "@mui/material/Grid";
 import { Box, styled } from "@mui/system";
 import { useEffect } from "react";
+import { useParams } from "react-router-dom";
 
 const Container = styled(Box)({
   display: "flex",
@@ -24,22 +27,24 @@ const PanelGrid = styled(Grid)({
 });
 
 const Project = () => {
+  const { projects } = useAppSelector((state) => state.project);
+  const dispatch = useAppDispatch();
+  const { projectId } = useParams()
   const center: [number, number] = [138.2529, 36.2048];
   const zoom = 5.5;
 
-  //commented out code just for testing
-  // useEffect(() => {
-  //   const availableProjectIds = projects.map((project) =>
-  //     project.project_id?.toString()
-  //   );
-  //   if (!availableProjectIds.includes(projectId)) {
-  //     window.location.href = "/";
-  //   }
-  // }, [projectId, projects]);
+  useEffect(() => {
+    const availableProjectIds = projects.map((project) =>
+      project.id?.toString()
+    );
+    if (!availableProjectIds.includes(projectId as string)) {
+      window.location.href = "/";
+    }
+  }, [projectId, projects]);
 
   useEffect(() => {
     return () => {
-      //clean up on project page unmount
+      dispatch(setSelectedProject(null));
     };
   }, []);
 
