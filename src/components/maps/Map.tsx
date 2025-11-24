@@ -26,6 +26,10 @@ import type {
   DrawDeleteHandlerParams,
   DrawUpdateHandlerParams,
 } from "@/utils/draw/drawHandlers";
+import { fetchBufferGreenLayer, fetchGreenLayer } from "@/api/layers";
+import { layerConfigs } from "@/config/layers/layerStyleConfig";
+import { addStyledLayer } from "@/utils/map/addLayer";
+
 // Declare mapbox-gl module augmentation for the accessToken
 declare global {
   interface Window {
@@ -159,6 +163,39 @@ const Map: React.FC<MapProps> = ({
     };
   }, [basemap, highResolution, collapsed]);
 
+  // fetch and add layers
+  const fetchAllLayers = () => {
+    // Create an array of promises with their identifiers and corresponding configs
+    const promises = [
+      {
+        name: "Green Layers",
+        promise: fetchGreenLayer(),
+        config: layerConfigs.green,
+      },
+      {
+        name: "BufferGreen Layers",
+        promise: fetchBufferGreenLayer(),
+        config: layerConfigs.bufferGreen,
+      },
+    ];
+
+    promises.forEach(({ promise, config }) => {
+      promise.then((data) => {
+        // Add layer to map as soon as data is available
+        if (
+          mapRef.current &&
+          data.success &&
+          data?.data &&
+          data.data.length > 0
+        ) {
+          addStyledLayer(mapRef.current, config, data?.data);
+        }
+        return data;
+      });
+    });
+  };
+
+  //set up draw tools
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
@@ -189,6 +226,13 @@ const Map: React.FC<MapProps> = ({
     // Handle initial setup and style changes
     if (projectId) {
       setupDrawTools();
+    }
+  }, [projectId, basemap]);
+
+  // useEffect to fetch layers
+  useEffect(() => {
+    if (projectId && mapRef.current) {
+      fetchAllLayers();
     }
   }, [projectId, basemap]);
 
