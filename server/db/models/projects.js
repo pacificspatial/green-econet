@@ -23,11 +23,11 @@ export const Projects = sequelize.define(
       allowNull: true,
     },
     aoi_centroid: {
-      type: DataTypes.GEOGRAPHY,
+      type: DataTypes.GEOMETRY("POINT", 4326),
       allowNull: true,
     },
     geom: {
-      type: DataTypes.GEOGRAPHY,
+      type: DataTypes.GEOMETRY("POLYGON", 4326),
       allowNull: true,
     }
   }, {

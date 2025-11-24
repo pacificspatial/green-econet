@@ -16,6 +16,7 @@ import { createProject, updateProject } from "@/api/project";
 import type { ProjectParam } from "@/types/ApiHandlers";
 import { useAppDispatch } from "@/hooks/reduxHooks";
 import { addProject, setSelectedProject, updateProjectById } from "@/redux/slices/projectSlice";
+import axios from "axios";
 
 interface ProjectModalProps {
   isOpen: boolean;
@@ -125,16 +126,21 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
       
       handleModalClose();
     } catch (err) {
-      setAlertState({
-        open: true,
-        message:
-          err instanceof Error 
-            ? err.message 
-            : isEditMode 
-              ? t("app.updateProjectFailed") 
-              : t("app.createProjectFailed"),
-        severity: "error",
-      });
+      if (axios.isAxiosError(err)) {
+        setAlertState({
+          open: true,
+          message: err.response?.data?.message || t("app.createProjectFailed"),
+          severity: "error",
+        });
+      } else {
+        setAlertState({
+          open: true,
+          message: isEditMode
+            ? t("app.updateProjectFailed")
+            : t("app.createProjectFailed"),
+          severity: "error",
+        });
+      }
     } finally {
       setLoading(false);
     }

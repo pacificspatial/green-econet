@@ -39,6 +39,11 @@ const Project = () => {
     );
     if (!availableProjectIds.includes(projectId as string)) {
       window.location.href = "/";
+    } else {
+      const selectedProject = projects.find(
+        (project) => project.id?.toString() === projectId
+      );
+      dispatch(setSelectedProject(selectedProject || null));
     }
   }, [projectId, projects]);
 

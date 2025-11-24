@@ -23,7 +23,7 @@ export const ProjectPolygons = sequelize.define(
       allowNull: false,
     },
     geom: {
-      type: DataTypes.GEOGRAPHY,
+      type: DataTypes.GEOMETRY("POLYGON", 4326),
       allowNull: false,
     },
     area_m2: {
