@@ -1,7 +1,7 @@
 import { Op } from "sequelize";
 import { ProjectPolygons, Projects } from "../db/models/index.js";
 import CustomError from "../utils/customError.js";
-import { calcArea, calcPerimeter, toGeography } from "../utils/geoUtil.js";
+import { calcArea, calcPerimeter, toGeometry } from "../utils/geoUtil.js";
 import { reorderPolygonIndexes } from "../utils/reorderPolygonIndexes.js";
 
 /**
@@ -93,7 +93,7 @@ const createProjectPolygon = async ({ projectId, geom, }) => {
   const polygon = await ProjectPolygons.create({
     project_id: projectId,
     polygon_index: nextIndex,
-    geom: toGeography(geom),
+    geom: toGeometry(geom),
     area_m2: calcArea(geom),
     perimeter_m: calcPerimeter(geom),
   });
@@ -113,7 +113,7 @@ const updateProjectPolygon = async (polygonId, updateData) => {
   if (updateData.geom) {
     const geojson = updateData.geom; 
 
-    updateData.geom = toGeography(geojson);
+    updateData.geom = toGeometry(geojson);
     updateData.area_m2 = calcArea(geojson);
     updateData.perimeter_m = calcPerimeter(geojson);
   }

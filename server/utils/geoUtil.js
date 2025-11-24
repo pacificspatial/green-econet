@@ -1,40 +1,36 @@
 import sequelize from "../config/dbConfig.js";
 
 /**
- * Convert a GeoJSON object to a PostGIS geography type for database storage.
- *
- * @param {Object} geojson - The GeoJSON geometry
- * @returns {sequelize.literal} - Sequelize literal for geography insertion
+ * Convert GeoJSON to PostGIS geometry type (Polygon, 4326)
  */
-export const toGeography = (geojson) => {
+export const toGeometry = (geojson) => {
   const geomString = JSON.stringify(geojson);
   return sequelize.literal(
-    `ST_SetSRID(ST_GeomFromGeoJSON('${geomString}'), 4326)::geography`
+    `ST_SetSRID(ST_GeomFromGeoJSON('${geomString}'), 4326)`
   );
 };
 
 /**
- * Calculate the area of a GeoJSON geometry in square meters.
- *
- * @param {Object} geojson - The GeoJSON geometry
- * @returns {sequelize.literal} - Sequelize literal for area calculation
+ * Calculate area of geometry 
+ * For EPSG:4326, ST_Area returns degrees², so we cast to geography for meters.
  */
 export const calcArea = (geojson) => {
   const geomString = JSON.stringify(geojson);
-  return sequelize.literal(
-    `ST_Area(ST_SetSRID(ST_GeomFromGeoJSON('${geomString}'), 4326)::geography)`
-  );
+  return sequelize.literal(`
+    ST_Area(
+      ST_SetSRID(ST_GeomFromGeoJSON('${geomString}'), 4326)::geography
+    )
+  `);
 };
 
 /**
- * Calculate the perimeter of a GeoJSON geometry in meters.
- *
- * @param {Object} geojson - The GeoJSON geometry
- * @returns {sequelize.literal} - Sequelize literal for perimeter calculation
+ * Calculate perimeter in meters (requires geography cast)
  */
 export const calcPerimeter = (geojson) => {
   const geomString = JSON.stringify(geojson);
-  return sequelize.literal(
-    `ST_Perimeter(ST_SetSRID(ST_GeomFromGeoJSON('${geomString}'), 4326)::geography)`
-  );
+  return sequelize.literal(`
+    ST_Perimeter(
+      ST_SetSRID(ST_GeomFromGeoJSON('${geomString}'), 4326)::geography
+    )
+  `);
 };
