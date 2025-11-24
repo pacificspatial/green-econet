@@ -18,19 +18,7 @@ Resources:
         IndexDocument: index.html
         ErrorDocument: error.html
     DeletionPolicy: Retain     
-
-  # S3BucketAppPolicy:
-  #   Type: AWS::S3::BucketPolicy
-  #   Properties:
-  #     Bucket: ${self:custom.environment.APPLICATION_BUCKET_NAME}
-  #     PolicyDocument:
-  #       Version: '2012-10-17'
-  #       Statement:
-  #         - Effect: Allow
-  #           Principal:
-  #             AWS: !Sub 'arn:aws:iam::cloudfront:user/CloudFront Origin Access Identity ${CloudFrontOriginIdentity}'
-  #           Action: 's3:GetObject'
-  #           Resource: arn:aws:s3:::${self:custom.environment.APPLICATION_BUCKET_NAME}/*  
+  
       
 
   

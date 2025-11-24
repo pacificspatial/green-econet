@@ -1,4 +1,5 @@
 Resources:
+
   CloudFrontOriginIdentity:
     Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
     Properties:
@@ -16,13 +17,14 @@ Resources:
             Principal:
               AWS: !Sub 'arn:aws:iam::cloudfront:user/CloudFront Origin Access Identity ${CloudFrontOriginIdentity}'
             Action: 's3:GetObject'
+            Resource: !Sub '${S3BucketApp.Arn}/*'
 
   PublicDistribution:
     Type: AWS::CloudFront::Distribution
     Properties:
       DistributionConfig:
         Origins:
-          - DomainName: !GetAtt S3Bucket.RegionalDomainName
+          - DomainName: !GetAtt S3BucketApp.RegionalDomainName
             Id: ${self:custom.namespaceShort}-app-bucket
             S3OriginConfig:
               OriginAccessIdentity: !Sub 'origin-access-identity/cloudfront/${CloudFrontOriginIdentity}'
@@ -46,5 +48,3 @@ Resources:
           MinimumProtocolVersion: TLSv1.2_2018
           SslSupportMethod: sni-only
         PriceClass: PriceClass_100 
-        #ViewerCertificate:
-         # CloudFrontDefaultCertificate: 'true' 

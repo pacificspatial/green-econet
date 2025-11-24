@@ -28,3 +28,5 @@ resources:
  
   - ${file(./resources-s3.yml)}
   - ${file(./resources-cloudfront.yml)}
+  - ${file(./resources-dns.yml)}
+
