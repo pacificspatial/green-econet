@@ -104,22 +104,29 @@ const createProjectPolygon = async ({ projectId, geom, }) => {
 /**
  * Update a project polygon
  */
-const updateProjectPolygon = async (polygonId, updateData) => {
+const updateProjectPolygon = async (polygonId, geom) => {
   const polygon = await ProjectPolygons.findByPk(polygonId);
   if (!polygon) {
-    throw new CustomError("Project polygon not found", 404, "PROJECT_POLYGON_NOT_FOUND");
+    throw new CustomError(
+      "Project polygon not found",
+      404,
+      "PROJECT_POLYGON_NOT_FOUND"
+    );
   }
 
-  if (updateData.geom) {
-    const geojson = updateData.geom; 
+  // Build proper update payload
+  const updatePayload = {
+    geom: toGeometry(geom),
+    area_m2: calcArea(geom),
+    perimeter_m: calcPerimeter(geom),
+  };
 
-    updateData.geom = toGeometry(geojson);
-    updateData.area_m2 = calcArea(geojson);
-    updateData.perimeter_m = calcPerimeter(geojson);
-  }
-  await polygon.update(updateData, { returning: true });
-  return polygon;
+  const updated = await polygon.update(updatePayload);
+
+  await updated.reload();
+  return updated;
 };
+
 
 /**
  * Delete a project polygon and reorder indexes
