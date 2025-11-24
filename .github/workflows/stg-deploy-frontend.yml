@@ -60,10 +60,10 @@ jobs:
           echo "S3 bucket: $S3_BUCKET"
           echo "AWS region: $AWS_REGION"
 
-      - name: Install dependencies (generate lock file)
+      - name: Install dependencies
         working-directory: ${{ env.FRONTEND_DIR }}
         run: |
-          npm ci
+          npm i
 
       - name: Build (tsc + vite)
         working-directory: ${{ env.FRONTEND_DIR }}
@@ -106,13 +106,6 @@ jobs:
           fi
           echo "Syncing ${{ env.FRONTEND_BUILD_DIR }} -> s3://$S3_BUCKET/"
           aws s3 sync "${{ env.FRONTEND_BUILD_DIR }}" "s3://$S3_BUCKET/" --delete --acl private
-
-      # Optional CloudFront invalidation (uncomment if you want it)
-      # - name: Invalidate CloudFront cache
-      #   if: ${{ env.CLOUDFRONT_DISTRIBUTION_ID != '' }}
-      #   run: |
-      #     echo "Creating CloudFront invalidation for $CLOUDFRONT_DISTRIBUTION_ID"
-      #     aws cloudfront create-invalidation --distribution-id ${{ env.CLOUDFRONT_DISTRIBUTION_ID }} --paths "/*"
 
       - name: Final status
         run: |
