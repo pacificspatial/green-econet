@@ -1,6 +1,7 @@
 import RightPanel from "@/components/common/RightPanel";
 import Map from "@/components/maps/Map";
 import { useAppDispatch, useAppSelector } from "@/hooks/reduxHooks";
+import { clearAoiPolygons } from "@/redux/slices/aoiSlice";
 import { setSelectedProject } from "@/redux/slices/projectSlice";
 import Grid from "@mui/material/Grid";
 import { Box, styled } from "@mui/system";
@@ -47,9 +48,11 @@ const Project = () => {
     }
   }, [projectId, projects]);
 
+  //cleanup on unmount
   useEffect(() => {
     return () => {
       dispatch(setSelectedProject(null));
+      dispatch(clearAoiPolygons());
     };
   }, []);
 
