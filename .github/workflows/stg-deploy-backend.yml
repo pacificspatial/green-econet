@@ -1,4 +1,4 @@
-name: Backend CI/CD -> EC2 (Staging)
+name: Backend CI/CD -> EC2 (Staging)  
 
 # Trigger workflow only on changes to backend
 on:
