@@ -12,7 +12,6 @@ import type { Project } from "@/types/ProjectData";
 import { formatDate } from "@/utils/common/formateDate";
 import { useTranslation } from "react-i18next";
 import type { AlertState } from "@/types/AlertState";
-import { useAppDispatch } from "@/hooks/reduxHooks";
 
 interface ProjectModalProps {
   isOpen: boolean;
@@ -27,8 +26,6 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
   isOpen,
   onClose,
   initialData,
-  onSuccess,
-  setAlertState,
 }) => {
   const isEditMode = !!initialData;
 
@@ -46,8 +43,6 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
 
   const { t } = useTranslation();
   const theme = useTheme();
-
-  const dispatch = useAppDispatch();
 
   useEffect(() => {
     if (initialData) {
@@ -91,40 +86,8 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
   }, [onClose]);
 
   const handleSubmit = useCallback(async () => {
-    try {
-      const updatedData: Project = {
-        ...initialData,
-        ...formData,
-      };
-
-      if (isEditMode) {
-        // call api to update project
-        // Refresh the project list
-        onSuccess();
-        handleModalClose();
-      } else {
-        // call api to create project
-        // Refresh the project list
-        onSuccess();
-        handleModalClose();
-      }
-    } catch (err) {
-      setAlertState({
-        open: true,
-        message:
-          err instanceof Error ? err.message : `${t("app.unexpectedError")}`,
-        severity: "error",
-      });
-    }
-  }, [
-    initialData,
-    formData,
-    isEditMode,
-    onSuccess,
-    handleModalClose,
-    dispatch,
-    t,
-  ]);
+    // add sumbit logic here
+  }, []);
 
   const handleNameBlur = useCallback(() => {
     setNameError(formData.name.trim() === "");
@@ -139,7 +102,7 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
     <>
       <Modal
         open={isOpen}
-        onClose={(event, reason) => {
+        onClose={(_event, reason) => {
           if (reason !== "backdropClick") {
             onClose();
           }

@@ -138,30 +138,9 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ collapsed, setCollapsed }) => {
 
   // Set up socket connection to listen for jobStatus events
   useEffect(() => {
-    const socket = io(process.env.REACT_APP_RG_SOCKET_PORT);
+    const socket = io(import.meta.env.VITE_EP_SOCKET_PORT);
     socketRef.current = socket;
-
-    // socket.on("jobStatus", (data) => {
-    //   if (data && data.projectId && data.status) {
-    //     setProjectJobStatuses((prev) => ({
-    //       ...prev,
-    //       [data.projectId]: data.status,
-    //     }));
-    //   }
-    // });
-
-    // socket.on("newProject", (project) => {
-    //   if (project.clientId !== socket.id) {
-    //     dispatch(addProjectDirect(project.newProject));
-    //   }
-    // });
-
-    // socket.on("deleteProject", (data) => {
-    //   if (data.clientId !== socket.id) {
-    //     dispatch(removeProjectDirect(data.projectId));
-    //   }
-    // });
-
+    // socket event listeners can be added here
     return () => {
       socket.disconnect();
     };

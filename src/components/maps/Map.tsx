@@ -42,7 +42,7 @@ interface MapProps {
   sx?: SxProps<Theme>;
 }
 
-mapboxgl.accessToken = process.env.REACT_APP_MAPBOX_TOKEN || "";
+mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN || "";
 
 const Map: React.FC<MapProps> = ({
   highResolution = false,

@@ -1,5 +1,4 @@
 import type { Geometry } from "geojson";
-import mapboxgl from "mapbox-gl";
 import bbox from "@turf/bbox";
 import { feature, featureCollection } from "@turf/helpers";
 
