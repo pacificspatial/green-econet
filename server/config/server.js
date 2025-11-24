@@ -3,6 +3,7 @@ import bodyParser from "body-parser";
 import cors from "cors";
 
 import projectApiRoutes from "../routes/projectRoutes.js";
+import layerApiRoutes from "../routes/layerRoutes.js";
 
 import dotenv from "dotenv";
 dotenv.config();
@@ -32,7 +33,7 @@ app.get("/ping", (req, res) => {
 app.use(authorizer);
 
 app.use("/api/v1/projects", projectApiRoutes);
-
+app.use("/api/v1/map/layers", layerApiRoutes);
 app.use(errorHandler);
 
 export default app;
