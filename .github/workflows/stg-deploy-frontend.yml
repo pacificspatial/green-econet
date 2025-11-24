@@ -1,0 +1,115 @@
+name: Frontend CI/CD -> S3 
+
+# Trigger only when frontend files or workflow changes
+on:
+  push:
+    branches:
+      - aws-infrastructure-1
+    paths:
+      - '**/*.ts'
+      - '**/*.tsx'
+      - '**/*.js'
+      - '**/*.jsx'
+      - 'vite.config.*'
+      - '.github/workflows/stg-deploy-frontend.yml'
+  workflow_dispatch: # optional manual trigger
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  DEFAULT_AWS_REGION: ap-northeast-1
+  FRONTEND_DIR: .           # root folder
+  FRONTEND_BUILD_DIR: dist  # Vite build output
+
+jobs:
+  build-and-deploy:
+    name: Build (tsc + vite) and Deploy to S3
+    runs-on: ubuntu-latest
+
+    env:
+      BRANCH_NAME: ${{ github.ref_name }}
+      ENV_NAME: ${{ github.ref_name == 'main' && 'prd' || github.ref_name == 'development' && 'stg' || 'skip' }}
+      S3_BUCKET: ${{ github.ref_name == 'main' && secrets.PRD_S3_BUCKET || github.ref_name == 'development' && secrets.STG_S3_BUCKET || '' }}
+      AWS_REGION: ${{ github.ref_name == 'main' && secrets.PRD_AWS_REGION || github.ref_name == 'development' && secrets.STG_AWS_REGION || 'ap-northeast-1' }}
+      CLOUDFRONT_DISTRIBUTION_ID: ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID || '' }}
+
+    # SKIP job for branches other than main/development/aws-infrastructure
+    if: ${{ contains('mains,developments,aws-infrastructure-1', github.ref_name) }}
+
+    defaults:
+      run:
+        shell: bash -l {0}
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Use Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Show CI info
+        run: |
+          echo "Branch: $BRANCH_NAME"
+          echo "Environment: $ENV_NAME"
+          echo "S3 bucket: $S3_BUCKET"
+          echo "AWS region: $AWS_REGION"
+
+      - name: Install dependencies (generate lock file)
+        working-directory: ${{ env.FRONTEND_DIR }}
+        run: |
+          npm install
+          echo "Installed packages:"
+          npm list --depth=0
+
+      - name: Build (tsc + vite)
+        working-directory: ${{ env.FRONTEND_DIR }}
+        run: |
+          set -euo pipefail
+          echo "Running build..."
+          npm run build
+
+      - name: Debug list build output
+        run: |
+          echo "Listing ${{ env.FRONTEND_BUILD_DIR }}:"
+          ls -la "${{ env.FRONTEND_BUILD_DIR }}" || echo "No build output found"
+
+      - name: Upload build artifact (optional)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist-${{ env.ENV_NAME }}-${{ github.run_id }}
+          path: ${{ env.FRONTEND_BUILD_DIR }}
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Sync dist to S3
+        working-directory: ${{ env.FRONTEND_DIR }}
+        run: |
+          set -euo pipefail
+          if [[ -z "$S3_BUCKET" ]]; then
+            echo "S3_BUCKET is empty — aborting deploy"
+            exit 1
+          fi
+          echo "Syncing ${{ env.FRONTEND_BUILD_DIR }} -> s3://$S3_BUCKET/"
+          aws s3 sync "${{ env.FRONTEND_BUILD_DIR }}" "s3://$S3_BUCKET/" --delete --acl private
+
+      # Optional CloudFront invalidation
+      # - name: Invalidate CloudFront cache
+      #   if: ${{ env.CLOUDFRONT_DISTRIBUTION_ID != '' }}
+      #   run: |
+      #     echo "Creating CloudFront invalidation for $CLOUDFRONT_DISTRIBUTION_ID"
+      #     aws cloudfront create-invalidation --distribution-id ${{ env.CLOUDFRONT_DISTRIBUTION_ID }} --paths "/*"
+
+      - name: Final status
+        run: echo "Frontend deployed to s3://$S3_BUCKET on $ENV_NAME"

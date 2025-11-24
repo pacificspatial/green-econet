@@ -1,0 +1,11 @@
+Resources:
+ DbSecurityByEC2SecurityGroup:
+  Type: AWS::RDS::DBSecurityGroup
+  Properties:
+   GroupDescription: "Ingress for Amazon EC2 security group"
+   DBSecurityGroupIngress: 
+    - 
+      EC2SecurityGroupId: "sg-0d4d5875475b24f7b"
+      EC2SecurityGroupOwnerId: "617648548008"
+      
+    

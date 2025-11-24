@@ -1,0 +1,50 @@
+Resources:
+  CloudFrontOriginIdentity:
+    Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
+    Properties:
+      CloudFrontOriginAccessIdentityConfig:
+        Comment: 'origin identity'
+  
+  BucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: ${self:custom.environment.APPLICATION_BUCKET_NAME}
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !Sub 'arn:aws:iam::cloudfront:user/CloudFront Origin Access Identity ${CloudFrontOriginIdentity}'
+            Action: 's3:GetObject'
+
+  PublicDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Origins:
+          - DomainName: !GetAtt S3Bucket.RegionalDomainName
+            Id: ${self:custom.namespaceShort}-app-bucket
+            S3OriginConfig:
+              OriginAccessIdentity: !Sub 'origin-access-identity/cloudfront/${CloudFrontOriginIdentity}'
+        Enabled: 'true'
+        Comment: ENP
+        DefaultRootObject: index.html
+        Aliases:
+         - ${self:custom.environment.APPLICATION_CUSTOM_DOMAIN_NAME}
+        DefaultCacheBehavior:
+          AllowedMethods:
+            - GET
+            - HEAD
+          TargetOriginId: ${self:custom.namespaceShort}-app-bucket
+          ForwardedValues:
+            QueryString: 'false'
+            Cookies:
+              Forward: none
+          ViewerProtocolPolicy: redirect-to-https
+        ViewerCertificate:
+          AcmCertificateArn: ${self:custom.environment.CLOUDFRONT_CERTIFICATE_ARN}
+          MinimumProtocolVersion: TLSv1.2_2018
+          SslSupportMethod: sni-only
+        PriceClass: PriceClass_100 
+        #ViewerCertificate:
+         # CloudFrontDefaultCertificate: 'true' 

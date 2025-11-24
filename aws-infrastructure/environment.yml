@@ -1,0 +1,5 @@
+
+
+stg:
+  DOWNLOAD_BUCKET_NAME: stg-econet-plateau-download-bucket
+  APPLICATION_BUCKET_NAME: stg-econet-plateau.net

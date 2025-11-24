@@ -1,0 +1,12 @@
+
+ 
+stg:
+  KMS_CERTIFICATE_ARN: arn:aws:kms:ap-northeast-1:617648548008:key/39e4c4b3-45c8-41e1-8ae7-1f263ac55257
+  KMS_CERTIFICATE_ID: 39e4c4b3-45c8-41e1-8ae7-1f263ac55257
+  STACK_NAME_PREFIX: "${self:custom.namespaceShort}-"
+  SECURITY_GROUP_ID: sg-61d20337
+  SUBNET_IDS: subnet-04c3d74a8a07d3ac3,subnet-005c8ebe3b46b3f1a
+  postgres:
+    ALLOCATED_STORAGE: 20 # 5-1024 GB.
+    BACKUP_RETENTION_PERIOD: 7 # Days.
+    INSTANCE_CLASS: db.t3.medium

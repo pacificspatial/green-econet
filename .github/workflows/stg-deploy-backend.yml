@@ -1,0 +1,214 @@
+name: Deploy backend (EC2 git-clone -> copy server -> .env from secrets -> npm i -> pm2 restart)
+
+on:
+  push:
+    branches:
+      - aws-infrastructures
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  DEPLOY_DIR: /var/www/stg
+  TMP_BASE: /tmp
+  PM2_NAME: stg-enp
+  WAIT_POLL_SECONDS: "5"
+  WAIT_POLL_RETRIES: "120"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      BRANCH_TO_DEPLOY: ${{ github.ref_name || 'aws-infrastructure' }}
+      REPO: ${{ github.repository }}   # owner/repo
+    steps:
+      - name: Info
+        run: |
+          echo "Repository: $REPO"
+          echo "Branch to deploy: $BRANCH_TO_DEPLOY"
+          echo "Instances: ${{ secrets.DEPLOY_INSTANCE_IDS }}"
+
+      - name: Configure AWS credentials (for SSM)
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Compose remote deploy script (git-clone -> copy server -> write .env -> npm i -> pm2)
+        id: compose
+        env:
+          REPO: ${{ github.repository }}
+          BRANCH: ${{ env.BRANCH_TO_DEPLOY }}
+          DEPLOY_DIR: ${{ env.DEPLOY_DIR }}
+          TMP_BASE: ${{ env.TMP_BASE }}
+          PM2_NAME: ${{ env.PM2_NAME }}
+          # If your repo is private, set a GitHub PAT with repo read scope into GIT_TOKEN secret
+          GIT_TOKEN: ${{ secrets.GIT_TOKEN || '' }}
+          # Inject .env values from GitHub Secrets (Option A)
+          REACT_APP_PORT: ${{ secrets.REACT_APP_PORT || '' }}
+          REACT_APP_MAPBOX_TOKEN: ${{ secrets.REACT_APP_MAPBOX_TOKEN || '' }}
+          REACT_APP_BACKEND_URL: ${{ secrets.REACT_APP_BACKEND_URL || '' }}
+          REACT_APP_EP_SOCKET_PORT: ${{ secrets.REACT_APP_EP_SOCKET_PORT || '' }}
+        run: |
+          set -euo pipefail
+
+          TIMESTAMP=$(date +%Y%m%d%H%M%S)
+          TMP_DIR="${TMP_BASE}/repo-${TIMESTAMP}"
+          REPO_URL="https://github.com/${REPO}.git"
+
+          if [ -n "${GIT_TOKEN}" ]; then
+            # Use token auth for private repo: x-access-token works with GitHub
+            CLONE_URL="https://x-access-token:${GIT_TOKEN}@github.com/${REPO}.git"
+          else
+            CLONE_URL="${REPO_URL}"
+          fi
+
+          # write remote script with placeholders
+          cat > remote_deploy.sh <<'REMOTE_EOF'
+#!/bin/bash
+set -euo pipefail
+
+# always cleanup temp dir even on error
+trap 'RC=$?; echo "CLEANUP: removing tmp dir $TMP_DIR (exit $RC)"; rm -rf "$TMP_DIR"; exit $RC' EXIT
+
+TMP_DIR="__TMP_DIR__"
+BRANCH="__BRANCH__"
+CLONE_URL="__CLONE_URL__"
+DEPLOY_DIR="__DEPLOY_DIR__"
+PM2_NAME="__PM2_NAME__"
+
+# .env values substituted in workflow using sed
+REACT_APP_PORT="__REACT_APP_PORT__"
+REACT_APP_MAPBOX_TOKEN="__REACT_APP_MAPBOX_TOKEN__"
+REACT_APP_BACKEND_URL="__REACT_APP_BACKEND_URL__"
+REACT_APP_EP_SOCKET_PORT="__REACT_APP_EP_SOCKET_PORT__"
+
+echo "Deploy script starting (tmp=$TMP_DIR branch=$BRANCH)"
+
+# Ensure clean tmp and clone only required branch shallowly
+rm -rf "$TMP_DIR"
+mkdir -p "$TMP_DIR"
+
+echo "Cloning branch $BRANCH from $CLONE_URL ..."
+git clone --depth 1 --branch "$BRANCH" "$CLONE_URL" "$TMP_DIR"
+
+if [ ! -d "$TMP_DIR/server" ]; then
+  echo "ERROR: server/ not found in cloned repo ($TMP_DIR/server). Aborting."
+  exit 1
+fi
+
+# Ensure deploy dir exists
+sudo mkdir -p "$DEPLOY_DIR"
+# Sync only server/ contents to target (overwrite)
+echo "Syncing $TMP_DIR/server/ -> $DEPLOY_DIR ..."
+sudo rsync -a --delete "$TMP_DIR/server/" "$DEPLOY_DIR/"
+
+# Write .env from injected values (overwrites existing .env)
+cat > "$DEPLOY_DIR/.env" <<ENV
+REACT_APP_PORT=${REACT_APP_PORT}
+REACT_APP_MAPBOX_TOKEN=${REACT_APP_MAPBOX_TOKEN}
+REACT_APP_BACKEND_URL=${REACT_APP_BACKEND_URL}
+REACT_APP_EP_SOCKET_PORT=${REACT_APP_EP_SOCKET_PORT}
+ENV
+sudo chmod 600 "$DEPLOY_DIR/.env"
+echo ".env written to $DEPLOY_DIR/.env (600)"
+
+# Install dependencies (staging: include dev deps)
+echo "Running npm install in $DEPLOY_DIR ..."
+cd "$DEPLOY_DIR"
+npm install
+
+# Restart pm2: try index 0, then try by name, then fallback start index.js
+echo "Restarting pm2 index 0 ..."
+if pm2 restart 0 2>/dev/null; then
+  echo "pm2 restart 0 succeeded"
+else
+  echo "pm2 restart 0 failed; attempting pm2 restart $PM2_NAME ..."
+  if pm2 restart "$PM2_NAME" 2>/dev/null; then
+    echo "pm2 restart $PM2_NAME succeeded"
+  else
+    echo "pm2 restart by name failed; attempting pm2 start index.js --name $PM2_NAME ..."
+    pm2 start index.js --name "$PM2_NAME" || true
+  fi
+fi
+
+echo "Deploy finished successfully."
+# trap EXIT will clean TMP_DIR
+REMOTE_EOF
+
+          # safe substitution of placeholders (escape CLONE_URL)
+          sed -i "s|__TMP_DIR__|${TMP_DIR}|g" remote_deploy.sh
+          sed -i "s|__BRANCH__|${BRANCH}|g" remote_deploy.sh
+          CLONE_URL_ESCAPED=$(printf '%s\n' "${CLONE_URL}" | sed -e 's/[\/&]/\\&/g')
+          sed -i "s|__CLONE_URL__|${CLONE_URL_ESCAPED}|g" remote_deploy.sh
+          sed -i "s|__DEPLOY_DIR__|${DEPLOY_DIR}|g" remote_deploy.sh
+          sed -i "s|__PM2_NAME__|${PM2_NAME}|g" remote_deploy.sh
+
+          # substitute env values (may contain slashes, so use | delimiter)
+          sed -i "s|__REACT_APP_PORT__|${REACT_APP_PORT}|g" remote_deploy.sh
+          sed -i "s|__REACT_APP_MAPBOX_TOKEN__|${REACT_APP_MAPBOX_TOKEN}|g" remote_deploy.sh
+          sed -i "s|__REACT_APP_BACKEND_URL__|${REACT_APP_BACKEND_URL}|g" remote_deploy.sh
+          sed -i "s|__REACT_APP_EP_SOCKET_PORT__|${REACT_APP_EP_SOCKET_PORT}|g" remote_deploy.sh
+
+          chmod +x remote_deploy.sh
+          echo "remote_deploy.sh created (size: $(wc -c < remote_deploy.sh) bytes)"
+          echo "remote_script=remote_deploy.sh" >> $GITHUB_OUTPUT
+
+      - name: Send SSM command to instances (run remote_deploy.sh)
+        id: send
+        run: |
+          set -euo pipefail
+          INSTANCES=$(echo "${{ secrets.DEPLOY_INSTANCE_IDS }}" | tr ',' ' ')
+          if [ -z "$INSTANCES" ]; then
+            echo "ERROR: DEPLOY_INSTANCE_IDS secret is empty"
+            exit 1
+          fi
+          CMD_ID=$(aws ssm send-command \
+            --instance-ids $INSTANCES \
+            --document-name "AWS-RunShellScript" \
+            --comment "Git-clone deploy (branch: ${{ env.BRANCH_TO_DEPLOY }})" \
+            --parameters commands="$(cat remote_deploy.sh)" \
+            --query "Command.CommandId" \
+            --output text)
+          echo "command_id=$CMD_ID" >> $GITHUB_OUTPUT
+          echo "Sent SSM command id: $CMD_ID"
+
+      - name: Wait for SSM command to finish on all instances
+        run: |
+          set -euo pipefail
+          CMD_ID="${{ steps.send.outputs.command_id }}"
+          INST_LIST=$(echo "${{ secrets.DEPLOY_INSTANCE_IDS }}" | tr ',' ' ')
+          echo "Waiting for command $CMD_ID on instances: $INST_LIST"
+          for iid in $INST_LIST; do
+            echo "Polling instance $iid..."
+            n=0
+            while true; do
+              STATUS=$(aws ssm get-command-invocation --command-id "$CMD_ID" --instance-id "$iid" --query "Status" --output text 2>/dev/null || echo "Pending")
+              echo "$(date -u +%T) Instance $iid status: $STATUS"
+              if [ "$STATUS" = "Success" ]; then
+                echo "Instance $iid succeeded."
+                break
+              fi
+              if [ "$STATUS" = "Failed" ] || [ "$STATUS" = "Cancelled" ] || [ "$STATUS" = "TimedOut" ] || [ "$STATUS" = "Undeliverable" ]; then
+                echo "Instance $iid failed with status $STATUS"
+                echo "Command output for $iid:"
+                aws ssm get-command-invocation --command-id "$CMD_ID" --instance-id "$iid" --output text || true
+                exit 1
+              fi
+              n=$((n+1))
+              if [ $n -ge ${WAIT_POLL_RETRIES:-120} ]; then
+                echo "Timed out waiting for instance $iid after $n attempts"
+                aws ssm get-command-invocation --command-id "$CMD_ID" --instance-id "$iid" --output text || true
+                exit 1
+              fi
+              sleep ${WAIT_POLL_SECONDS:-5}
+            done
+          done
+          echo "SSM command completed successfully on all instances."
+
+      - name: Final status
+        run: echo "Deployment finished for branch ${{ env.BRANCH_TO_DEPLOY }} to instances: ${{ secrets.DEPLOY_INSTANCE_IDS }}"
+
