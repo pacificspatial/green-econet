@@ -63,7 +63,6 @@ export const addStyledLayer = async (
         isVisible ? "visible" : "none"
       );
     }
-    console.log(`layer ${layerId} has added`);
   } catch (error) {
     console.error(`Error adding layer ${layerConfig.id}:`, error);
     throw error;

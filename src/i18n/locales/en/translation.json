@@ -61,6 +61,9 @@
     "shapeStatistics": "Stats",
     "total": "Total",
     "aoiPolygonsLimitMessage": "Only {{minCount}} - {{maxCount}} shapes are allowed",
-    "shape": "Shape"
+    "shape": "Shape",
+    "green": "Green Layer",
+    "bufferGreen": "Buffer Green Layer"
+
   }
 }

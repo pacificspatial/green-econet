@@ -29,6 +29,7 @@ import type {
 import { fetchBufferGreenLayer, fetchGreenLayer } from "@/api/layers";
 import { layerConfigs } from "@/config/layers/layerStyleConfig";
 import { addStyledLayer } from "@/utils/map/addLayer";
+import Legend from "./Legend";
 
 // Declare mapbox-gl module augmentation for the accessToken
 declare global {
@@ -57,6 +58,7 @@ const Map: React.FC<MapProps> = ({
 }) => {
   const [loading, setLoading] = useState(false);
   const [loadingText, setLoadingText] = useState("");
+  const [mapReady, setMapReady] = useState(false);
   const [alert, setAlert] = useState<AlertState>({
     open: false,
     message: "",
@@ -151,6 +153,7 @@ const Map: React.FC<MapProps> = ({
           center: [139.652424, 35.652423],
           zoom: 12,
         });
+        setMapReady(true);
       }
     });
 
@@ -259,6 +262,7 @@ const Map: React.FC<MapProps> = ({
             ...sx,
           }}
         />
+        {projectId && mapReady && <Legend map={mapRef.current} />}
       </Box>
     </>
   );

@@ -61,6 +61,8 @@
     "shapeStatistics": "統計",
     "total": "合計",
     "aoiPolygonsLimitMessage": "{{minCount}} - {{maxCount}} 個のシェイプのみ使用できます",
-    "shape": "シェイプ"
+    "shape": "シェイプ",
+    "green": "グリーンレイヤー",
+    "bufferGreen": "バッファグリーンレイヤー"
   }
 }
