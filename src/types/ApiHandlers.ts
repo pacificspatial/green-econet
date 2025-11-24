@@ -1,0 +1,11 @@
+import type { Geometry } from "geojson";
+
+export interface ProjectParam {
+  name: string;
+  description?: string;
+};
+
+export interface ProjectPolygonParam {
+  projectId: string;
+  geom: Geometry
+}
