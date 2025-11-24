@@ -7,7 +7,6 @@ on:
       - aws-infrastructure-1
     paths:
       - 'server/**'
-  workflow_dispatch: {}  # optional manual trigger
 
 permissions:
   id-token: write
