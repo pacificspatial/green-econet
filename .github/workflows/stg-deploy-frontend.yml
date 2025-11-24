@@ -226,76 +226,90 @@ jobs:
             --paths "/*"
 
   backend:
-      name: Backend CI/CD -> EC2
-      runs-on: ubuntu-latest
-      steps:
-      - name: Checkout repo
+    name: Backend CI/CD → EC2 (SSM only – no SSH)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
+      - name: Configure AWS credentials (Access Keys – Option B)
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.DEFAULT_AWS_REGION }}
 
-      - name: Install SSM Agent on EC2  # ← ADD THIS STEP HERE
-        uses: appleboy/ssh-action@v0.1.6
-        with:
-          host: ${{ secrets.STG_EC2_PUBLIC_IP }}
-          username: ec2-user
-          key: ${{ secrets.STG_EC2_SSH_KEY }}
-          script: |
-            sudo snap install amazon-ssm-agent --classic
-            sudo systemctl enable amazon-ssm-agent
-            sudo systemctl start amazon-ssm-agent       
-      - name: Wait for EC2 to be ready for SSM
+      - name: Ensure SSM Agent is running (restart instance if needed)
         run: |
-          echo "Checking if EC2 instance ${EC2_INSTANCE_ID} is ready for SSM..."
-          retries=10
-          count=0
-          while [ $count -lt $retries ]; do
-            status=$(aws ssm describe-instance-information \
-                      --filters "Key=InstanceIds,Values=${EC2_INSTANCE_ID}" \
-                      --region ${{ env.DEFAULT_AWS_REGION }} \
-                      --query "InstanceInformationList[0].PingStatus" \
-                      --output text 2>/dev/null || echo "Offline")
-            if [ "$status" == "Online" ]; then
-              echo "Instance is online for SSM"
+          echo "Checking SSM agent status..."
+          STATUS=$(aws ssm describe-instance-information \
+            --filters "Key=InstanceIds,Values=${{ env.EC2_INSTANCE_ID }}" \
+            --query "InstanceInformationList[0].PingStatus" \
+            --output text 2>/dev/null || echo "NotFound")
+
+          if [ "$STATUS" = "Online" ]; then
+            echo "SSM Agent already Online – no restart needed"
+          else
+            echo "SSM Agent is $STATUS – restarting instance to bring it online..."
+            aws ec2 stop-instances --instance-ids ${{ env.EC2_INSTANCE_ID }}
+            aws ec2 wait instance-stopped --instance-ids ${{ env.EC2_INSTANCE_ID }}
+            aws ec2 start-instances --instance-ids ${{ env.EC2_INSTANCE_ID }}
+          fi
+
+      - name: Wait for SSM Agent to become Online (max ~5 min)
+        run: |
+          echo "Waiting for SSM Agent to report Online..."
+          for i in {1..40}; do
+            STATUS=$(aws ssm describe-instance-information \
+              --filters "Key=InstanceIds,Values=${{ env.EC2_INSTANCE_ID }}" \
+              --query "InstanceInformationList[0].PingStatus" \
+              --output text 2>/dev/null || echo "Offline")
+
+            if [ "$STATUS" = "Online" ]; then
+              echo "SSM Agent is ONLINE! Proceeding with deployment."
               break
-            else
-              echo "Instance not ready yet, retrying in 15s..."
-              sleep 15
-              count=$((count+1))
             fi
+
+            echo "Attempt $i/40 – SSM status: $STATUS – sleeping 15s..."
+            sleep 15
           done
-          if [ "$status" != "Online" ]; then
-            echo "Error: EC2 instance not ready for SSM"
+
+          if [ "$STATUS" != "Online" ]; then
+            echo "ERROR: SSM Agent never came online after 10 minutes"
             exit 1
           fi
 
-      - name: Deploy backend to EC2 via SSM
+      - name: Deploy Backend via AWS SSM Run Command
         run: |
-          echo "Deploying backend to EC2 instance ${EC2_INSTANCE_ID}..."
+          echo "Deploying backend to EC2 instance ${{ env.EC2_INSTANCE_ID }}..."
+
           aws ssm send-command \
-            --targets "Key=instanceIds,Values=${EC2_INSTANCE_ID}" \
+            --targets "Key=instanceids,Values=${{ env.EC2_INSTANCE_ID }}" \
             --document-name "AWS-RunShellScript" \
-            --comment "Deploy backend with env" \
-            --parameters 'commands=[
-              "export PORT=${PORT}",
-              "export NODE_ENV=${NODE_ENV}",
-              "export JWT_SECRET=${JWT_SECRET}",
-              "export FRONT_END_URL=${FRONT_END_URL}",
-              "export DB_USER=${DB_USER}",
-              "export DB_HOST=${DB_HOST}",
-              "export DB_NAME=${DB_NAME}",
-              "export DB_PASSWORD=${DB_PASSWORD}",
-              "export DB_PORT=${DB_PORT}",
-              "cd /var/www/stg/",
-              "npm install --production",
-              "pm2 restart stg-enp"
-            ]' \
+            --comment "GitHub Actions deploy – $(date)" \
+            --timeout-seconds 1800 \
+            --parameters '{
+              "commands": [
+                "cd /var/www/stg",
+                "git fetch --all",
+                "git reset --hard origin/main",
+                "npm ci --omit=dev",
+                "export PORT=${{ secrets.PORT }}",
+                "export NODE_ENV=${{ secrets.NODE_ENV }}",
+                "export JWT_SECRET=${{ secrets.JWT_SECRET }}",
+                "export FRONT_END_URL=${{ secrets.FRONT_END_URL }}",
+                "export DB_USER=${{ secrets.DB_USER }}",
+                "export DB_HOST=${{ secrets.DB_HOST }}",
+                "export DB_NAME=${{ secrets.DB_NAME }}",
+                "export DB_PASSWORD=${{ secrets.DB_PASSWORD }}",
+                "export DB_PORT=${{ secrets.DB_PORT }}",
+                "pm2 restart stg-enp || pm2 start dist/index.js --name stg-enp --update-env"
+              ]
+            }' \
             --region ${{ env.DEFAULT_AWS_REGION }}
 
-      - name: Deployment completed
-        run: echo "Backend deployment finished successfully!"
+      - name: Deployment finished
+        run: |
+          echo "Backend deployed successfully via SSM!"
+          echo "Instance: ${{ env.EC2_INSTANCE_ID }}"
