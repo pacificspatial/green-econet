@@ -253,6 +253,7 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ collapsed, setCollapsed }) => {
   }, [collapsed, setCollapsed]);
 
   const handleListItemClick = (itemId: string) => {
+    dispatch(setSelectedProject(projects.find((p) => p.id === itemId) || null));
     navigate(`/project/${itemId}`);
   };
 
