@@ -1,11 +1,11 @@
-import sequelize from "../config/dbConfig.js";
+import { pool, sequelize } from "../config/dbConfig.js";
 import {
   EnGreen,
   Projects,
   ProjectPolygons,
 } from "./models/index.js";
 
-async function connectDB() {
+export const connectDB = async function () {
   try {
     await sequelize.authenticate();
     console.log("Database connection has been established successfully.");
@@ -18,4 +18,6 @@ async function connectDB() {
   }
 }
 
-export default connectDB;
+export const db = {
+  query: (text, params) => pool.query(text, params),
+};

@@ -1,4 +1,4 @@
-import sequelize from "../config/dbConfig.js";
+import { sequelize } from "../config/dbConfig.js";
 
 /**
  * Convert GeoJSON to PostGIS geometry type (Polygon, 4326)

@@ -1,7 +1,7 @@
 import http from "http";
 import app from "./config/server.js";
 import { Server as SocketServer } from "socket.io";
-import connectDB from "./db/connect.js";
+import { connectDB } from "./db/connect.js";
 
 const server = http.createServer(app);
 

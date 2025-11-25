@@ -1,5 +1,5 @@
 import { DataTypes } from "sequelize";
-import sequelize from "../../config/dbConfig.js";
+import { sequelize } from "../../config/dbConfig.js";
 
 export const EnGreen = sequelize.define(
   "en_green",
