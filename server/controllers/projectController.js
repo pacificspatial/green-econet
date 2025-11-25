@@ -182,7 +182,7 @@ const setProjectAoi = async (req, res, next) => {
  * @route POST /projects/mock-set-aoi/:projectId
  * Kicks off a mock AOI pipeline and returns pipelineId immediately.
  */
-const setProjectAoi = async (req, res, next) => {
+const setProjectMockAoi = async (req, res, next) => {
   try {
     const { projectId } = req.params;
     const io = req.app.get("socket");
@@ -212,4 +212,5 @@ export default {
   deleteProjectPolygon,
   getPolygonsByProject,
   setProjectAoi,
+  setProjectMockAoi,
 };
