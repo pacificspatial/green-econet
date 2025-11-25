@@ -306,15 +306,20 @@ jobs:
           TARGET_HOST: ${{ secrets.STG_EC2_PUBLIC_IP }}
           TARGET_PATH: /var/www/stg
         run: |
-          ssh -o StrictHostKeyChecking=no ${TARGET_USER}@${TARGET_HOST} <<'EOF'
+          ssh -o StrictHostKeyChecking=no ${TARGET_USER}@${TARGET_HOST} <<EOF
             set -e
             cd ${TARGET_PATH}
-            echo "Node version: $(node -v || echo 'node not found')"
-            # Install (use --no-audit --no-fund to reduce noise). Remove --production if you need dev deps.
+            echo "PWD: \$(pwd)"
+            echo "Listing files:"
+            ls -la
+
+            echo "Node version: \$(node -v || echo 'node not found')"
+            # Install dependencies
             npm install --no-audit --no-fund
             # Build if present
             npm run build --if-present
-            # restart pm2 app (zero downtime)
+
+            # Restart pm2 app (zero downtime)
             pm2 restart stg-enp || pm2 start dist/index.js --name stg-enp --update-env
             pm2 save || true
             echo "Remote install/build/restart complete"
