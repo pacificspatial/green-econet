@@ -300,7 +300,7 @@ jobs:
           TARGET_HOST: ${{ secrets.STG_EC2_PUBLIC_IP }}
           TARGET_PATH: /var/www/stg
         run: |
-          ssh -o StrictHostKeyChecking=no ${TARGET_USER}@${TARGET_HOST} <<'EOF'
+          ssh -o StrictHostKeyChecking=no ${TARGET_USER}@${TARGET_HOST} <<EOF
             set -e
             cd ${TARGET_PATH}
 
@@ -312,7 +312,7 @@ jobs:
             echo "Running npm install..."
             npm install --no-audit --no-fund
 
-            # Load environment variables from .env
+            # Load environment variables from .env if exists
             if [ -f .env ]; then
               export $(grep -v '^#' .env | xargs)
             fi
@@ -332,7 +332,7 @@ jobs:
             pm2 save
             pm2 status "$PROCESS_NAME"
             echo "Backend deployment completed."
-            EOF
+             EOF
 
    
 
