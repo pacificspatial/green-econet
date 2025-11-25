@@ -3,12 +3,13 @@ import AoiStatistics from "./AoiStatistics";
 import { styled } from "@mui/material/styles";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Button, Tooltip, Typography } from "@mui/material";
+import { Button, Tooltip } from "@mui/material";
 import AlertBox from "../utils/AlertBox";
 import type { AlertState } from "@/types/AlertState";
 import { useAppSelector } from "@/hooks/reduxHooks";
 import { MAX_AOI_POLYGON_COUNT, MIN_AOI_POLYGON_COUNT } from "@/constants/numberConstants";
 import { setProjectAoi } from "@/api/project";
+import { Alert } from "@mui/material";
 
 const StyledBox = styled(Box)(({ theme }) => ({
   backgroundColor:
@@ -112,12 +113,20 @@ const AoiRightPanel = () => {
             justifyContent="center"
             sx={{ width: "100%" }}
           >
-            {loading && (
-              <Typography sx={{ mb: 1, textAlign: "center" }}>
-                {t("app.settingAoiMessage")}
-              </Typography>
-            )}
 
+            {/* Indicator message with balanced spacing */}
+            {loading && (
+              <Alert
+                severity="info"
+                sx={{
+                  width: "100%",
+                  mb: 3.5,
+                  textAlign: "center",
+                }}
+              >
+                {t("app.settingAoiMessage")}
+              </Alert>
+            )}
             <Button
               sx={{ px: 4, py: 2 }}
               color="primary"
