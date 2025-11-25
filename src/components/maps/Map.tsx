@@ -29,9 +29,9 @@ import type {
 import { getPolygonsByProject } from "@/api/project";
 import { setAoiPolygons } from "@/redux/slices/aoiSlice";
 import type { ProjectPolygon } from "@/types/ProjectData";
-import { getClippedBuffer125GreenResult } from "@/api/result";
+import { getClippedBuffer125GreenResult, getClippedGreenResult } from "@/api/result";
 import { addLayer, removeLayer } from "@/utils/map/addLayer";
-import { CLIPPED_BUFFER125_LAYER_CONFIG } from "@/constants/layerConfig";
+import { CLIPPED_BUFFER125_LAYER_CONFIG, CLIPPED_GREEN_LAYER_CONFIG } from "@/constants/layerConfig";
 import type { ClippedBuffer125Green } from "@/types/ClippedData";
 import type { Feature, Geometry } from "geojson";
 
@@ -140,7 +140,7 @@ const Map: React.FC<MapProps> = ({
     [projectId, dispatch, t, handleSetAlert]
   ); 
 
-/**
+  /**
    * Load project polygons from API
    */
   const fetchProjectPolygons = useCallback(async () => {
@@ -188,7 +188,7 @@ const Map: React.FC<MapProps> = ({
   /**
    * Load and add clipped buffer 125 green layer to map
    */
-  const getClippedBuffer125Green = useCallback(async () => {
+  const getClippedLayers = useCallback(async () => {
     const map = mapRef.current;
     if (!map || !map.isStyleLoaded() || !projectId) return null;
 
@@ -199,13 +199,18 @@ const Map: React.FC<MapProps> = ({
     }
 
     try {
-      const response = await getClippedBuffer125GreenResult(projectId as string);
+      // Fetch both layers in parallel
+      const [buffer125Response, greenResponse] = await Promise.all([
+        getClippedBuffer125GreenResult(projectId as string),
+        getClippedGreenResult(projectId as string)
+      ]);
       
-      if (response.success && response.data) {
-        // Handle both single object and array of records
-        const records = Array.isArray(response.data) ? response.data : [response.data];        
+      let allFeatures: Feature<Geometry>[] = [];
+
+      // Process clipped-buffer-125-green layer
+      if (buffer125Response.success && buffer125Response.data) {
+        const records = Array.isArray(buffer125Response.data) ? buffer125Response.data : [buffer125Response.data];
         
-        // Filter records that have valid geometry
         const features = (records as ClippedBuffer125Green[])
           .filter((record) => record.geom)
           .map((record) => ({
@@ -221,13 +226,14 @@ const Map: React.FC<MapProps> = ({
           }));
 
         if (features.length > 0) {
-          // Create GeoJSON FeatureCollection from all records
+          allFeatures = [...allFeatures, ...features];
+          
           const geojsonData = {
             type: "FeatureCollection" as const,
             features,
           };
 
-          // Add the layer using the utility function
+          // Add first layer
           addLayer(
             map,
             CLIPPED_BUFFER125_LAYER_CONFIG.id,
@@ -241,11 +247,62 @@ const Map: React.FC<MapProps> = ({
             }
           );
           
-          return features; // Return features for bounds calculation
+          // Wait for map to be idle before adding next layer
+          await new Promise<void>((resolve) => {
+            if (map.loaded()) {
+              resolve();
+            } else {
+              map.once('idle', () => resolve());
+            }
+          });
         }
       }
+
+      // Process clipped-green layer
+      if (greenResponse.success && greenResponse.data) {
+        const records = Array.isArray(greenResponse.data) ? greenResponse.data : [greenResponse.data];      
+        
+        const features = (records as ClippedBuffer125Green[])
+          .filter((record) => record.geom)
+          .map((record) => ({
+            type: "Feature" as const,
+            geometry: record.geom!,
+            properties: {
+              id: record.id,
+              project_id: record.project_id,
+              src_id: record.src_id,
+              uid: record.uid,
+              ...record.properties,
+            },
+          }));
+
+        if (features.length > 0) {
+          allFeatures = [...allFeatures, ...features];
+          
+          const geojsonData = {
+            type: "FeatureCollection" as const,
+            features,
+          };
+
+          // Add second layer
+          addLayer(
+            map,
+            CLIPPED_GREEN_LAYER_CONFIG.id,
+            {
+              type: "geojson",
+              data: geojsonData,
+            },
+            {
+              type: CLIPPED_GREEN_LAYER_CONFIG.type,
+              paint: CLIPPED_GREEN_LAYER_CONFIG.paint,
+            }
+          );
+        }
+      }
+      
+      return allFeatures.length > 0 ? allFeatures : null;
     } catch (error) {
-      console.error("Error in fetching clipped buffer 125 layer", error);
+      console.error("Error in fetching clipped layers", error);
     } finally {
       if (selectedProject?.processed === true) {
         setLoading(false);
@@ -347,35 +404,40 @@ const Map: React.FC<MapProps> = ({
     // Always fetch polygons
     fetchProjectPolygons();
 
-    // Load clipped buffer layer if map exists
+    // Load clipped layers if map exists
     if (map) {
-      const loadClippedBufferLayer = async () => {
+      const loadClippedLayers = async () => {
         if (map.isStyleLoaded() && map.loaded()) {
-          const features = await getClippedBuffer125Green();
+          const features = await getClippedLayers();
           if (features) setClippedBufferFeatures(features);
         } else {
           map.once("idle", async () => {
-            const features = await getClippedBuffer125Green();
+            const features = await getClippedLayers();
             if (features) setClippedBufferFeatures(features);
           });
         }
       };
 
-      loadClippedBufferLayer();
+      loadClippedLayers();
     }
 
-    // Cleanup
+    // Cleanup: remove both layers
     return () => {
       try {
-        if (map && map.getStyle() && map.getLayer(CLIPPED_BUFFER125_LAYER_CONFIG.id)) {
-          removeLayer(map, CLIPPED_BUFFER125_LAYER_CONFIG.id);
+        if (map && map.getStyle()) {
+          if (map.getLayer(CLIPPED_BUFFER125_LAYER_CONFIG.id)) {
+            removeLayer(map, CLIPPED_BUFFER125_LAYER_CONFIG.id);
+          }
+          if (map.getLayer(CLIPPED_GREEN_LAYER_CONFIG.id)) {
+            removeLayer(map, CLIPPED_GREEN_LAYER_CONFIG.id);
+          }
         }
       } catch (error) {
-        console.debug("Could not remove layer on cleanup:", error);
+        console.debug("Could not remove layers on cleanup:", error);
       }
-      setClippedBufferFeatures([]); // Clear features on cleanup
+      setClippedBufferFeatures([]);
     };
-  }, [projectId, basemap, fetchProjectPolygons, getClippedBuffer125Green]);
+  }, [projectId, basemap, fetchProjectPolygons, getClippedLayers]);
 
   /**
    * Auto-fit map to polygons
