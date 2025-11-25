@@ -1,12 +1,23 @@
-import { configureStore } from "@reduxjs/toolkit";
+import { configureStore, combineReducers } from "@reduxjs/toolkit";
 import aoiReducer from "./slices/aoiSlice";
 import projectReducer from "./slices/projectSlice";
 
+import storage from "redux-persist/lib/storage";
+import { persistReducer, persistStore } from "redux-persist";
+
+const projectPersistConfig = {
+  key: "project",
+  storage,
+  whitelist: ["projects", "selectedProject"], 
+};
+
+const rootReducer = combineReducers({
+  aoi: aoiReducer,
+  project: persistReducer(projectPersistConfig, projectReducer),
+});
+
 export const store = configureStore({
-  reducer: {
-    aoi: aoiReducer,
-    project: projectReducer,
-  },
+  reducer: rootReducer,
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
       serializableCheck: {
@@ -14,6 +25,8 @@ export const store = configureStore({
       },
     }),
 });
+
+export const persistor = persistStore(store);
 
 export type RootState = ReturnType<typeof store.getState>;
 export type AppDispatch = typeof store.dispatch;

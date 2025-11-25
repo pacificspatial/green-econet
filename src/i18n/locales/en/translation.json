@@ -63,7 +63,20 @@
     "aoiPolygonsLimitMessage": "Only {{minCount}} - {{maxCount}} shapes are allowed",
     "shape": "Shape",
     "green": "Green Layer",
-    "bufferGreen": "Buffer Green Layer"
-
+    "bufferGreen": "Buffer Green Layer",
+    "loadingProjectPolygons": "Loading project polygons...",
+    "errorFetchingPolygons": "Error fetching polygons",
+    "creatingPolygon": "Creating project polygon...",
+    "polygonCreatedSuccessfully": "Polygon created successfully!",
+    "errorCreatingPolygon": "Error creating polygon",
+    "updatingPolygon": "Updating project polygon...",
+    "errorUpdatingPolygon": "Error updating polygon",
+    "polygonUpdatedSuccessfully": "Polygon updated successfully!",
+    "deletingPolygon": "Deleting project polygon...",
+    "errorDeletingPolygon": "Error deleting polygon",
+    "polygonDeletedSuccessfully": "Polygon deleted successfully!",
+    "aoiSetSuccessMessage": "AOI set successfully!",
+    "errorSettingAOI": "Error setting AOI",
+    "settingAoiMessage": "Setting AOI will take a few moments..."
   }
 }

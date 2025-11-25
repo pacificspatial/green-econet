@@ -8,7 +8,7 @@ import { useBasemap } from "@/hooks/useBasemap";
 import MapboxDraw from "@mapbox/mapbox-gl-draw";
 import "@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css";
 import { initializeMap } from "@/utils/map/mapUtils";
-import { useAppDispatch } from "@/hooks/reduxHooks";
+import { useAppDispatch, useAppSelector } from "@/hooks/reduxHooks";
 import { useParams } from "react-router-dom";
 import Loader from "../common/Loader";
 import { useTranslation } from "react-i18next";
@@ -30,7 +30,10 @@ import type {
 import { layerConfigs } from "@/config/layers/layerStyleConfig";
 import { addStyledLayer } from "@/utils/map/addLayer";
 import Legend from "./Legend";
-
+import { getPolygonsByProject } from "@/api/project";
+import { setAoiPolygons } from "@/redux/slices/aoiSlice";
+import type { ProjectPolygon } from "@/types/ProjectData";
+import type { Feature } from "geojson";
 // Declare mapbox-gl module augmentation for the accessToken
 declare global {
   interface Window {
@@ -69,6 +72,7 @@ const Map: React.FC<MapProps> = ({
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const drawInstance = useRef<MapboxDraw | null>(null);
+  const aoiPolygons = useAppSelector((state) => state.aoi.polygons);
 
   const { basemap } = useBasemap();
   const theme = useTheme();
@@ -133,9 +137,59 @@ const Map: React.FC<MapProps> = ({
       handleDrawDelete(params).catch(console.error);
     },
     [projectId, dispatch, t, handleSetAlert]
-  );
+  ); 
 
-  // Initialize map
+  /**
+   * Load project polygons from API
+   */
+  const fetchProjectPolygons = useCallback(async () => {
+    setLoading(true);
+    setLoadingText(t("app.loadingProjectPolygons"));
+    
+    try {
+      const response = await getPolygonsByProject(projectId as string);
+      if (response.success && response.data.polygons) {    
+        
+      const polygonData = response.data.polygons.map((polygon: ProjectPolygon, index: number) => {
+        return {
+          id: polygon.id,
+          geom: {
+            type: "Feature",
+            id: polygon.id,
+            geometry: polygon.geom,
+            properties: {
+              name: `Shape ${index + 1}`,
+              _id: polygon.id,
+            }
+          } as Feature,
+          area: polygon.area_m2,
+          perimeter: polygon.perimeter_m,
+        };
+      });
+        
+        dispatch(setAoiPolygons(polygonData));
+      } else {
+        handleSetAlert(t("errorFetchingPolygons"), "error");
+      }
+    } catch (error) {
+      console.error("Error in fetching polygons", error);
+      handleSetAlert(t("errorFetchingPolygons"), "error");
+    } finally {
+      setLoading(false);
+      setLoadingText("");
+    }
+  }, [projectId, dispatch, t, handleSetAlert]);
+
+  // Fetch polygons when project changes
+  useEffect(() => {
+    if (projectId) {
+      fetchProjectPolygons();
+    }
+  }, [projectId]); 
+
+  /**
+   * Setup map (runs only once)
+   */
   useEffect(() => {
     if (mapRef.current || !mapContainerRef.current) return;
 
@@ -186,12 +240,13 @@ const Map: React.FC<MapProps> = ({
     });
   };
 
-  //set up draw tools
+  /**
+   * Setup draw tool & load polygons into it
+   */
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
 
-    // Initialize draw tool and cleanup functions
     const setupDrawTools = () => {
       if (drawInstance.current) {
         cleanupDrawTool({
@@ -203,6 +258,7 @@ const Map: React.FC<MapProps> = ({
         });
         drawInstance.current = null;
       }
+      
       // Initialize the new draw tool instance
       drawInstance.current = initializeDrawTool(
         map,
@@ -212,13 +268,54 @@ const Map: React.FC<MapProps> = ({
         handleDrawDeleteSync,
         theme
       );
+
+      // Add polygons with proper IDs
+      if (aoiPolygons?.length > 0) {
+        aoiPolygons.forEach((polygon) => {
+          try {
+            drawInstance.current?.add(polygon.geom);
+          } catch (error) {
+            console.error("Error adding polygon to draw instance:", error);
+          }
+        });
+      }
     };
 
-    // Handle initial setup and style changes
     if (projectId) {
       setupDrawTools();
     }
-  }, [projectId, basemap]);
+  }, [projectId, basemap, aoiPolygons]);
+
+  /**
+   * Auto-fit map to polygons
+   */
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !aoiPolygons || aoiPolygons.length === 0) return;
+
+    try {
+      const bounds = new mapboxgl.LngLatBounds();
+
+      aoiPolygons.forEach((polygon) => {
+        const geom = polygon.geom.geometry;
+
+        if (geom.type === "Polygon") {
+          geom.coordinates[0].forEach(([lng, lat]) => {
+            bounds.extend([lng, lat]);
+          });
+        }
+      });
+
+      if (!bounds.isEmpty()) {
+        map.fitBounds(bounds, {
+          padding: 50,
+          duration: 800,
+        });
+      }
+    } catch (err) {
+      console.error("Error fitting map bounds:", err);
+    }
+  }, [aoiPolygons]);
 
   // useEffect to add layers
   useEffect(() => {

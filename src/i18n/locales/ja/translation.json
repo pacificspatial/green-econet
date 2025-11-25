@@ -63,6 +63,20 @@
     "aoiPolygonsLimitMessage": "{{minCount}} - {{maxCount}} 個のシェイプのみ使用できます",
     "shape": "シェイプ",
     "green": "グリーンレイヤー",
-    "bufferGreen": "バッファグリーンレイヤー"
+    "bufferGreen": "バッファグリーンレイヤー",
+    "loadingProjectPolygons": "プロジェクトのポリゴンを読み込み中...",
+    "errorFetchingPolygons": "ポリゴンの取得中にエラーが発生しました",
+    "creatingPolygon": "プロジェクトのポリゴンを作成中...",
+    "polygonCreatedSuccessfully": "ポリゴンが正常に作成されました！",
+    "errorCreatingPolygon": "ポリゴンの作成中にエラーが発生しました",
+    "updatingPolygon": "プロジェクトのポリゴンを更新中...",
+    "errorUpdatingPolygon": "ポリゴンの更新中にエラーが発生しました",
+    "polygonUpdatedSuccessfully": "ポリゴンが正常に更新されました！",
+    "deletingPolygon": "プロジェクトのポリゴンを削除中...",
+    "errorDeletingPolygon": "ポリゴンの削除中にエラーが発生しました",
+    "polygonDeletedSuccessfully": "ポリゴンが正常に削除されました！",
+    "aoiSetSuccessMessage": "AOI が正常に設定されました！",
+    "errorSettingAOI": "AOI の設定中にエラーが発生しました",
+    "settingAoiMessage": "AOI の設定には少し時間がかかります..."
   }
 }
