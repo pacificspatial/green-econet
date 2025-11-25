@@ -294,45 +294,19 @@ jobs:
           ssh -o StrictHostKeyChecking=no ${TARGET_USER}@${TARGET_HOST} "sudo chown ${TARGET_USER}:${TARGET_USER} ${TARGET_PATH}/.env"
           echo ".env written to ${TARGET_PATH}/.env"
 
-      - name: Remote install & start PM2
+      - name: npm install + PM2 restart/start
         env:
           TARGET_USER: ${{ secrets.STG_EC2_USER || 'ec2-user' }}
           TARGET_HOST: ${{ secrets.STG_EC2_PUBLIC_IP }}
-          TARGET_PATH: /var/www/stg
         run: |
-          ssh -o StrictHostKeyChecking=no ${TARGET_USER}@${TARGET_HOST} <<EOF
-            set -e
-            cd ${TARGET_PATH}
-
-            echo "Remote Host: \$(hostname -f || hostname)"
-            echo "PWD: \$(pwd)"
-            echo "Node: \$(node -v || echo 'node not found')"
-            echo "Npm: \$(npm -v || echo 'npm not found')"
-
-            echo "Running npm install..."
-            npm install --no-audit --no-fund
-
-            # Load environment variables from .env if exists
-            if [ -f .env ]; then
-              export \$(grep -v '^#' .env | xargs)
-            fi
-
-            PROCESS_NAME="stg-enp"
-            SCRIPT_FILE="index.js"
-
-            # Restart or start PM2
-            if pm2 describe "\$PROCESS_NAME" >/dev/null 2>&1; then
-              echo "Restarting PM2 process \$PROCESS_NAME..."
-              pm2 restart "\$PROCESS_NAME" --update-env
-            else
-              echo "Starting PM2 process \$SCRIPT_FILE..."
-              pm2 start "\$SCRIPT_FILE" --name "\$PROCESS_NAME" --update-env
-            fi
-
-            pm2 save
-            pm2 status "\$PROCESS_NAME"
-            echo "Backend deployment completed."
-            EOF
+          ssh -o StrictHostKeyChecking=no ${TARGET_USER}@${TARGET_HOST} <<'EOF'
+          cd /var/www/stg
+          npm install --no-audit --no-fund --production
+          pm2 restart stg-enp 2>/dev/null || pm2 start index.js --name stg-enp --update-env
+          pm2 save
+          echo "Backend (stg-enp) is running:"
+          pm2 status stg-enp
+          EOF
 
 
    
