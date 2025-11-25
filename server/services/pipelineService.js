@@ -14,7 +14,7 @@ function formatDbError(err, step) {
   };
 }
 
-const runPipeline = async (projectId) => {
+const runPipeline = async ({ projectId, io }) => {
   console.log(`🚀 Starting pipeline for project: ${projectId}`);
 
   const steps = [
@@ -25,18 +25,78 @@ const runPipeline = async (projectId) => {
     // { name: "Group Service", fn: groupService },
     // { name: "Indices Service", fn: indicesService },
   ];
+  let status = "success";
+  const totalSteps = steps.length;
+  const emit = (event, payload) => {
+    if (!io) {
+      console.warn("Socket.IO instance not found on app; cannot emit:", event);
+      return;
+    }
+    io.emit(event, payload);
+  };
+    console.log(
+    `[MOCK AOI] Starting pipeline for project ${projectId} with ${totalSteps} stages`
+  );
+
+  emit("aoi:pipeline_started", {
+    projectId,
+    totalSteps,
+    startedAt: new Date().toISOString(),
+  });
+
+  let failed = 0, succeeded = 0, index = 0;
 
   for (const step of steps) {
     const start = Date.now();
-
+    index++;
     try {
       console.log(`➡️ Running ${step.name}...`);
       await step.fn(projectId);
+      succeeded++;
+      status = "success";
+
       console.log(`✅ ${step.name} completed (${Date.now() - start}ms)`);
     } catch (err) {
+      failed++;
+      status = "failed";
       const formatted = formatDbError(err, step.name);
       console.error(`❌ Pipeline failed at step: ${step.name}`, formatted);
       // throw err; // stop pipeline immediately
+    } finally {
+      emit("aoi:pipeline_stage", {
+        projectId,
+        stageKey: step.name,
+        label: step.name,
+        status, // "success" | "failed"
+        step: index, // 1..6
+        totalSteps,
+        timestamp: new Date().toISOString(),
+      });
+
+      // last stage → emit pipeline_completed
+      if (index === totalSteps) {
+        const overallStatus =
+          failed === 0
+            ? "success"
+            : succeeded === 0
+            ? "failed"
+            : "partial_failure";
+
+        console.log(
+          `[MOCK AOI] Pipeline completed for project ${projectId}. Status=${overallStatus}, success=${succeeded}, failed=${failed}`
+        );
+
+        emit("aoi:pipeline_completed", {
+          projectId,
+          status: overallStatus,
+          summary: {
+            totalSteps,
+            succeeded,
+            failed,
+          },
+          completedAt: new Date().toISOString(),
+        });
+      }
     }
   }
 

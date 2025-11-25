@@ -168,27 +168,32 @@ const getPolygonsByProject = async (req, res, next) => {
  * @route POST /projects/mock-set-aoi/:projectId
  * Kicks off a mock AOI pipeline and returns pipelineId immediately.
  */
-const setProjectMockAoi = async (req, res, next) => {
-  try {
-    const { projectId } = req.params;
-    const io = req.app.get("socket");
+// const setProjectMockAoi = async (req, res, next) => {
+//   try {
+//     const { projectId } = req.params;
+//     const io = req.app.get("socket");
 
-    console.log("[CONTROLLER] /mock-set-aoi called for project:", projectId);
+//     console.log("[CONTROLLER] /mock-set-aoi called for project:", projectId);
 
-    const { pipelineId } = await startMockAoiPipeline({ projectId, io });
+//     const { pipelineId } = await startMockAoiPipeline({ projectId, io });
 
-    return success(res, "Mock AOI pipeline started", {
-      pipelineId,
-      projectId,
-    });
-  } catch (err) {
-    console.log("Error in setProjectAoi (mock pipeline):", err.message);
-    next(err);
-  }
-};
+//     return success(res, "Mock AOI pipeline started", {
+//       pipelineId,
+//       projectId,
+//     });
+//   } catch (err) {
+//     console.log("Error in setProjectAoi (mock pipeline):", err.message);
+//     next(err);
+//   }
+// };
 
 const runPipeline = async (req, res, next) => {
-  pipelineService.runPipeline(req?.params?.projectId);
+  const { projectId } = req?.params;
+  const io = req.app.get("socket");
+
+  console.log("[CONTROLLER] /mock-set-aoi called for project:", projectId);
+
+  pipelineService.runPipeline({ projectId, io });
   return success(res, "Pipeline started successfully", null);
 };
 
@@ -203,5 +208,5 @@ export default {
   deleteProjectPolygon,
   getPolygonsByProject,
   runPipeline,
-  setProjectMockAoi,
+  // setProjectMockAoi,
 };
