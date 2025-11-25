@@ -226,9 +226,9 @@ jobs:
             --paths "/*"
 
   backend:
-    name: Backend CI/CD → EC2 (SSM only – no SSH)
+    name: Deploy Backend (server/ → /var/www/stg)
     runs-on: ubuntu-latest
-
+    needs: frontend
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -247,28 +247,26 @@ jobs:
           aws ssm send-command \
             --targets "Key=instanceids,Values=${{ env.EC2_INSTANCE_ID }}" \
             --document-name "AWS-RunShellScript" \
-            --comment "Deploy backend from server/ – $(date)" \
+            --comment "Deploy backend from server/ – $(date '+%Y-%m-%d %H:%M:%S')" \
             --timeout-seconds 1800 \
             --parameters '{
               "commands": [
-                "# 1. Clone fresh repo to /tmp (safe & clean)",
+                "# 1. Clone fresh repo to /tmp",
                 "cd /tmp",
                 "rm -rf deploy-tmp-repo || true",
                 "git clone https://github.com/${{ github.repository }}.git deploy-tmp-repo",
                 "cd deploy-tmp-repo",
                 "git checkout ${{ github.sha }}",
 
-                "# 2. Sync ONLY the server/ folder into the real app directory",
-                "rsync -av --delete server/ /var/www/stg/ \\
-                  --exclude node_modules \\
-                  --exclude .git",
+                "# 2. Sync ONLY the server/ folder → /var/www/stg",
+                "rsync -av --delete server/ /var/www/stg/ --exclude node_modules --exclude .git --exclude .env",
 
-                "# 3. Install deps & restart app inside real directory",
+                "# 3. Install dependencies & build (if needed)",
                 "cd /var/www/stg",
                 "npm ci --omit=dev",
                 "npm run build --if-present",
 
-                "# 4. Inject environment variables",
+                "# 4. Inject secrets",
                 "export PORT=${{ secrets.PORT }}",
                 "export NODE_ENV=${{ secrets.NODE_ENV }}",
                 "export JWT_SECRET=${{ secrets.JWT_SECRET }}",
@@ -279,15 +277,17 @@ jobs:
                 "export DB_PASSWORD=${{ secrets.DB_PASSWORD }}",
                 "export DB_PORT=${{ secrets.DB_PORT }}",
 
-                "# 5. Restart with PM2 – zero downtime",
+                "# 5. Restart PM2 app – zero downtime",
                 "pm2 restart stg-enp || pm2 start dist/index.js --name stg-enp --update-env",
 
-                "# 6. Cleanup",
+                "# 6. Cleanup temp repo",
                 "cd /tmp && rm -rf deploy-tmp-repo"
               ]
             }'
 
       - name: Backend Deployed Successfully
         run: |
-          echo "Backend deployed from server/ → /var/www/stg"
-          echo "Zero downtime • No instance restart • Correct branch"
+          echo "Backend deployed successfully!"
+          echo "Source: server/ folder"
+          echo "Target: /var/www/stg on ${{ env.EC2_INSTANCE_ID }}"
+          echo "Zero downtime • No instance restart • Using latest commit ${{ github.sha }}"
