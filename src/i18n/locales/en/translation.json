@@ -72,6 +72,9 @@
     "polygonUpdatedSuccessfully": "Polygon updated successfully!",
     "deletingPolygon": "Deleting project polygon...",
     "errorDeletingPolygon": "Error deleting polygon",
-    "polygonDeletedSuccessfully": "Polygon deleted successfully!"
+    "polygonDeletedSuccessfully": "Polygon deleted successfully!",
+    "aoiSetSuccessMessage": "AOI set successfully!",
+    "errorSettingAOI": "Error setting AOI",
+    "settingAoiMessage": "Setting AOI will take a few moments..."
   }
 }
