@@ -302,7 +302,7 @@ jobs:
           ssh -o StrictHostKeyChecking=no ${TARGET_USER}@${TARGET_HOST} <<'EOF'
           cd /var/www/stg
           npm install --no-audit --no-fund --production
-          pm2 restart stg-enp 2>/dev/null || pm2 start index.js --name stg-enp --update-env
+          pm2 restart stg-enp --update-env 2>/dev/null || pm2 start index.js --name stg-enp --update-env
           pm2 save
           echo "Backend (stg-enp) is running:"
           pm2 status stg-enp
