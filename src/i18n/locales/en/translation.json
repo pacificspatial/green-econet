@@ -72,6 +72,9 @@
     "polygonUpdatedSuccessfully": "Polygon updated successfully!",
     "deletingPolygon": "Deleting project polygon...",
     "errorDeletingPolygon": "Error deleting polygon",
-    "polygonDeletedSuccessfully": "Polygon deleted successfully!"
+    "polygonDeletedSuccessfully": "Polygon deleted successfully!",
+    "download": "Download",
+    "pdf": "PDF",
+    "csv": "CSV"
   }
 }

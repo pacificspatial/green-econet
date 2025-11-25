@@ -3,11 +3,16 @@ import AoiStatistics from "./AoiStatistics";
 import { styled } from "@mui/material/styles";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Button, Tooltip } from "@mui/material";
+import { Button, IconButton, Tooltip } from "@mui/material";
 import AlertBox from "../utils/AlertBox";
 import type { AlertState } from "@/types/AlertState";
 import { useAppSelector } from "@/hooks/reduxHooks";
 import { MAX_AOI_POLYGON_COUNT, MIN_AOI_POLYGON_COUNT } from "@/constants/numberConstants";
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import DownloadPopover from "./DownloadPopover";
+import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
+import ArrowDropUpIcon from '@mui/icons-material/ArrowDropUp';
+import { useNavigate } from "react-router-dom";
 
 const StyledBox = styled(Box)(({ theme }) => ({
   backgroundColor:
@@ -42,11 +47,22 @@ const AoiRightPanel = () => {
     message: "",
     severity: "info",
   });
-  const aoiPolygons = useAppSelector((state) => state.aoi.polygons)
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const navigate = useNavigate();
+  const aoiPolygons = useAppSelector((state) => state.aoi.polygons);
   const { t } = useTranslation();
 
   const handleConfirmClick = async () => {
     // Here handle the set AOI action
+  };
+  
+  const handleDownloadClick = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleSelectDownload = (type: "pdf" | "csv") => {
+    console.log("Selected:", type);
+    setAnchorEl(null);
   };
 
   return (
@@ -59,6 +75,39 @@ const AoiRightPanel = () => {
           severity={alert.severity}
         />
       )}
+      <Box 
+        sx={{ 
+          height: 60, 
+          width: "100%", 
+          display: "flex", 
+          alignItems: "center", 
+          justifyContent: "flex-start",
+          px: 1,
+          gap: 1,
+          borderBottom: (theme) => `1px solid ${theme.palette.divider}`
+        }} 
+      >
+        {/* Back Button with Icon */}
+        <IconButton onClick={() => navigate(-1)} sx={{ p: 0.5 }}>
+          <ArrowBackIcon fontSize="medium" />
+        </IconButton>
+
+        {/* Download Button */}
+        <Button
+          variant="outlined"
+          sx={{ ml: "auto", mr: 1, textTransform: "none", px: 2, py: 0.5 }}
+          onClick={handleDownloadClick}
+          endIcon={
+            anchorEl ? (
+              <ArrowDropUpIcon fontSize="small" />
+            ) : (
+              <ArrowDropDownIcon fontSize="small" />
+            )
+          }
+        >
+          {t("app.download")}
+        </Button>
+      </Box>
 
       {/* This section takes the remaining space */}
       <StyledGridBottom>
@@ -96,6 +145,11 @@ const AoiRightPanel = () => {
           </span>
         </Tooltip>
       </StyledConfirmBox>
+      <DownloadPopover
+        anchorEl={anchorEl}
+        onClose={() => setAnchorEl(null)}
+        onSelect={handleSelectDownload}
+      />
     </StyledBox>
   );
 };
