@@ -1,4 +1,4 @@
-import { pool, sequelize } from "../config/dbConfig.ts";
+import { pool, sequelize } from "../config/dbConfig.js";
 import {
   EnGreen,
   Projects,
@@ -23,5 +23,5 @@ export const connectDB = async function () {
 }
 
 export const db = {
-  query: (text: string, params?: any[]) => pool.query(text, params),
+  query: (text, params) => pool.query(text, params),
 };

@@ -1,4 +1,4 @@
-import { db } from "../db/connect.ts";
+import { db } from "../db/connect.js";
 
 // Util for consistent error formatting
 function formatDbError(err, step) {
