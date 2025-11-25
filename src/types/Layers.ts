@@ -23,6 +23,7 @@ export interface LayerConfig {
   style: LayerStyle;
   beforeId?: string;
   zIndex?: number;
+  fileName?: string;
 }
 
 export type LayerName = "green" | "bufferGreen";

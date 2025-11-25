@@ -4,7 +4,7 @@ import { Box, IconButton, Switch, Typography } from "@mui/material";
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ExpandLess, ExpandMore } from "@mui/icons-material";
-import { layerColors } from "@/constants/layerColors";
+import { layerColors } from "@/constants/layerConstants";
 
 interface LegendProps {
   map: mapboxgl.Map | null;

@@ -1,38 +1,40 @@
+import { getS3PreSignedUrl } from "@/api/s3PresignedUrl";
 import { layerVisibilityConfig } from "@/config/layers/initialLayerVisibility";
-import type { LayerConfig, LayerData } from "@/types/Layers";
-import type { FeatureCollection } from "geojson";
+import type { LayerConfig } from "@/types/Layers";
+import { PMTiles } from "pmtiles";
 
+export interface Metadata {
+  vector_layers: { id: string }[];
+}
 export const addStyledLayer = async (
   map: mapboxgl.Map | null,
   layerConfig: LayerConfig,
-  data: LayerData[]
+  fileName: string
 ): Promise<void> => {
   if (!map) return;
 
   try {
     await removeStyledLayer(map, layerConfig.id);
 
+    let tileUrl = "";
+    //step 1: fetch presigned url from server
+    const res = await getS3PreSignedUrl({ fileName });
+
+    if (res.success) {
+      tileUrl = res.data;
+    }
     const sourceId = `source-${layerConfig.id}`;
     const layerId = `layer-${layerConfig.id}`;
 
-    const geoJsonData: FeatureCollection = {
-      type: "FeatureCollection",
-      features: data?.map((feature: LayerData) => ({
-        type: "Feature",
-        geometry: feature.geom,
-        properties: feature.properties || {},
-      })),
-    };
+    const pmtiles = new PMTiles(tileUrl);
+    const metadata = (await pmtiles.getMetadata()) as Metadata;
+    const sourceLayer = metadata?.vector_layers[0]?.id;
 
-    // Add or update source
     if (!map.getSource(sourceId)) {
       map.addSource(sourceId, {
-        type: "geojson",
-        data: geoJsonData,
+        type: "vector",
+        url: `pmtiles://${tileUrl}`,
       });
-    } else {
-      const source = map.getSource(sourceId) as mapboxgl.GeoJSONSource;
-      source.setData(geoJsonData);
     }
 
     const isVisible = layerVisibilityConfig[layerId] ?? true;
@@ -40,8 +42,9 @@ export const addStyledLayer = async (
     // Add layer
     const layerOptions: mapboxgl.LayerSpecification = {
       id: layerId,
-      source: sourceId,
       type: layerConfig.style.type,
+      source: sourceId,
+      "source-layer": sourceLayer,
       paint: layerConfig.style.paint,
       layout: {
         ...layerConfig.style.layout,

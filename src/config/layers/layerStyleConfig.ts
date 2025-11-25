@@ -1,4 +1,4 @@
-import { layerColors } from "@/constants/layerColors";
+import { layerColors, layerPMTileFileNames } from "@/constants/layerConstants";
 import type { LayerConfig, LayerName } from "@/types/Layers";
 
 export const greenLayerConfig: LayerConfig = {
@@ -10,6 +10,7 @@ export const greenLayerConfig: LayerConfig = {
       "fill-opacity": 0.4,
     },
   },
+  fileName: layerPMTileFileNames.green,
 };
 
 export const bufferGreenLayerConfig: LayerConfig = {
@@ -21,6 +22,7 @@ export const bufferGreenLayerConfig: LayerConfig = {
       "fill-opacity": 0.4,
     },
   },
+  fileName: layerPMTileFileNames.bufferGreen,
 };
 
 // Collection of all layer configs

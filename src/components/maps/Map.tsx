@@ -26,7 +26,6 @@ import type {
   DrawDeleteHandlerParams,
   DrawUpdateHandlerParams,
 } from "@/utils/draw/drawHandlers";
-import { fetchBufferGreenLayer, fetchGreenLayer } from "@/api/layers";
 import { layerConfigs } from "@/config/layers/layerStyleConfig";
 import { addStyledLayer } from "@/utils/map/addLayer";
 import Legend from "./Legend";
@@ -167,34 +166,21 @@ const Map: React.FC<MapProps> = ({
   }, [basemap, highResolution, collapsed]);
 
   // fetch and add layers
-  const fetchAllLayers = () => {
+  const addLayers = () => {
     // Create an array of promises with their identifiers and corresponding configs
-    const promises = [
+    const layers = [
       {
         name: "Green Layers",
-        promise: fetchGreenLayer(),
         config: layerConfigs.green,
       },
       {
         name: "BufferGreen Layers",
-        promise: fetchBufferGreenLayer(),
         config: layerConfigs.bufferGreen,
       },
     ];
 
-    promises.forEach(({ promise, config }) => {
-      promise.then((data) => {
-        // Add layer to map as soon as data is available
-        if (
-          mapRef.current &&
-          data.success &&
-          data?.data &&
-          data.data.length > 0
-        ) {
-          addStyledLayer(mapRef.current, config, data?.data);
-        }
-        return data;
-      });
+    layers.forEach(({ config }) => {
+      addStyledLayer(mapRef.current, config, config.fileName || "");
     });
   };
 
@@ -232,10 +218,10 @@ const Map: React.FC<MapProps> = ({
     }
   }, [projectId, basemap]);
 
-  // useEffect to fetch layers
+  // useEffect to add layers
   useEffect(() => {
     if (projectId && mapRef.current) {
-      fetchAllLayers();
+      addLayers();
     }
   }, [projectId, basemap]);
 

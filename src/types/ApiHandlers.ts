@@ -9,3 +9,6 @@ export interface ProjectPolygonParam {
   projectId: string;
   geom: Geometry
 }
+export interface S3PresignedUrlParam {
+  fileName: string;
+}
