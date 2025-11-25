@@ -294,51 +294,46 @@ jobs:
           ssh -o StrictHostKeyChecking=no ${TARGET_USER}@${TARGET_HOST} "sudo chown ${TARGET_USER}:${TARGET_USER} ${TARGET_PATH}/.env"
           echo ".env written to ${TARGET_PATH}/.env"
 
-      - name: Remote install & pm2 restart
+      - name: Remote install & start PM2
         env:
           TARGET_USER: ${{ secrets.STG_EC2_USER || 'ec2-user' }}
           TARGET_HOST: ${{ secrets.STG_EC2_PUBLIC_IP }}
           TARGET_PATH: /var/www/stg
         run: |
-          ssh -o StrictHostKeyChecking=no ${TARGET_USER}@${TARGET_HOST} <<EOF
-          set -e
-          cd ${TARGET_PATH}
+          ssh -o StrictHostKeyChecking=no ${TARGET_USER}@${TARGET_HOST} <<'EOF'
+            set -e
+            cd ${TARGET_PATH}
 
-          echo "Remote Host: \$(hostname -f || hostname)"
-          echo "PWD: \$(pwd)"
-          echo "Node: \$(node -v || echo 'node not found')"
-          echo "Npm: \$(npm -v || echo 'npm not found')"
+            echo "Remote Host: $(hostname -f || hostname)"
+            echo "PWD: $(pwd)"
+            echo "Node: $(node -v || echo 'node not found')"
+            echo "Npm: $(npm -v || echo 'npm not found')"
 
-          echo "Running npm install..."
-          npm install --no-audit --no-fund
+            echo "Running npm install..."
+            npm install --no-audit --no-fund
 
-          # Optional build
-          if npm run | grep -qE ' build'; then
-            echo "Running npm run build..."
-            npm run build
-          else
-            echo "No build script found, skipping build"
-          fi
+            # Load environment variables from .env
+            if [ -f .env ]; then
+              export $(grep -v '^#' .env | xargs)
+            fi
 
-          # Load .env variables for PM2
-          export \$(grep -v '^#' .env | xargs)
+            PROCESS_NAME="stg-enp"
+            SCRIPT_FILE="index.js"
 
-          PROCESS_NAME="stg-enp"
+            # Check if process exists, restart if yes, start if not
+            if pm2 describe "$PROCESS_NAME" >/dev/null 2>&1; then
+              echo "Restarting PM2 process $PROCESS_NAME..."
+              pm2 restart "$PROCESS_NAME" --update-env
+            else
+              echo "Starting PM2 process $PROCESS_NAME..."
+              pm2 start "$SCRIPT_FILE" --name "$PROCESS_NAME" --update-env
+            fi
 
-          # Restart or start PM2 safely
-          if pm2 describe "\${PROCESS_NAME}" >/dev/null 2>&1; then
-            echo "Restarting PM2 process \${PROCESS_NAME}..."
-            pm2 restart "\${PROCESS_NAME}" --update-env || { pm2 delete "\${PROCESS_NAME}" && pm2 start npm --name "\${PROCESS_NAME}" -- start --update-env; }
-          else
-            echo "Starting PM2 process \${PROCESS_NAME}..."
-            pm2 start npm --name "\${PROCESS_NAME}" -- start --update-env
-          fi
-
-          pm2 save
-          pm2 status "\${PROCESS_NAME}"
-          echo "Backend deployment completed."
-          EOF
-
+            pm2 save
+            pm2 status "$PROCESS_NAME"
+            echo "Backend deployment completed."
+            EOF
+   
 
 
       - name: Backend Deployed Successfully
