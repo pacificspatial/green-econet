@@ -325,7 +325,7 @@ jobs:
               echo "Restarting PM2 process $PROCESS_NAME..."
               pm2 restart "$PROCESS_NAME" --update-env
             else
-              echo "Starting PM2 process $PROCESS_NAME..."
+              echo "Starting PM2 process $SCRIPT_FILE..."
               pm2 start "$SCRIPT_FILE" --name "$PROCESS_NAME" --update-env
             fi
 
@@ -333,6 +333,7 @@ jobs:
             pm2 status "$PROCESS_NAME"
             echo "Backend deployment completed."
             EOF
+
    
 
 
