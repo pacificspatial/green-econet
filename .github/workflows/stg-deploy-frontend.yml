@@ -305,12 +305,15 @@ jobs:
             rm -rf node_modules package-lock.json
             echo "Installing fresh dependencies..."
             npm install --no-audit --no-fund
+            echo "Ensuring socket.io is installed..."
+            npm install socket.io --save
             echo "Restarting/starting PM2 process..."
             pm2 restart stg-enp --update-env 2>/dev/null || pm2 start index.js --name stg-enp --update-env
             pm2 save
             echo "Backend (stg-enp) is running:"
             pm2 status stg-enp
           EOF
+
 
 
    
