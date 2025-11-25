@@ -145,7 +145,7 @@ const LeftPanel: React.FC<LeftPanelProps> = ({
   const [isModalOpen, setModalOpen] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
 
-  // ⭐ NEW: track completions only for this mount
+  // track completions only for this mount
   const [recentlyCompleted, setRecentlyCompleted] = useState<
     Record<string, boolean>
   >({});
@@ -218,7 +218,7 @@ const LeftPanel: React.FC<LeftPanelProps> = ({
           completedAt: payload.completedAt,
         })
       );
-      // ⭐ mark this project as "recently completed" for this mount
+      // mark this project as "recently completed" for this mount
       setRecentlyCompleted((prev) => ({
         ...prev,
         [payload.projectId]: true,
@@ -399,8 +399,20 @@ const LeftPanel: React.FC<LeftPanelProps> = ({
       ) : !collapsed && filteredProjects.length > 0 ? (
         <StyledList sx={{ mx: 1 }}>
           {filteredProjects?.map((project) => {
-            const aoiStatus = aoiPipelineByProject[project.id]?.status;
+            const pipelineInfo = aoiPipelineByProject[project.id];
+            const aoiStatus = pipelineInfo?.status;
             const showCompletionIcon = recentlyCompleted[project.id];
+
+            // derive counts from stages if available
+            const totalSteps =
+              pipelineInfo?.stages?.[0]?.totalSteps ??
+              pipelineInfo?.totalSteps ??
+              6;
+            const completedSteps = pipelineInfo?.stages
+              ? pipelineInfo.stages.filter(
+                  (s: { status: string }) => s.status !== "pending"
+                ).length
+              : 0;
 
             return (
               <ListItem
@@ -426,7 +438,21 @@ const LeftPanel: React.FC<LeftPanelProps> = ({
 
                         {/* AOI pipeline status for this project */}
                         {aoiStatus === "running" && (
-                          <CircularProgress size={16} sx={{ ml: 1 }} />
+                          <Box
+                            sx={{
+                              display: "flex",
+                              alignItems: "center",
+                              ml: 1,
+                            }}
+                          >
+                            <CircularProgress size={16} />
+                            <Typography
+                              variant="caption"
+                              sx={{ ml: 0.5, minWidth: 32 }}
+                            >
+                              {completedSteps}/{totalSteps}
+                            </Typography>
+                          </Box>
                         )}
 
                         {showCompletionIcon && aoiStatus === "success" && (

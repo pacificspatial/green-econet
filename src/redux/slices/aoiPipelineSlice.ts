@@ -13,6 +13,7 @@ export interface AoiStage {
 }
 
 export interface ProjectAoiStatus {
+  totalSteps: number;
   projectId: string;
   pipelineId: string;
   status: AoiRunStatus;
@@ -47,6 +48,7 @@ const aoiPipelineSlice = createSlice({
       state.byProjectId[projectId] = {
         projectId,
         pipelineId,
+        totalSteps, // Added totalSteps here
         status: "running",
         startedAt,
         stages: Array.from({ length: totalSteps }, (_, idx) => ({
