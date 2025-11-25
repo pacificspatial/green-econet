@@ -300,12 +300,16 @@ jobs:
           TARGET_HOST: ${{ secrets.STG_EC2_PUBLIC_IP }}
         run: |
           ssh -o StrictHostKeyChecking=no ${TARGET_USER}@${TARGET_HOST} <<'EOF'
-          cd /var/www/stg
-          npm install --no-audit --no-fund
-          pm2 restart stg-enp --update-env 2>/dev/null || pm2 start index.js --name stg-enp --update-env
-          pm2 save
-          echo "Backend (stg-enp) is running:"
-          pm2 status stg-enp
+            cd /var/www/stg
+            echo "Removing existing node_modules and package-lock.json..."
+            rm -rf node_modules package-lock.json
+            echo "Installing fresh dependencies..."
+            npm install --no-audit --no-fund
+            echo "Restarting/starting PM2 process..."
+            pm2 restart stg-enp --update-env 2>/dev/null || pm2 start index.js --name stg-enp --update-env
+            pm2 save
+            echo "Backend (stg-enp) is running:"
+            pm2 status stg-enp
           EOF
 
 
