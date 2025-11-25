@@ -11,6 +11,10 @@ router
     validate(projectValidationRules.createProject),
     projectController.createProject
   )
+
+  // 🔹 MOCK: Set AOI pipeline
+  .post("/mock-set-aoi/:projectId", projectController.setProjectMockAoi)
+
   .patch("/:projectId",
     validate(projectValidationRules.updateProject),
     projectController.updateProject

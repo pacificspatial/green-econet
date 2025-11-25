@@ -64,6 +64,15 @@ export const getPolygonsByProject = async (projectId: string) => {
   return res.data;
 };
 
+// =========================
+// AOI MOCK PIPELINE
+// =========================
+
+// Kick off the mock Set AOI pipeline
+export const setProjectAoiMock = async (projectId: string) => {
+  const res = await axiosInstance.post(`/projects/mock-set-aoi/${projectId}`);
+  return res.data;
+};
 // Set AOI for a project
 export const setProjectAoi = async (projectId: string) => {
   const res = await axiosInstance.post(`/projects/:${projectId}/process/run`);
