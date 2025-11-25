@@ -93,8 +93,9 @@ const AoiRightPanel = () => {
 
   const isRunning = pipelineStatus === "running";
   const isSuccess = pipelineStatus === "success";
-  const isFailed =
-    pipelineStatus === "failed" || pipelineStatus === "partial_failure";
+  const isFailed = pipelineStatus === "failed" || pipelineStatus === "partial_failure";
+
+  console.log(summary)
 
   const totalSteps = useMemo(() => {
     if (stages.length > 0) {
