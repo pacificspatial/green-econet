@@ -17,3 +17,13 @@ export const CLIPPED_GREEN_LAYER_CONFIG = {
     'fill-outline-color': '#1565C0'
   }
 };
+
+export const PROJECT_LAYER_CONFIG = {
+  id: "project-boundary",
+  type: "line" as const,
+  paint: {
+    "line-color": "#000",
+    "line-width": 3,
+    "line-opacity": 0.8,
+  },
+};

@@ -1,3 +1,4 @@
+import type { Geometry } from 'geojson';
 import { createSlice } from "@reduxjs/toolkit";
 import type { PayloadAction } from "@reduxjs/toolkit";
 
@@ -7,7 +8,8 @@ export interface Project {
   description?: string;
   created_at?: string;
   updated_at?: string;
-  processed: boolean
+  processed: boolean;
+  geom?: Geometry
 }
 
 interface ProjectState {
