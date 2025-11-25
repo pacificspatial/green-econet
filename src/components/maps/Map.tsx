@@ -31,7 +31,7 @@ import { setAoiPolygons } from "@/redux/slices/aoiSlice";
 import type { ProjectPolygon } from "@/types/ProjectData";
 import { getClippedBuffer125GreenResult, getClippedGreenResult } from "@/api/result";
 import { addLayer, removeLayer } from "@/utils/map/addLayer";
-import { CLIPPED_BUFFER125_LAYER_CONFIG, CLIPPED_GREEN_LAYER_CONFIG } from "@/constants/layerConfig";
+import { CLIPPED_BUFFER125_LAYER_CONFIG, CLIPPED_GREEN_LAYER_CONFIG, PROJECT_LAYER_CONFIG } from "@/constants/layerConfig";
 import type { ClippedBuffer125Green } from "@/types/ClippedData";
 import type { Feature, Geometry } from "geojson";
 
@@ -74,7 +74,7 @@ const Map: React.FC<MapProps> = ({
   const aoiPolygons = useAppSelector((state) => state.aoi.polygons);
   const { selectedProject } = useAppSelector((state) => state.project)
   const [clippedBufferFeatures, setClippedBufferFeatures] = useState<Feature<Geometry>[]>([])
-
+  
   const { basemap } = useBasemap();
   const theme = useTheme();
   const { projectId } = useParams();
@@ -209,7 +209,9 @@ const Map: React.FC<MapProps> = ({
 
       // Process clipped-buffer-125-green layer
       if (buffer125Response.success && buffer125Response.data) {
-        const records = Array.isArray(buffer125Response.data) ? buffer125Response.data : [buffer125Response.data];
+        const records = Array.isArray(buffer125Response.data) 
+          ? buffer125Response.data 
+          : [buffer125Response.data];
         
         const features = (records as ClippedBuffer125Green[])
           .filter((record) => record.geom)
@@ -233,7 +235,6 @@ const Map: React.FC<MapProps> = ({
             features,
           };
 
-          // Add first layer
           addLayer(
             map,
             CLIPPED_BUFFER125_LAYER_CONFIG.id,
@@ -260,7 +261,9 @@ const Map: React.FC<MapProps> = ({
 
       // Process clipped-green layer
       if (greenResponse.success && greenResponse.data) {
-        const records = Array.isArray(greenResponse.data) ? greenResponse.data : [greenResponse.data];      
+        const records = Array.isArray(greenResponse.data) 
+          ? greenResponse.data 
+          : [greenResponse.data];      
         
         const features = (records as ClippedBuffer125Green[])
           .filter((record) => record.geom)
@@ -284,7 +287,6 @@ const Map: React.FC<MapProps> = ({
             features,
           };
 
-          // Add second layer
           addLayer(
             map,
             CLIPPED_GREEN_LAYER_CONFIG.id,
@@ -299,6 +301,47 @@ const Map: React.FC<MapProps> = ({
           );
         }
       }
+
+      // ============================================
+      // ADD PROJECT BOUNDARY LAYER HERE
+      // ============================================
+      if (selectedProject?.geom) {
+        const boundaryFeature = {
+          type: "Feature" as const,
+          geometry: selectedProject.geom,
+          properties: {
+            id: selectedProject.id,
+            name: selectedProject.name,
+          },
+        };
+
+        const boundaryData = {
+          type: "FeatureCollection" as const,
+          features: [boundaryFeature],
+        };
+
+        // Wait for map to be idle before adding boundary layer
+        await new Promise<void>((resolve) => {
+          if (map.loaded()) {
+            resolve();
+          } else {
+            map.once('idle', () => resolve());
+          }
+        });
+
+        addLayer(
+          map,
+          PROJECT_LAYER_CONFIG.id,
+          {
+            type: "geojson",
+            data: boundaryData,
+          },
+          {
+            type: PROJECT_LAYER_CONFIG.type,
+            paint: PROJECT_LAYER_CONFIG.paint,
+          }
+        );
+      }
       
       return allFeatures.length > 0 ? allFeatures : null;
     } catch (error) {
@@ -311,7 +354,7 @@ const Map: React.FC<MapProps> = ({
     }
     
     return null;
-  }, [projectId, selectedProject?.processed, t]);
+  }, [projectId, selectedProject?.processed, selectedProject?.geom, t]);
 
   /**
    * Setup map (runs only once)
@@ -430,6 +473,9 @@ const Map: React.FC<MapProps> = ({
           }
           if (map.getLayer(CLIPPED_GREEN_LAYER_CONFIG.id)) {
             removeLayer(map, CLIPPED_GREEN_LAYER_CONFIG.id);
+          }
+          if (map.getLayer(PROJECT_LAYER_CONFIG.id)) {
+            removeLayer(map, PROJECT_LAYER_CONFIG.id);
           }
         }
       } catch (error) {
