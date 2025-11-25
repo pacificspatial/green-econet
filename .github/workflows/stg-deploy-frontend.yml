@@ -279,26 +279,33 @@ jobs:
         env:
           TARGET_USER: ${{ secrets.STG_EC2_USER || 'ec2-user' }}
           TARGET_HOST: ${{ secrets.STG_EC2_PUBLIC_IP }}
+          PORT: 4000   # explicitly set if it's masked as ***
         run: |
-          ssh -o StrictHostKeyChecking=no $TARGET_USER@$TARGET_HOST <<EOF
-            cd /var/www/stg
+          ssh -o StrictHostKeyChecking=no $TARGET_USER@$TARGET_HOST <<'EOF'
+            cd /var/www/stg || { echo "Directory /var/www/stg does not exist"; exit 1; }
 
             echo "Installing dependencies..."
-            npm install --no-audit --no-fund
+            npm install --no-audit --no-fund --prefer-offline
 
-            echo "Killing any process on port 4000..."
-            PID=$(lsof -t -i:4000)
-            if [ -n "$PID" ]; then
-              kill -9 $PID
+            echo "Killing any process on port $PORT..."
+            if command -v lsof >/dev/null 2>&1; then
+              PID=$(lsof -t -i:${PORT} || true)
+              if [ -n "$PID" ]; then
+                echo "Killing process $PID on port ${PORT}..."
+                kill -9 $PID || true
+              fi
+            else
+              echo "lsof not available, skipping port kill"
             fi
 
             echo "Reloading PM2 process safely..."
             pm2 delete stg-enp 2>/dev/null || true
-            pm2 start index.js --name stg-enp --update-env
-
+            pm2 start index.js --name stg-enp --update-env --time
             pm2 save
+
+            echo "Current PM2 status:"
             pm2 status stg-enp
-           EOF
+          EOF
 
       - name: Backend Deployed Successfully
         run: |
