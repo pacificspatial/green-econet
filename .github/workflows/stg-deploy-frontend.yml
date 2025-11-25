@@ -275,7 +275,7 @@ jobs:
             --exclude node_modules --exclude .git --exclude .env --exclude uploads --exclude tmp \
             server/ $TARGET_USER@$TARGET_HOST:$TARGET_PATH/
 
-      - name: npm install + PM2 reload/start
+      - name: Install dependencies & restart PM2 safely
         env:
           TARGET_USER: ${{ secrets.STG_EC2_USER || 'ec2-user' }}
           TARGET_HOST: ${{ secrets.STG_EC2_PUBLIC_IP }}
@@ -283,20 +283,22 @@ jobs:
           ssh -o StrictHostKeyChecking=no $TARGET_USER@$TARGET_HOST <<'EOF'
             cd /var/www/stg
 
-            echo "Installing all dependencies..."
+            echo "Installing dependencies..."
             npm install --no-audit --no-fund
 
-            echo "Ensuring socket.io is installed..."
-            npm install socket.io --save --no-audit --no-fund
+            echo "Killing any process on port 4000..."
+            PID=$(lsof -t -i:4000)
+            if [ -n "$PID" ]; then
+              kill -9 $PID
+            fi
 
             echo "Reloading PM2 process safely..."
-            # Try zero-downtime reload; fallback to start if not running
-            pm2 reload stg-enp --update-env 2>/dev/null || pm2 start index.js --name stg-enp --update-env
+            pm2 delete stg-enp 2>/dev/null || true
+            pm2 start index.js --name stg-enp --update-env
 
             pm2 save
             pm2 status stg-enp
-            pm2 env 0  # ✅ Show PM2 env to verify environment variables
-          EOF
+           EOF
 
       - name: Backend Deployed Successfully
         run: |
