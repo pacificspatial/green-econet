@@ -242,7 +242,7 @@ jobs:
       - name: Start ssh-agent and add key
         uses: webfactory/ssh-agent@v0.9.0
         with:
-          ssh-private-key: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
+          ssh-private-key: ${{ secrets.STG_EC2_SSH_KEY }}
 
       - name: Ensure remote dir exists & set ownership
         env:
