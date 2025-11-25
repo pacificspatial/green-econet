@@ -227,68 +227,96 @@ jobs:
             --paths "/*"
 
   backend:
-    name: Deploy Backend (server/ → /var/www/stg)
+    name: Deploy Backend (server/ → /var/www/stg) via SSH (Option A)
     runs-on: ubuntu-latest
     needs: frontend
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.DEFAULT_AWS_REGION }}
-
-      - name: Deploy server/ folder to existing /var/www/stg (zero downtime)
+      - name: Install rsync
         run: |
-          echo "Deploying server/ → /var/www/stg on ${{ env.EC2_INSTANCE_ID }}..."
+          sudo apt-get update -y
+          sudo apt-get install -y rsync
 
-          aws ssm send-command \
-            --targets "Key=instanceids,Values=${{ env.EC2_INSTANCE_ID }}" \
-            --document-name "AWS-RunShellScript" \
-            --comment "Deploy backend from server/ – $(date '+%Y-%m-%d %H:%M:%S')" \
-            --timeout-seconds 1800 \
-            --parameters '{
-              "commands": [
-                "# 1. Clone fresh repo to /tmp",
-                "cd /tmp",
-                "rm -rf deploy-tmp-repo || true",
-                "git clone https://github.com/${{ github.repository }}.git deploy-tmp-repo",
-                "cd deploy-tmp-repo",
-                "git checkout ${{ github.sha }}",
+      - name: Start ssh-agent and add key
+        uses: webfactory/ssh-agent@v0.8.1
+        with:
+          ssh-private-key: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
 
-                "# 2. Sync ONLY the server/ folder → /var/www/stg",
-                "rsync -av --delete server/ /var/www/stg/ --exclude node_modules --exclude .git --exclude .env",
+      - name: Ensure remote dir exists & set ownership
+        env:
+          TARGET_USER: ${{ secrets.STG_EC2_USER || 'ec2-user' }}
+          TARGET_HOST: ${{ secrets.STG_EC2_PUBLIC_IP }}
+          TARGET_PATH: /var/www/stg
+        run: |
+          ssh -o StrictHostKeyChecking=no $TARGET_USER@$TARGET_HOST "sudo mkdir -p $TARGET_PATH && sudo chown $TARGET_USER:$TARGET_USER $TARGET_PATH"
 
-                "# 3. Install dependencies & build (if needed)",
-                "cd /var/www/stg",
-                "npm ci --omit=dev",
-                "npm run build --if-present",
+      - name: Backup existing remote app (one-line tar)
+        env:
+          TARGET_USER: ${{ secrets.STG_EC2_USER || 'ec2-user' }}
+          TARGET_HOST: ${{ secrets.STG_EC2_PUBLIC_IP }}
+          TARGET_PATH: /var/www/stg
+        run: |
+          # make a quick timestamped tar backup of the current site (keeps on remote)
+          TS=$(date +%Y%m%d%H%M%S)
+          ssh -o StrictHostKeyChecking=no $TARGET_USER@$TARGET_HOST "sudo tar -czf /tmp/stg-backup-\${TS}.tar.gz -C $(dirname $TARGET_PATH) $(basename $TARGET_PATH) || true && sudo chown $TARGET_USER:$TARGET_USER /tmp/stg-backup-\${TS}.tar.gz || true"
+          echo "Backup created on remote: /tmp/stg-backup-*.tar.gz"
 
-                "# 4. Inject secrets",
-                "export PORT=${{ secrets.PORT }}",
-                "export NODE_ENV=${{ secrets.NODE_ENV }}",
-                "export JWT_SECRET=${{ secrets.JWT_SECRET }}",
-                "export FRONT_END_URL=${{ secrets.FRONT_END_URL }}",
-                "export DB_USER=${{ secrets.DB_USER }}",
-                "export DB_HOST=${{ secrets.DB_HOST }}",
-                "export DB_NAME=${{ secrets.DB_NAME }}",
-                "export DB_PASSWORD=${{ secrets.DB_PASSWORD }}",
-                "export DB_PORT=${{ secrets.DB_PORT }}",
+      - name: Rsync server/ → remote (contents)
+        env:
+          TARGET_USER: ${{ secrets.STG_EC2_USER || 'ec2-user' }}
+          TARGET_HOST: ${{ secrets.STG_EC2_PUBLIC_IP }}
+          TARGET_PATH: /var/www/stg
+        run: |
+          # NOTE: trailing slash on 'server/' sends the CONTENTS of server into TARGET_PATH
+          rsync -avz --delete \
+            --chmod=Du=rwx,Dg=rx,Do=rx,Fu=rw,Fg=r,Fo=r \
+            --exclude node_modules --exclude .git --exclude .env --exclude uploads --exclude tmp \
+            server/ $TARGET_USER@$TARGET_HOST:$TARGET_PATH/
 
-                "# 5. Restart PM2 app – zero downtime",
-                "pm2 restart stg-enp || pm2 start dist/index.js --name stg-enp --update-env",
+      - name: Write .env on remote (optional - overwrites remote .env)
+        if: always()
+        env:
+          TARGET_USER: ${{ secrets.STG_EC2_USER || 'ec2-user' }}
+          TARGET_HOST: ${{ secrets.STG_EC2_PUBLIC_IP }}
+          TARGET_PATH: /var/www/stg
+        run: |
+          ssh -o StrictHostKeyChecking=no $TARGET_USER@$TARGET_HOST "cat > ${TARGET_PATH}/.env <<'EOD'
+          PORT=${{ secrets.PORT }}
+          NODE_ENV=${{ secrets.NODE_ENV }}
+          JWT_SECRET=${{ secrets.JWT_SECRET }}
+          FRONT_END_URL=${{ secrets.FRONT_END_URL }}
+          DB_USER=${{ secrets.DB_USER }}
+          DB_HOST=${{ secrets.DB_HOST }}
+          DB_NAME=${{ secrets.DB_NAME }}
+          DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+          DB_PORT=${{ secrets.DB_PORT }}
+          EOD
+                    sudo chown $TARGET_USER:$TARGET_USER ${TARGET_PATH}/.env || true
+                    echo ".env written to ${TARGET_PATH}/.env"
 
-                "# 6. Cleanup temp repo",
-                "cd /tmp && rm -rf deploy-tmp-repo"
-              ]
-            }'
+      - name: Remote install & pm2 restart
+        env:
+          TARGET_USER: ${{ secrets.STG_EC2_USER || 'ec2-user' }}
+          TARGET_HOST: ${{ secrets.STG_EC2_PUBLIC_IP }}
+          TARGET_PATH: /var/www/stg
+        run: |
+          ssh -o StrictHostKeyChecking=no $TARGET_USER@$TARGET_HOST <<'EOF'
+            set -e
+            cd ${TARGET_PATH}
+            # ensure Node is available on instance. If not, install or use nodebrew/nvm on instance.
+            npm ci --omit=dev
+            npm run build --if-present
+            # restart pm2 app (zero downtime)
+            pm2 restart stg-enp || pm2 start dist/index.js --name stg-enp --update-env
+            pm2 save || true
+            echo "Remote install/build/restart complete"
+          EOF
 
       - name: Backend Deployed Successfully
         run: |
           echo "Backend deployed successfully!"
-          echo "Source: server/ folder"
-          echo "Target: /var/www/stg on ${{ env.EC2_INSTANCE_ID }}"
-          echo "Zero downtime • No instance restart • Using latest commit ${{ github.sha }}"
+          echo "Source: server/ (contents)"
+          echo "Target: /var/www/stg on ${{ secrets.STG_EC2_PUBLIC_IP }}"
+          echo "If anything goes wrong you can restore backup from /tmp/stg-backup-<timestamp>.tar.gz on the instance"
