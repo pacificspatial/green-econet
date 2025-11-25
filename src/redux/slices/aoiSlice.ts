@@ -1,10 +1,16 @@
-// redux/slices/aoiSlice.ts
 import { createSlice } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
 import type { Feature } from 'geojson';
 
+interface AoiPolygon {
+  id: string;
+  geom: Feature;
+  area: number;
+  perimeter: number;
+}
+
 interface AoiState {
-  polygons: Feature[];
+  polygons: AoiPolygon[];
 }
 
 const initialState: AoiState = {
@@ -15,61 +21,83 @@ const aoiSlice = createSlice({
   name: 'aoi',
   initialState,
   reducers: {
-    addAoiPolygon: (state, action: PayloadAction<Feature>) => {
+    addAoiPolygon: (
+      state,
+      action: PayloadAction<{ id: string, geom: Feature; area: number; perimeter: number }>
+    ) => {
       const nextIndex = state.polygons.length + 1;
 
-      const newPolygon = {
-        ...action.payload,
+      const geomWithName = {
+        ...action.payload.geom,
+        id: action.payload.id,
         properties: {
-          ...(action.payload.properties || {}),
+          ...(action.payload.geom.properties || {}),
           name: `Shape ${nextIndex}`,
+          _id: action.payload.id,
         },
       };
 
-      state.polygons.push(newPolygon);
+      state.polygons.push({
+        id: action.payload.id,
+        geom: geomWithName,
+        area: action.payload.area,
+        perimeter: action.payload.perimeter,
+      });
     },
-    updateAoiPolygon: (state, action: PayloadAction<Feature>) => {
-      const feature = action.payload;
-      const id = feature.id;
+    updateAoiPolygon: (
+      state,
+      action: PayloadAction<{ geom: Feature; area: number; perimeter: number }>
+    ) => {
+      const { geom, area, perimeter } = action.payload;
+      const id = geom.id;
       if (!id) return;
 
-      const index = state.polygons.findIndex(p => p.id === id);
+      const index = state.polygons.findIndex(p => p.geom.id === id);
       if (index !== -1) {
-        state.polygons[index] = {
-          ...feature,
+        const oldName = state.polygons[index].geom.properties?.name;
+
+        const updatedGeom = {
+          ...geom,
           properties: {
-            ...feature.properties,
-            name: state.polygons[index].properties?.name, 
+            ...(geom.properties || {}),
+            name: oldName, // preserve name
           },
+        };
+
+        state.polygons[index] = {
+          id: id as string,
+          geom: updatedGeom,
+          area,
+          perimeter,
         };
       }
     },
+
     deleteAoiPolygon: (state, action: PayloadAction<string | number>) => {
-      // Find the index of the polygon being deleted
       const deleteIndex = state.polygons.findIndex(
-        polygon => polygon.id === action.payload
+        polygon => polygon.geom.id === action.payload
       );
 
       if (deleteIndex === -1) return;
 
-      // Remove the polygon
       state.polygons.splice(deleteIndex, 1);
 
-      // Only rename polygons AFTER the deleted index
+      // Rename remaining polygons
       for (let i = deleteIndex; i < state.polygons.length; i++) {
-        state.polygons[i] = {
-          ...state.polygons[i],
+        state.polygons[i].geom = {
+          ...state.polygons[i].geom,
           properties: {
-            ...(state.polygons[i].properties || {}),
+            ...(state.polygons[i].geom.properties || {}),
             name: `Shape ${i + 1}`,
           },
         };
       }
     },
+
     clearAoiPolygons: (state) => {
       state.polygons = [];
     },
-    setAoiPolygons: (state, action: PayloadAction<Feature[]>) => {
+    setAoiPolygons: (state, action: PayloadAction<AoiPolygon[]>) => {
       state.polygons = action.payload;
     },
   },

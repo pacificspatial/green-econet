@@ -1,7 +1,7 @@
 import { DataTypes } from "sequelize";
-import sequelize from "../../config/dbConfig.js";
+import { sequelize } from "../../config/dbConfig.js";
 
-const EnGreen = sequelize.define(
+export const EnGreen = sequelize.define(
   "en_green",
   {
     cartodb_id: {
@@ -44,5 +44,3 @@ const EnGreen = sequelize.define(
     timestamps: false,
   }
 );
-
-export default EnGreen;

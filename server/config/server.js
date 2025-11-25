@@ -15,15 +15,15 @@ const app = express();
 // Middleware
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
-
-app.use(
-  cors({
-    origin: process.env.FRONT_END_URL,
-    methods: ["GET", "POST", "PUT", "DELETE"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-    credentials: true,
-  })
-);
+// app.use(
+//   cors({
+//     origin: process.env.FRONT_END_URL,
+//     methods: ["GET", "POST", "PUT", "DELETE"],
+//     allowedHeaders: ["Content-Type", "Authorization"],
+//     credentials: true,
+//   })
+// );
+app.use(cors({ origin: "*" }));
 
 app.get("/ping", (req, res) => {
   res.send("pong");
@@ -31,7 +31,7 @@ app.get("/ping", (req, res) => {
 
 app.use(authorizer);
 
-app.use("/api/v1", projectApiRoutes);
+app.use("/api/v1/projects", projectApiRoutes);
 
 app.use(errorHandler);
 

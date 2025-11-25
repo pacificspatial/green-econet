@@ -18,6 +18,7 @@ import { basemapStyles } from "@/constants/basemapStyles";
 import { useThemeContext } from "@/hooks/useThemeContext";
 import MenuIcon from "@mui/icons-material/Menu";
 import { useLocation, useNavigate } from "react-router-dom";
+import { useAppSelector } from "@/hooks/reduxHooks";
 
 const StyledAppBar = styled(AppBar)(({ theme }) => ({
   backgroundColor:
@@ -82,6 +83,7 @@ const Header = () => {
   const theme = useTheme();
   const { basemap, setBasemap } = useBasemap();
   const { theme: currentTheme, toggleTheme } = useThemeContext();
+  const { selectedProject } = useAppSelector((state) => state.project);
 
   const isDarkMode = currentTheme === "dark";
 
@@ -131,7 +133,7 @@ const Header = () => {
       pathname.includes("/project") &&
       pathname.split("/").length > 2
     ) {
-      return ""; //selected project name can be set here
+      return selectedProject?.name;
     }
     return "";
   };

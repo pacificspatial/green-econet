@@ -1,8 +1,6 @@
 import { Box, styled, Typography, useTheme, Divider } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import { useAppSelector } from "@/hooks/reduxHooks";
-import { calculateArea } from "@/utils/geometery/calculateArea";
-import { calculatePerimeter } from "@/utils/geometery/calculatePerimeter";
 import { List, ListItem, ListItemIcon, ListItemText } from "@mui/material";
 import CircleIcon from "@mui/icons-material/Circle";
 
@@ -33,17 +31,15 @@ const ScrollBox = styled(Box)(({ theme }) => ({
 const AoiStatistics = () => {
   const { t } = useTranslation();
   const theme = useTheme();
-  const aoiPolygons = useAppSelector((state) => state.aoi.polygons);
+  const aoiPolygons = useAppSelector((state) => state.aoi.polygons);  
+  // Total values now come from stored area/perimeter
+  const totalArea = aoiPolygons
+    ? aoiPolygons.reduce((sum, p) => sum + Number(p.area || 0), 0)
+    : 0;
 
-  const totalArea = aoiPolygons.reduce(
-    (sum, p) => sum + calculateArea(p),
-    0
-  );
-
-  const totalPerimeter = aoiPolygons.reduce(
-    (sum, p) => sum + calculatePerimeter(p),
-    0
-  );
+  const totalPerimeter = aoiPolygons
+    ? aoiPolygons.reduce((sum, p) => sum + Number(p.perimeter || 0), 0)
+    : 0;
 
   return (
     <Box
@@ -82,14 +78,16 @@ const AoiStatistics = () => {
           </Box>
         ) : (
           aoiPolygons.map((polygon, idx) => {
-            const area = calculateArea(polygon);
-            const perimeter = calculatePerimeter(polygon);  
-            const rawName = polygon?.properties?.name; 
-            const [label, number] = rawName.split(" ");          
-            const translatedLabel = t(`app.${label.toLowerCase()}`); 
+            const area = polygon.area;
+            const perimeter = polygon.perimeter;
+
+            const rawName = polygon.geom?.properties?.name || "";
+            const [label, number] = rawName.split(" ");
+            const translatedLabel = t(`app.${label?.toLowerCase()}`);
+
             return (
-              <Box 
-                key={polygon.id || idx} 
+              <Box
+                key={polygon.geom.id || idx}
                 sx={{
                   px: 3,
                   py: 2,
@@ -103,17 +101,22 @@ const AoiStatistics = () => {
                     <ListItemIcon sx={{ minWidth: 24 }}>
                       <CircleIcon sx={{ fontSize: 8 }} />
                     </ListItemIcon>
-                    <ListItemText primary={`${t("app.area")}: ${area.toFixed(2)} m²`} />
+                    <ListItemText
+                      primary={`${t("app.area")}: ${Number(area).toFixed(2)} m²`}
+                    />
                   </ListItem>
 
                   <ListItem disableGutters sx={{ py: 0.3 }}>
                     <ListItemIcon sx={{ minWidth: 24 }}>
                       <CircleIcon sx={{ fontSize: 8 }} />
                     </ListItemIcon>
-                    <ListItemText primary={`${t("app.perimeter")}: ${perimeter.toFixed(2)} m`} />
+                    <ListItemText
+                      primary={`${t("app.perimeter")}: ${Number(perimeter).toFixed(2)} m`}
+                    />
                   </ListItem>
                 </List>
-                {idx !== aoiPolygons.length - 1 && <Divider sx={{ mt: 3}}/>}
+
+                {idx !== aoiPolygons.length - 1 && <Divider sx={{ mt: 3 }} />}
               </Box>
             );
           })
@@ -134,19 +137,17 @@ const AoiStatistics = () => {
             borderTop: `1px solid ${theme.palette.divider}`,
           }}
         >
-          {/* Total heading */}
           <StyledTypography fontWeight="bold" fontSize={17} pb={1}>
             {t("app.total")}
           </StyledTypography>
 
-          {/* Make it like list items */}
           <List disablePadding>
             <ListItem disableGutters sx={{ py: 0.3 }}>
               <ListItemIcon sx={{ minWidth: 24 }}>
                 <CircleIcon sx={{ fontSize: 8 }} />
               </ListItemIcon>
               <ListItemText
-                primary={`${t("app.area")}: ${totalArea.toFixed(2)} m²`}
+                primary={`${t("app.area")}: ${Number(totalArea).toFixed(2)} m²`}
               />
             </ListItem>
 
@@ -155,7 +156,7 @@ const AoiStatistics = () => {
                 <CircleIcon sx={{ fontSize: 8 }} />
               </ListItemIcon>
               <ListItemText
-                primary={`${t("app.perimeter")}: ${totalPerimeter.toFixed(2)} m`}
+                primary={`${t("app.perimeter")}: ${Number(totalPerimeter).toFixed(2)} m`}
               />
             </ListItem>
           </List>

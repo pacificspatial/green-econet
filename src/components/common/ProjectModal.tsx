@@ -8,16 +8,21 @@ import {
   Grid,
   useTheme,
 } from "@mui/material";
-import type { Project } from "@/types/ProjectData";
+import type { ProjectData } from "@/types/ProjectData";
 import { formatDate } from "@/utils/common/formateDate";
 import { useTranslation } from "react-i18next";
 import type { AlertState } from "@/types/AlertState";
+import { createProject, updateProject } from "@/api/project";
+import type { ProjectParam } from "@/types/ApiHandlers";
+import { useAppDispatch } from "@/hooks/reduxHooks";
+import { addProject, setSelectedProject, updateProjectById } from "@/redux/slices/projectSlice";
+import axios from "axios";
 
 interface ProjectModalProps {
   isOpen: boolean;
   onClose: () => void;
-  initialData: Project | null;
-  onSuccess: () => void;
+  initialData: ProjectData | null;
+  onSuccess: (project: ProjectData) => void;
   setAlertState: React.Dispatch<React.SetStateAction<AlertState>>;
   socketId: string;
 }
@@ -25,21 +30,22 @@ interface ProjectModalProps {
 const ProjectModal: React.FC<ProjectModalProps> = ({
   isOpen,
   onClose,
+  onSuccess,
+  setAlertState,
   initialData,
 }) => {
   const isEditMode = !!initialData;
 
-  // const loading = useAppSelector((state) => state.projects.loading);
-  const loading = false;
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState<
-    Pick<Project, "name" | "description" | "note">
+    Pick<ProjectData, "name" | "description">
   >({
     name: "",
     description: "",
-    note: "",
-  });
+  });  
 
   const [nameError, setNameError] = useState<boolean>(false);
+  const dispatch = useAppDispatch();
 
   const { t } = useTranslation();
   const theme = useTheme();
@@ -49,13 +55,11 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
       setFormData({
         name: initialData.name || "",
         description: initialData.description || "",
-        note: initialData.note || "",
       });
     } else {
       setFormData({
         name: "",
         description: "",
-        note: "",
       });
     }
   }, [initialData]);
@@ -63,8 +67,6 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
       const { name, value } = e.target;
-
-      // const fieldName = fieldMapping[name] || name;
       setFormData((prev) => ({ ...prev, [name]: value }));
 
       // Remove error when the user starts typing in the project name field
@@ -79,15 +81,78 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
     setFormData({
       name: "",
       description: "",
-      note: "",
     });
     setNameError(false);
     onClose();
   }, [onClose]);
 
   const handleSubmit = useCallback(async () => {
-    // add sumbit logic here
-  }, []);
+    // Validate name before submitting
+    if (formData.name.trim() === "") {
+      setNameError(true);
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const projectData: ProjectParam = {
+        name: formData.name.trim(),
+        description: formData?.description?.trim(),
+      };
+
+      if (isEditMode && initialData?.id) {
+        // Update existing project
+        const updatedProject = await updateProject(initialData.id, projectData);
+        dispatch(updateProjectById(updatedProject.data));
+        setAlertState({
+          open: true,
+          message: t("app.updateProjectSuccess"),
+          severity: "success",
+        });
+        dispatch(setSelectedProject(null));
+      } else {
+        // Create new project
+        const newProject = await createProject(projectData);
+        dispatch(addProject(newProject.data));
+
+        setAlertState({
+          open: true,
+          message: t("app.createProjectSuccess"),
+          severity: "success",
+        });
+        onSuccess(newProject.data);
+      }
+      
+      handleModalClose();
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        setAlertState({
+          open: true,
+          message: err.response?.data?.message || t("app.createProjectFailed"),
+          severity: "error",
+        });
+      } else {
+        setAlertState({
+          open: true,
+          message: isEditMode
+            ? t("app.updateProjectFailed")
+            : t("app.createProjectFailed"),
+          severity: "error",
+        });
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [
+    formData,
+    isEditMode,
+    initialData,
+    onSuccess,
+    handleModalClose,
+    t,
+    setAlertState,
+  ]);
 
   const handleNameBlur = useCallback(() => {
     setNameError(formData.name.trim() === "");
@@ -99,182 +164,139 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
   );
 
   return (
-    <>
-      <Modal
-        open={isOpen}
-        onClose={(_event, reason) => {
-          if (reason !== "backdropClick") {
-            onClose();
-          }
+    <Modal
+      open={isOpen}
+      onClose={(_event, reason) => {
+        if (reason !== "backdropClick" && !loading) {
+          handleModalClose();
+        }
+      }}
+      aria-labelledby="project-modal-title"
+    >
+      <Box
+        sx={{
+          position: "absolute",
+          top: "50%",
+          left: "50%",
+          transform: "translate(-50%, -50%)",
+          width: 500,
+          bgcolor: "background.paper",
+          borderRadius: 2,
+          boxShadow: 24,
+          p: 4,
         }}
-        aria-labelledby="project-modal-title"
       >
-        <Box
-          sx={{
-            position: "absolute",
-            top: "50%",
-            left: "50%",
-            transform: "translate(-50%, -50%)",
-            width: 500,
-            bgcolor: "background.paper",
-            borderRadius: 2,
-            boxShadow: 24,
-            p: 4,
-          }}
+        <Typography
+          id="project-modal-title"
+          variant="h4"
+          gutterBottom
+          sx={{ fontWeight: "bold", mb: 3, color: "primary.main" }}
         >
-          <Typography
-            id="project-modal-title"
-            variant="h4"
-            gutterBottom
-            sx={{ fontWeight: "bold", mb: 5, color: "primary.main" }}
-          >
-            {isEditMode ? `${t("app.editProject")}` : `${t("app.addProject")}`}
-          </Typography>
+          {isEditMode ? t("app.editProject") : t("app.addProject")}
+        </Typography>
 
-          <Grid container spacing={2}>
-            {/* Project Name */}
-            <Grid size={{ xs: 12 }}>
-              <TextField
-                fullWidth
-                // autoFocus
-                label={t("app.projectName")}
-                name="name"
-                id="projectName"
-                value={formData.name}
-                onChange={handleChange}
-                // Trigger error validation on blur
-                onBlur={handleNameBlur}
-                required
-                // Show error when name is empty
-                error={nameError}
-                helperText={nameError ? `${t("app.projectNameRequired")}` : ""}
-                autoComplete="off"
-              />
-            </Grid>
-
-            {/* Project Description */}
-            <Grid size={{ xs: 12 }}>
-              <TextField
-                fullWidth
-                label={t("app.projectDescription")}
-                name="description"
-                id="projectDescription"
-                value={formData.description}
-                onChange={handleChange}
-                multiline
-                minRows={3}
-                maxRows={5}
-                autoComplete="off"
-                sx={{
-                  "& textarea": {
-                    resize: "none",
-                    height: "70px",
-                    overflow: "auto",
-                  },
-                }}
-                slotProps={{
-                  input: {
-                    inputComponent: "textarea",
-                  },
-                }}
-              />
-            </Grid>
-
-            {/* Note */}
-            <Grid size={{ xs: 12 }}>
-              <TextField
-                fullWidth
-                label={t("app.note")}
-                name="note"
-                id="note"
-                value={formData.note}
-                onChange={handleChange}
-                multiline
-                minRows={3}
-                maxRows={5}
-                autoComplete="off"
-                sx={{
-                  "& textarea": {
-                    resize: "none",
-                    height: "70px",
-                    overflow: "auto",
-                  },
-                }}
-                slotProps={{
-                  input: {
-                    inputComponent: "textarea",
-                  },
-                }}
-              />
-            </Grid>
-
-            {/* Display additional info when in edit mode */}
-            {isEditMode && initialData && (
-              <>
-                <Grid size={{ xs: 12 }}>
-                  <Typography
-                    variant="body2"
-                    component="div"
-                    sx={{ color: theme.palette.text.secondary }}
-                  >
-                    <span style={{ fontWeight: "bold" }}>
-                      {t("app.owner")}:
-                    </span>{" "}
-                    {initialData.owner}
-                  </Typography>
-                </Grid>
-                <Grid size={{ xs: 12 }}>
-                  <Typography
-                    variant="body2"
-                    component="div"
-                    sx={{ color: theme.palette.text.secondary }}
-                  >
-                    <span style={{ fontWeight: "bold" }}>
-                      {t("app.dateCreated")}:
-                    </span>{" "}
-                    {formatDate(initialData.date_created || "")}
-                  </Typography>
-                </Grid>
-                <Grid size={{ xs: 12 }}>
-                  <Typography
-                    variant="body2"
-                    component="div"
-                    sx={{ color: theme.palette.text.secondary }}
-                  >
-                    <span style={{ fontWeight: "bold" }}>
-                      {t("app.dateModified")}:
-                    </span>{" "}
-                    {formatDate(initialData.date_modified || "")}
-                  </Typography>
-                </Grid>
-              </>
-            )}
+        <Grid container spacing={2}>
+          {/* Project Name */}
+          <Grid size={{ xs: 12 }}>
+            <TextField
+              fullWidth
+              label={t("app.projectName")}
+              name="name"
+              id="projectName"
+              value={formData.name}
+              onChange={handleChange}
+              onBlur={handleNameBlur}
+              required
+              error={nameError}
+              helperText={nameError ? t("app.projectNameRequired") : ""}
+              autoComplete="off"
+              disabled={loading}
+            />
           </Grid>
 
-          {/* Footer */}
-          <Box
-            sx={{ mt: 3, display: "flex", justifyContent: "flex-end", gap: 2 }}
-          >
-            <Button
-              onClick={handleModalClose}
-              variant="outlined"
-              color="secondary"
+          {/* Project Description */}
+          <Grid size={{ xs: 12 }}>
+            <TextField
+              fullWidth
+              label={t("app.projectDescription")}
+              name="description"
+              id="projectDescription"
+              value={formData.description}
+              onChange={handleChange}
+              multiline
+              minRows={3}
+              maxRows={5}
+              autoComplete="off"
               disabled={loading}
-            >
-              {t("app.cancel")}
-            </Button>
-            <Button
-              onClick={handleSubmit}
-              variant="contained"
-              color="primary"
-              disabled={isSubmitDisabled || loading}
-            >
-              {loading ? `${t("app.processing")}` : `${t("app.save")}`}
-            </Button>
-          </Box>
+              sx={{
+                "& textarea": {
+                  resize: "none",
+                  height: "70px",
+                  overflow: "auto",
+                },
+              }}
+              slotProps={{
+                input: {
+                  inputComponent: "textarea",
+                },
+              }}
+            />
+          </Grid>
+
+          {/* Display additional info when in edit mode */}
+          {isEditMode && initialData && (
+            <>
+              <Grid size={{ xs: 12 }}>
+                <Typography
+                  variant="body2"
+                  component="div"
+                  sx={{ color: theme.palette.text.secondary, mt: 1 }}
+                >
+                  <span style={{ fontWeight: "bold" }}>
+                    {t("app.dateCreated")}:
+                  </span>{" "}
+                  {formatDate(initialData.createdAt || "")}
+                </Typography>
+              </Grid>
+              <Grid size={{ xs: 12 }}>
+                <Typography
+                  variant="body2"
+                  component="div"
+                  sx={{ color: theme.palette.text.secondary }}
+                >
+                  <span style={{ fontWeight: "bold" }}>
+                    {t("app.dateModified")}:
+                  </span>{" "}
+                  {formatDate(initialData.updatedAt || "")}
+                </Typography>
+              </Grid>
+            </>
+          )}
+        </Grid>
+
+        {/* Footer */}
+        <Box
+          sx={{ mt: 3, display: "flex", justifyContent: "flex-end", gap: 2 }}
+        >
+          <Button
+            onClick={handleModalClose}
+            variant="outlined"
+            color="secondary"
+            disabled={loading}
+          >
+            {t("app.cancel")}
+          </Button>
+          <Button
+            onClick={handleSubmit}
+            variant="contained"
+            color="primary"
+            disabled={isSubmitDisabled}
+          >
+            {loading ? t("app.processing") : t("app.save")}
+          </Button>
         </Box>
-      </Modal>
-    </>
+      </Box>
+    </Modal>
   );
 };
 
