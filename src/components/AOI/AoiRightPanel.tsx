@@ -3,7 +3,13 @@ import AoiStatistics from "./AoiStatistics";
 import { styled } from "@mui/material/styles";
 import { useState, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { Button, Tooltip, CircularProgress, Typography } from "@mui/material";
+import {
+  Button,
+  Tooltip,
+  CircularProgress,
+  Typography,
+  Alert,
+} from "@mui/material";
 import { useAppSelector } from "@/hooks/reduxHooks";
 import {
   MAX_AOI_POLYGON_COUNT,
@@ -67,12 +73,15 @@ const AoiRightPanel = () => {
 
   const aoiPolygons = useAppSelector((state) => state.aoi.polygons);
 
-  const [pipelineStatus, setPipelineStatus] = useState<PipelineStatus>("idle");
+  const [pipelineStatus, setPipelineStatus] =
+    useState<PipelineStatus>("idle");
   const [stages, setStages] = useState<LocalStage[]>([]);
   const [summary, setSummary] = useState<PipelineSummary | null>(null);
-  const [currentPipelineId, setCurrentPipelineId] = useState<string | null>(
-    null
-  );
+  const [currentPipelineId, setCurrentPipelineId] =
+    useState<string | null>(null);
+
+  // loading just for the initial POST /mock-set-aoi call
+  const [loading, setLoading] = useState(false);
 
   const isRunning = pipelineStatus === "running";
   const isSuccess = pipelineStatus === "success";
@@ -86,7 +95,7 @@ const AoiRightPanel = () => {
     return 6; // default mock total
   }, [stages]);
 
-  // ✅ number of completed stages (success or failed) – starts at 0
+  // number of completed stages (success or failed) – starts at 0
   const completedSteps = useMemo(() => {
     if (stages.length === 0) return 0;
     return stages.filter((s) => s.status !== "pending").length;
@@ -96,7 +105,12 @@ const AoiRightPanel = () => {
   useEffect(() => {
     if (!socket || !projectId) return;
 
-    console.log("[AOI RIGHT] using socket:", socket.id, "for project:", projectId);
+    console.log(
+      "[AOI RIGHT] using socket:",
+      socket.id,
+      "for project:",
+      projectId
+    );
 
     const handleStarted = (payload: any) => {
       console.log("[AOI RIGHT] aoi:pipeline_started:", payload);
@@ -187,7 +201,9 @@ const AoiRightPanel = () => {
 
   const handleConfirmClick = async () => {
     if (!projectId) {
-      console.warn("[AOI RIGHT] No project selected, ignoring Set AOI click");
+      console.warn(
+        "[AOI RIGHT] No project selected, ignoring Set AOI click"
+      );
       return;
     }
 
@@ -202,12 +218,15 @@ const AoiRightPanel = () => {
       setStages([]);
       setSummary(null);
       setCurrentPipelineId(null);
+      setLoading(true);
 
       await setProjectAoiMock(projectId);
       // pipeline events handled via socket
     } catch (err) {
       console.error("[AOI RIGHT] Error starting AOI pipeline:", err);
       setPipelineStatus("idle");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -238,7 +257,27 @@ const AoiRightPanel = () => {
             )
           }
         >
-          <span>
+          <Box
+            display="flex"
+            flexDirection="column"
+            alignItems="center"
+            justifyContent="center"
+            sx={{ width: "100%" }}
+          >
+            {/* Inline info alert from incoming branch */}
+            {loading && (
+              <Alert
+                severity="info"
+                sx={{
+                  width: "100%",
+                  mb: 3.5,
+                  textAlign: "center",
+                }}
+              >
+                {t("app.settingAoiMessage")}
+              </Alert>
+            )}
+
             <Button
               sx={{ px: 4, py: 2 }}
               color="primary"
@@ -247,22 +286,20 @@ const AoiRightPanel = () => {
               disabled={
                 isRunning ||
                 aoiPolygons.length < MIN_AOI_POLYGON_COUNT ||
-                aoiPolygons.length > MAX_AOI_POLYGON_COUNT
+                aoiPolygons.length > MAX_AOI_POLYGON_COUNT ||
+                loading
               }
             >
               {t("app.setAOI")}
             </Button>
-          </span>
+          </Box>
         </Tooltip>
 
         <Box sx={{ ml: 2, display: "flex", alignItems: "center" }}>
           {isRunning && (
             <>
               <CircularProgress size={22} />
-              <Typography
-                variant="body2"
-                sx={{ ml: 1, minWidth: 48 }}
-              >
+              <Typography variant="body2" sx={{ ml: 1, minWidth: 48 }}>
                 {completedSteps}/{totalSteps}
               </Typography>
             </>

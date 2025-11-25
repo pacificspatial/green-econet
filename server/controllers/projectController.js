@@ -161,6 +161,21 @@ const getPolygonsByProject = async (req, res, next) => {
     next(err);
   }
 };
+/** * Set AOI for a project
+ * @route POST /projects/set-aoi/:projectId
+ * @params projectId - UUID of the project
+ * @returns Updated project object with AOI set
+ */
+const setProjectAoi = async (req, res, next) => {
+  try {
+    const projectId = req.params.projectId;
+    const updatedProject = await projectService.setProjectAoi(projectId);
+    return success(res, "Project AOI set successfully", updatedProject);
+  } catch (err) {
+    console.log("Error in set project AOI:", err.message);
+    next(err);
+  }
+}
 
 /**
  * MOCK: Set AOI pipeline
