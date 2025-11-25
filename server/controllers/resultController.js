@@ -15,6 +15,21 @@ const getClippedBuffer125GreenResult = async (req, res, next) => {
   }
 };
 
+const getClippedGreenResult = async (req, res, next) => {
+  const { projectId } = req.params;
+
+  try {
+    const result = await resultServices.getClippedGreenResult(
+      projectId
+    );
+    success(res, "Clipped Green Result fetched successfully", result);
+  } catch (err) {
+    console.log("Error in getClippedGreenResult:", err);
+    next(err);
+  }
+};
+
 export default {
   getClippedBuffer125GreenResult,
+  getClippedGreenResult
 };
