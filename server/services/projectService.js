@@ -191,11 +191,8 @@ const getPolygonsByProject = async (projectId) => {
  *     aoi:pipeline_completed
  */
 const startMockAoiPipeline = async ({ projectId, io }) => {
-  console.log("[AOI PIPELINE] Starting mock AOI pipeline for project:", projectId);
-
   const project = await Projects.findByPk(projectId);
   if (!project) {
-    console.log("[AOI PIPELINE] Project not found:", projectId);
     throw new CustomError("Project not found", 404, "PROJECT_NOT_FOUND");
   }
 
@@ -203,18 +200,13 @@ const startMockAoiPipeline = async ({ projectId, io }) => {
   const totalSteps = MOCK_AOI_STAGES.length;
 
   // env flag to control failure simulation
-  const simulateFailure =
-    (process.env.AOI_MOCK_SIMULATE_FAILURE || "false") === "true";
+  const simulateFailure = (process.env.AOI_MOCK_SIMULATE_FAILURE || "false") === "true";
 
   const emit = (event, payload) => {
     if (!io) {
-      console.warn(
-        "[AOI PIPELINE] Socket.IO instance not found; cannot emit:",
-        event
-      );
+      console.warn("Socket.IO instance not found on app; cannot emit:", event);
       return;
     }
-    console.log("[AOI PIPELINE] EMIT:", event, JSON.stringify(payload));
     io.emit(event, payload);
   };
 
@@ -229,13 +221,9 @@ const startMockAoiPipeline = async ({ projectId, io }) => {
   let failed = 0;
 
   MOCK_AOI_STAGES.forEach((stage, index) => {
-    const delayMs = (index + 1) * 2000; // 2s between stages
+    const delayMs = (index + 1) * 2000; // 2s between stages – tweak if needed
 
     setTimeout(() => {
-      console.log(
-        `[AOI PIPELINE] Running stage ${index + 1}/${totalSteps} (${stage.key})`
-      );
-
       let status = "success";
 
       // For mock: if simulateFailure=true, fail exactly one middle "query" stage (e.g. QUERY_2)
@@ -251,28 +239,15 @@ const startMockAoiPipeline = async ({ projectId, io }) => {
         projectId,
         stageKey: stage.key,
         label: stage.label,
-        status, // "success" | "failed"
-        step: index + 1, // 1..6
+        status,                // "success" | "failed"
+        step: index + 1,       // 1..6
         totalSteps,
         timestamp: new Date().toISOString(),
       });
 
       if (index === totalSteps - 1) {
         const overallStatus =
-          failed === 0
-            ? "success"
-            : succeeded === 0
-            ? "failed"
-            : "partial_failure";
-
-        console.log(
-          "[AOI PIPELINE] Completed. Status:",
-          overallStatus,
-          "Succeeded:",
-          succeeded,
-          "Failed:",
-          failed
-        );
+          failed === 0 ? "success" : succeeded === 0 ? "failed" : "partial_failure";
 
         emit("aoi:pipeline_completed", {
           pipelineId,
@@ -292,7 +267,6 @@ const startMockAoiPipeline = async ({ projectId, io }) => {
   // return immediately; pipeline continues in background
   return { pipelineId };
 };
-
 
 
 export default {

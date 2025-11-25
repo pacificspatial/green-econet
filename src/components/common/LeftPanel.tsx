@@ -145,6 +145,11 @@ const LeftPanel: React.FC<LeftPanelProps> = ({
   const [isModalOpen, setModalOpen] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
 
+  // ⭐ NEW: track completions only for this mount
+  const [recentlyCompleted, setRecentlyCompleted] = useState<
+    Record<string, boolean>
+  >({});
+
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const { t } = useTranslation();
@@ -180,6 +185,12 @@ const LeftPanel: React.FC<LeftPanelProps> = ({
           startedAt: payload.startedAt,
         })
       );
+      // when a new run starts, clear previous completion flag for that project
+      setRecentlyCompleted((prev) => {
+        const copy = { ...prev };
+        delete copy[payload.projectId];
+        return copy;
+      });
     };
 
     const handleStage = (payload: any) => {
@@ -207,6 +218,11 @@ const LeftPanel: React.FC<LeftPanelProps> = ({
           completedAt: payload.completedAt,
         })
       );
+      // ⭐ mark this project as "recently completed" for this mount
+      setRecentlyCompleted((prev) => ({
+        ...prev,
+        [payload.projectId]: true,
+      }));
     };
 
     socket.on("aoi:pipeline_started", handleStarted);
@@ -384,6 +400,7 @@ const LeftPanel: React.FC<LeftPanelProps> = ({
         <StyledList sx={{ mx: 1 }}>
           {filteredProjects?.map((project) => {
             const aoiStatus = aoiPipelineByProject[project.id]?.status;
+            const showCompletionIcon = recentlyCompleted[project.id];
 
             return (
               <ListItem
@@ -411,21 +428,24 @@ const LeftPanel: React.FC<LeftPanelProps> = ({
                         {aoiStatus === "running" && (
                           <CircularProgress size={16} sx={{ ml: 1 }} />
                         )}
-                        {aoiStatus === "success" && (
+
+                        {showCompletionIcon && aoiStatus === "success" && (
                           <CheckCircleIcon
                             fontSize="small"
                             color="success"
                             sx={{ ml: 1 }}
                           />
                         )}
-                        {(aoiStatus === "failed" ||
-                          aoiStatus === "partial_failure") && (
-                          <ErrorIcon
-                            fontSize="small"
-                            color="error"
-                            sx={{ ml: 1 }}
-                          />
-                        )}
+
+                        {showCompletionIcon &&
+                          (aoiStatus === "failed" ||
+                            aoiStatus === "partial_failure") && (
+                            <ErrorIcon
+                              fontSize="small"
+                              color="error"
+                              sx={{ ml: 1 }}
+                            />
+                          )}
                       </Box>
                     }
                     sx={{
