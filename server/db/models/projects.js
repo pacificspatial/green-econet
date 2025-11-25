@@ -29,6 +29,10 @@ export const Projects = sequelize.define(
     geom: {
       type: DataTypes.GEOMETRY("POLYGON", 4326),
       allowNull: true,
+    },
+    processed: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false
     }
   }, {
     tableName: "projects",

@@ -3,7 +3,6 @@
 import projectService from "../services/projectService.js";
 import pipelineService from "../services/pipelineService.js";
 import { success } from "../utils/response.js";
-import { startMockAoiPipeline } from "../services/mockpipelineservice.js";
 
 /**
  * Create a new project
@@ -163,30 +162,6 @@ const getPolygonsByProject = async (req, res, next) => {
   }
 };
 
-/**
- * MOCK: Set AOI pipeline
- * @route POST /projects/mock-set-aoi/:projectId
- * Kicks off a mock AOI pipeline and returns pipelineId immediately.
- */
-// const setProjectMockAoi = async (req, res, next) => {
-//   try {
-//     const { projectId } = req.params;
-//     const io = req.app.get("socket");
-
-//     console.log("[CONTROLLER] /mock-set-aoi called for project:", projectId);
-
-//     const { pipelineId } = await startMockAoiPipeline({ projectId, io });
-
-//     return success(res, "Mock AOI pipeline started", {
-//       pipelineId,
-//       projectId,
-//     });
-//   } catch (err) {
-//     console.log("Error in setProjectAoi (mock pipeline):", err.message);
-//     next(err);
-//   }
-// };
-
 const runPipeline = async (req, res, next) => {
   const { projectId } = req?.params;
   const io = req.app.get("socket");
@@ -208,5 +183,4 @@ export default {
   deleteProjectPolygon,
   getPolygonsByProject,
   runPipeline,
-  // setProjectMockAoi,
 };
