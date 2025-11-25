@@ -1,5 +1,8 @@
+// controllers/projectController.js
+
 import projectService from "../services/projectService.js";
 import { success } from "../utils/response.js";
+import { startMockAoiPipeline } from "../services/mockpipelineservice.js";
 
 /**
  * Create a new project
@@ -35,7 +38,7 @@ const updateProject = async (req, res, next) => {
     console.log("Error in update project:", err.message);
     next(err);
   }
-}
+};
 
 /**
  * Delete a project
@@ -49,7 +52,7 @@ const deleteProject = async (req, res, next) => {
     return success(res, "Project deleted successfully", null);
   } catch (err) {
     console.log("Error in delete project", err.message);
-    
+
     next(err);
   }
 };
@@ -114,7 +117,11 @@ const updateProjectPolygon = async (req, res, next) => {
       req.params.polygonId,
       req.body
     );
-    return success(res, "Project polygon updated successfully", updatedPolygon);
+    return success(
+      res,
+      "Project polygon updated successfully",
+      updatedPolygon
+    );
   } catch (err) {
     console.log("Error in update project polygon:", err.message);
     next(err);
@@ -155,34 +162,26 @@ const getPolygonsByProject = async (req, res, next) => {
   }
 };
 
-
 /**
- * MOCK: Kick off AOI pipeline for a project
+ * MOCK: Set AOI pipeline
  * @route POST /projects/mock-set-aoi/:projectId
+ * Kicks off a mock AOI pipeline and returns pipelineId immediately.
  */
 const setProjectAoi = async (req, res, next) => {
   try {
     const { projectId } = req.params;
-
-    if (!projectId) {
-      throw new CustomError("projectId is required", 400, "PROJECT_ID_REQUIRED");
-    }
-
     const io = req.app.get("socket");
 
-    const { pipelineId } = await projectService.startMockAoiPipeline({
-      projectId,
-      io, // simulateFailure is read from env
-    });
+    console.log("[CONTROLLER] /mock-set-aoi called for project:", projectId);
 
-    return success(
-      res,
-      "Mock AOI pipeline started",
-      { pipelineId, projectId },
-      202
-    );
+    const { pipelineId } = await startMockAoiPipeline({ projectId, io });
+
+    return success(res, "Mock AOI pipeline started", {
+      pipelineId,
+      projectId,
+    });
   } catch (err) {
-    console.log("Error in setProjectAoi:", err.message);
+    console.log("Error in setProjectAoi (mock pipeline):", err.message);
     next(err);
   }
 };
@@ -197,6 +196,5 @@ export default {
   updateProjectPolygon,
   deleteProjectPolygon,
   getPolygonsByProject,
-  setProjectAoi
+  setProjectAoi,
 };
-
