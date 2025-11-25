@@ -300,7 +300,7 @@ jobs:
           ssh -o StrictHostKeyChecking=no ${TARGET_USER}@${TARGET_HOST} "sudo chown ${TARGET_USER}:${TARGET_USER} ${TARGET_PATH}/.env || true"
           echo ".env written to ${TARGET_PATH}/.env"
 
-      - name: Remote install & pm2 restart (use index.js, keep name stg-enp)
+      - name: Remote install & pm2 restart (single SSH, npm install, keep stg-enp)
         env:
           TARGET_USER: ${{ secrets.STG_EC2_USER || 'ec2-user' }}
           TARGET_HOST: ${{ secrets.STG_EC2_PUBLIC_IP }}
@@ -311,10 +311,12 @@ jobs:
             exit 1
           fi
 
-          ssh -o StrictHostKeyChecking=no ${TARGET_USER}@${TARGET_HOST} <<'EOF'
+          # single ssh connection — unquoted heredoc so ${TARGET_PATH} is expanded locally
+          ssh -o StrictHostKeyChecking=no ${TARGET_USER}@${TARGET_HOST} <<EOF
             set -e
             cd ${TARGET_PATH}
 
+            echo "REMOTE HOST: \$(hostname -f || hostname)"
             echo "PWD: \$(pwd)"
             echo "Files:"
             ls -la
@@ -333,30 +335,28 @@ jobs:
               echo "No build script found, skipping build"
             fi
 
-            # PM2 process name kept as stg-enp
+            # Keep PM2 name stg-enp — attempt restart, fallback to delete+start if needed
             PROCESS_NAME="stg-enp"
             ENTRY="index.js"
 
-            # If pm2 says the process exists try restart, if restart fails try start
-            if pm2 describe "${PROCESS_NAME}" >/dev/null 2>&1; then
-              echo "PM2 process ${PROCESS_NAME} exists — attempting restart"
-              if pm2 restart "${PROCESS_NAME}" --update-env; then
-                echo "Restarted ${PROCESS_NAME} successfully"
+            if pm2 describe "\${PROCESS_NAME}" >/dev/null 2>&1; then
+              echo "PM2 process \${PROCESS_NAME} exists — attempting restart"
+              if pm2 restart "\${PROCESS_NAME}" --update-env; then
+                echo "Restarted \${PROCESS_NAME} successfully"
               else
-                echo "Restart failed for ${PROCESS_NAME} — trying a fresh start"
-                pm2 delete "${PROCESS_NAME}" || true
-                pm2 start "${ENTRY}" --name "${PROCESS_NAME}" --update-env
+                echo "Restart failed for \${PROCESS_NAME} — deleting and starting fresh"
+                pm2 delete "\${PROCESS_NAME}" || true
+                pm2 start "\${ENTRY}" --name "\${PROCESS_NAME}" --update-env
               fi
             else
-              echo "PM2 process ${PROCESS_NAME} not found — starting"
-              pm2 start "${ENTRY}" --name "${PROCESS_NAME}" --update-env
+              echo "PM2 process \${PROCESS_NAME} not found — starting fresh"
+              pm2 start "\${ENTRY}" --name "\${PROCESS_NAME}" --update-env
             fi
 
             pm2 save || true
-            pm2 status "${PROCESS_NAME}" || true
+            pm2 status "\${PROCESS_NAME}" || true
             echo "Backend deployment completed."
           EOF
-
 
 
 
