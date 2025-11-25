@@ -1,7 +1,7 @@
 import { Box } from "@mui/system";
 import AoiStatistics from "./AoiStatistics";
 import { styled } from "@mui/material/styles";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { Button, Tooltip, CircularProgress } from "@mui/material";
 import AlertBox from "../utils/AlertBox";
@@ -15,7 +15,8 @@ import { useParams } from "react-router-dom";
 import { setProjectAoiMock } from "@/api/project";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import ErrorIcon from "@mui/icons-material/Error";
-import { io, Socket } from "socket.io-client";
+import FiberManualRecordIcon from "@mui/icons-material/FiberManualRecord";
+import { useSocket } from "@/context/SocketContext";
 
 const StyledBox = styled(Box)(({ theme }) => ({
   backgroundColor:
@@ -29,10 +30,12 @@ const StyledBox = styled(Box)(({ theme }) => ({
   position: "relative",
 }));
 
-const StyledGridBottom = styled("div")(() => ({
+// 👇 add bottom padding so content doesn't clash with Set AOI row
+const StyledGridBottom = styled("div")(({ theme }) => ({
   flex: 1,
   width: "100%",
   minHeight: "0px",
+  paddingBottom: theme.spacing(6), // reserve space above the button row
 }));
 
 const StyledConfirmBox = styled(Box)(() => ({
@@ -46,6 +49,20 @@ const StyledConfirmBox = styled(Box)(() => ({
 
 type PipelineStatus = "idle" | "running" | "success" | "failed" | "partial_failure";
 
+interface LocalStage {
+  stageKey: string;
+  label: string;
+  status: "pending" | "success" | "failed";
+  step: number;
+  totalSteps: number;
+}
+
+interface PipelineSummary {
+  totalSteps: number;
+  succeeded: number;
+  failed: number;
+}
+
 const AoiRightPanel = () => {
   const [alert, setAlert] = useState<AlertState>({
     open: false,
@@ -54,12 +71,16 @@ const AoiRightPanel = () => {
   });
 
   const { projectId } = useParams<{ projectId: string }>();
+  const socket = useSocket();
 
   const aoiPolygons = useAppSelector((state) => state.aoi.polygons);
 
-  // Local status just for this panel
   const [pipelineStatus, setPipelineStatus] = useState<PipelineStatus>("idle");
-  const socketRef = useRef<Socket | null>(null);
+  const [stages, setStages] = useState<LocalStage[]>([]);
+  const [summary, setSummary] = useState<PipelineSummary | null>(null);
+  const [currentPipelineId, setCurrentPipelineId] = useState<string | null>(
+    null
+  );
 
   const { t } = useTranslation();
 
@@ -68,52 +89,104 @@ const AoiRightPanel = () => {
   const isFailed =
     pipelineStatus === "failed" || pipelineStatus === "partial_failure";
 
-  // 🔌 Socket listeners for AOI events (filtered by projectId)
+  const runningStep = useMemo(() => {
+    if (!isRunning || stages.length === 0) return undefined;
+    const pending = stages.find((s) => s.status === "pending");
+    return pending?.step;
+  }, [isRunning, stages]);
+
+  // Socket listeners for AOI events specific to this project
   useEffect(() => {
-    console.log(
-      "[AOI RIGHT] Connecting socket to:",
-      import.meta.env.VITE_EP_SOCKET_PORT
-    );
-    const socket = io(import.meta.env.VITE_EP_SOCKET_PORT, {
-      transports: ["websocket"],
-    });
-    socketRef.current = socket;
+    if (!socket || !projectId) return;
 
-    socket.on("connect", () => {
-      console.log("[AOI RIGHT] Socket connected:", socket.id);
-    });
+    console.log("[AOI RIGHT] using socket:", socket.id, "for project:", projectId);
 
-    socket.on("disconnect", () => {
-      console.log("[AOI RIGHT] Socket disconnected");
-    });
-
-    socket.on("aoi:pipeline_started", (payload) => {
-      console.log("[AOI RIGHT] pipeline_started:", payload);
-      if (!projectId) return;
+    const handleStarted = (payload: any) => {
+      console.log("[AOI RIGHT] aoi:pipeline_started:", payload);
       if (payload.projectId !== projectId) return;
+
+      setCurrentPipelineId(payload.pipelineId);
       setPipelineStatus("running");
-    });
+      setSummary(null);
 
-    socket.on("aoi:pipeline_stage", (payload) => {
-      console.log("[AOI RIGHT] pipeline_stage:", payload);
-      if (!projectId) return;
-      if (payload.projectId !== projectId) return;
-      // we keep status as "running" here; you could also show stage info if needed
-    });
+      const totalSteps = payload.totalSteps ?? 6;
+      const initialStages: LocalStage[] = Array.from(
+        { length: totalSteps },
+        (_, idx) => ({
+          stageKey: `STEP_${idx + 1}`,
+          label: `Stage ${idx + 1}`,
+          status: "pending",
+          step: idx + 1,
+          totalSteps,
+        })
+      );
+      setStages(initialStages);
+    };
 
-    socket.on("aoi:pipeline_completed", (payload) => {
-      console.log("[AOI RIGHT] pipeline_completed:", payload);
-      if (!projectId) return;
+    const handleStage = (payload: any) => {
+      console.log("[AOI RIGHT] aoi:pipeline_stage:", payload);
       if (payload.projectId !== projectId) return;
-      // status from backend: "success" | "failed" | "partial_failure"
-      setPipelineStatus(payload.status);
-    });
+      if (currentPipelineId && payload.pipelineId !== currentPipelineId) return;
+
+      setPipelineStatus("running");
+      setStages((prev) => {
+        const totalSteps = payload.totalSteps ?? prev[0]?.totalSteps ?? 6;
+        const stepIndex = (payload.step ?? 1) - 1;
+
+        const copy: LocalStage[] =
+          prev.length === totalSteps
+            ? [...prev]
+            : Array.from({ length: totalSteps }, (_, idx) => {
+                const existing = prev[idx];
+                return (
+                  existing || {
+                    stageKey: `STEP_${idx + 1}`,
+                    label: `Stage ${idx + 1}`,
+                    status: "pending" as const,
+                    step: idx + 1,
+                    totalSteps,
+                  }
+                );
+              });
+
+        copy[stepIndex] = {
+          stageKey: payload.stageKey ?? copy[stepIndex].stageKey,
+          label: payload.label ?? copy[stepIndex].label,
+          status: payload.status === "failed" ? "failed" : "success",
+          step: payload.step,
+          totalSteps,
+        };
+
+        return copy;
+      });
+    };
+
+    const handleCompleted = (payload: any) => {
+      console.log("[AOI RIGHT] aoi:pipeline_completed:", payload);
+      if (payload.projectId !== projectId) return;
+      if (currentPipelineId && payload.pipelineId !== currentPipelineId) return;
+
+      setPipelineStatus(payload.status as PipelineStatus);
+      if (payload.summary) {
+        setSummary({
+          totalSteps: payload.summary.totalSteps,
+          succeeded: payload.summary.succeeded,
+          failed: payload.summary.failed,
+        });
+      }
+    };
+
+    socket.on("aoi:pipeline_started", handleStarted);
+    socket.on("aoi:pipeline_stage", handleStage);
+    socket.on("aoi:pipeline_completed", handleCompleted);
 
     return () => {
-      console.log("[AOI RIGHT] Disconnecting socket…");
-      socket.disconnect();
+      socket.off("aoi:pipeline_started", handleStarted);
+      socket.off("aoi:pipeline_stage", handleStage);
+      socket.off("aoi:pipeline_completed", handleCompleted);
     };
-  }, [projectId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [socket, projectId, currentPipelineId]);
 
   const handleConfirmClick = async () => {
     if (!projectId) {
@@ -125,6 +198,11 @@ const AoiRightPanel = () => {
       return;
     }
 
+    if (pipelineStatus === "running") {
+      console.log("[AOI RIGHT] Ignoring click: pipeline already running");
+      return;
+    }
+
     try {
       setAlert({
         open: true,
@@ -133,9 +211,12 @@ const AoiRightPanel = () => {
       });
 
       console.log("[AOI RIGHT] Calling setProjectAoiMock with:", projectId);
-      setPipelineStatus("running"); // immediately show spinner + disable button
+      setPipelineStatus("running");
+      setStages([]);
+      setSummary(null);
+      setCurrentPipelineId(null);
+
       await setProjectAoiMock(projectId);
-      // socket events will finalize the status
     } catch (err) {
       console.error("[AOI RIGHT] Error starting AOI pipeline:", err);
       setPipelineStatus("idle");
@@ -161,11 +242,89 @@ const AoiRightPanel = () => {
         />
       )}
 
-      {/* This section takes the remaining space */}
+      {/* Stats + compact timeline */}
       <StyledGridBottom>
         <AoiStatistics />
+
+        {stages.length > 0 && (
+          <Box
+            sx={{
+              width: "100%",
+              px: 2,
+              pt: 1,
+              mb: 1, // 👈 extra margin so it's clearly above the button
+              display: "flex",
+              justifyContent: "center",
+            }}
+          >
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                width: "100%",
+                maxWidth: 260,
+              }}
+            >
+              {stages.map((stage, idx) => {
+                const isCurrentRunning =
+                  isRunning &&
+                  stage.status === "pending" &&
+                  stage.step === runningStep;
+
+                let icon;
+                if (stage.status === "success") {
+                  icon = <CheckCircleIcon fontSize="small" color="success" />;
+                } else if (stage.status === "failed") {
+                  icon = <ErrorIcon fontSize="small" color="error" />;
+                } else if (isCurrentRunning) {
+                  icon = <CircularProgress size={16} />;
+                } else {
+                  icon = (
+                    <FiberManualRecordIcon
+                      sx={{ fontSize: 12, color: "text.disabled" }}
+                    />
+                  );
+                }
+
+                return (
+                  <Box
+                    key={stage.stageKey}
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      flex: 1,
+                    }}
+                  >
+                    {idx > 0 && (
+                      <Box
+                        sx={{
+                          flex: 1,
+                          height: 2,
+                          bgcolor: "divider",
+                          mx: 0.5,
+                        }}
+                      />
+                    )}
+                    <Box
+                      sx={{
+                        width: 24,
+                        height: 24,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      {icon}
+                    </Box>
+                  </Box>
+                );
+              })}
+            </Box>
+          </Box>
+        )}
       </StyledGridBottom>
 
+      {/* Confirm / Set AOI button + overall pipeline status icon */}
       <StyledConfirmBox>
         <Tooltip
           title={
@@ -201,7 +360,6 @@ const AoiRightPanel = () => {
           </span>
         </Tooltip>
 
-        {/* Status indicator beside the button */}
         <Box sx={{ ml: 2, display: "flex", alignItems: "center" }}>
           {isRunning && <CircularProgress size={22} />}
           {isSuccess && <CheckCircleIcon color="success" />}

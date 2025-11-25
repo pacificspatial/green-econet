@@ -3,7 +3,6 @@ import React, {
   useEffect,
   useCallback,
   useMemo,
-  useRef,
 } from "react";
 import {
   Box,
@@ -34,7 +33,6 @@ import ProjectModal from "./ProjectModal";
 import type { AlertState } from "@/types/AlertState";
 import { useAppDispatch, useAppSelector } from "@/hooks/reduxHooks";
 import { useNavigate } from "react-router-dom";
-import { io, Socket } from "socket.io-client";
 import type { ProjectData } from "@/types/ProjectData";
 import { deleteProject } from "@/api/project";
 import {
@@ -46,6 +44,7 @@ import {
   pipelineStageUpdated,
   pipelineCompleted,
 } from "@/redux/slices/aoiPipelineSlice";
+import { useSocket } from "@/context/SocketContext";
 
 interface LeftPanelProps {
   collapsed: boolean;
@@ -150,11 +149,12 @@ const LeftPanel: React.FC<LeftPanelProps> = ({
   const navigate = useNavigate();
   const { t } = useTranslation();
   const theme = useTheme();
+  const socket = useSocket();
+
   const iconColor = useMemo(
     () => (theme.palette.mode === "dark" ? "#ffffff" : "inherit"),
     [theme.palette.mode]
   );
-  const socketRef = useRef<Socket | null>(null);
 
   const filteredProjects = useMemo(
     () =>
@@ -164,27 +164,14 @@ const LeftPanel: React.FC<LeftPanelProps> = ({
     [projects, searchTerm]
   );
 
-  // Set up socket connection to listen for AOI pipeline events
+  // Socket → Redux mapping
   useEffect(() => {
-    console.log(
-      "[AOI SOCKET] Connecting to:",
-      import.meta.env.VITE_EP_SOCKET_PORT
-    );
-    const socket = io(import.meta.env.VITE_EP_SOCKET_PORT, {
-      transports: ["websocket"],
-    });
-    socketRef.current = socket;
+    if (!socket) return;
 
-    socket.on("connect", () => {
-      console.log("[AOI SOCKET] Connected:", socket.id);
-    });
+    console.log("[LEFT PANEL] using socket:", socket.id);
 
-    socket.on("disconnect", () => {
-      console.log("[AOI SOCKET] Disconnected");
-    });
-
-    socket.on("aoi:pipeline_started", (payload) => {
-      console.log("[AOI SOCKET] pipeline_started:", payload);
+    const handleStarted = (payload: any) => {
+      console.log("[LEFT PANEL] aoi:pipeline_started:", payload);
       dispatch(
         pipelineStarted({
           projectId: payload.projectId,
@@ -193,10 +180,10 @@ const LeftPanel: React.FC<LeftPanelProps> = ({
           startedAt: payload.startedAt,
         })
       );
-    });
+    };
 
-    socket.on("aoi:pipeline_stage", (payload) => {
-      console.log("[AOI SOCKET] pipeline_stage:", payload);
+    const handleStage = (payload: any) => {
+      console.log("[LEFT PANEL] aoi:pipeline_stage:", payload);
       dispatch(
         pipelineStageUpdated({
           projectId: payload.projectId,
@@ -208,10 +195,10 @@ const LeftPanel: React.FC<LeftPanelProps> = ({
           totalSteps: payload.totalSteps,
         })
       );
-    });
+    };
 
-    socket.on("aoi:pipeline_completed", (payload) => {
-      console.log("[AOI SOCKET] pipeline_completed:", payload);
+    const handleCompleted = (payload: any) => {
+      console.log("[LEFT PANEL] aoi:pipeline_completed:", payload);
       dispatch(
         pipelineCompleted({
           projectId: payload.projectId,
@@ -220,13 +207,18 @@ const LeftPanel: React.FC<LeftPanelProps> = ({
           completedAt: payload.completedAt,
         })
       );
-    });
+    };
+
+    socket.on("aoi:pipeline_started", handleStarted);
+    socket.on("aoi:pipeline_stage", handleStage);
+    socket.on("aoi:pipeline_completed", handleCompleted);
 
     return () => {
-      console.log("[AOI SOCKET] Disconnecting…");
-      socket.disconnect();
+      socket.off("aoi:pipeline_started", handleStarted);
+      socket.off("aoi:pipeline_stage", handleStage);
+      socket.off("aoi:pipeline_completed", handleCompleted);
     };
-  }, [dispatch]);
+  }, [socket, dispatch]);
 
   const handleAlert = useCallback(
     (message: string, severity: "success" | "error") => {
@@ -524,7 +516,7 @@ const LeftPanel: React.FC<LeftPanelProps> = ({
           navigate(`/project/${project.id}`);
         }}
         setAlertState={setAlertState}
-        socketId={socketRef.current?.id || ""}
+        socketId={socket?.id ?? ""}
       />
     </StyledBox>
   );
