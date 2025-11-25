@@ -1,4 +1,4 @@
-import { db } from "../db/connect.ts";
+import { db } from "../db/connect.js";
 import { ClippedBuffer125Green } from "../db/models/clippedBuffer125Green.js";
 import { ClippedGreen } from "../db/models/clippedGreen.js";
 
