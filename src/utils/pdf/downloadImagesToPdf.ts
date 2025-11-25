@@ -2,117 +2,138 @@ import { initializeMap } from "../map/mapUtils";
 import type { MapInitOptions } from "../map/mapUtils";
 import type { FeatureCollection } from "geojson";
 
-interface ShapeImagesOptions {
-  // Array of 4 GeoJSON FeatureCollections
-  shapes: FeatureCollection[]; 
-  // container will be created internally
-  mapOptions: Omit<MapInitOptions, "container">; 
+interface LayerStyle {
+  fillColor?: string;
+  fillOpacity?: number;
+  lineColor?: string;
+  lineWidth?: number;
+}
+
+interface RenderGeoJsonOptions {
+  geojson: FeatureCollection;
+  mapOptions: Omit<MapInitOptions, "container">;
+  layerStyle?: LayerStyle;
   width?: number;
   height?: number;
 }
 
-export const downloadImagesToPdf = async ({
-  shapes,
+export const snapMapImage = async ({
+  geojson,
   mapOptions,
+  layerStyle = {},
   width = 800,
   height = 600,
-}: ShapeImagesOptions): Promise<string[]> => {
-  const imageUrls: string[] = [];
+}: RenderGeoJsonOptions): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    // Create off-screen container
+    const container = document.createElement("div");
+    container.style.width = `${width}px`;
+    container.style.height = `${height}px`;
+    container.style.position = "absolute";
+    container.style.top = "-9999px";
+    container.style.left = "-9999px";
+    document.body.appendChild(container);
 
-  const renderShapeToImage = (shape: FeatureCollection): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      // Create a hidden container
-      const container = document.createElement("div");
-      container.style.width = `${width}px`;
-      container.style.height = `${height}px`;
-      container.style.position = "absolute";
-      container.style.top = "-9999px";
-      document.body.appendChild(container);
+    try {
+      const map = initializeMap({ container, ...mapOptions });
 
-      try {
-        // Initialize map using your helper
-        const map = initializeMap({ container, ...mapOptions });
+      map.on("load", () => {
+        try {
+          // Detect if empty GeoJSON
+          const isEmpty =
+            !geojson ||
+            !Array.isArray((geojson as any).features) ||
+            (geojson as any).features.length === 0;
 
-        map.on("load", () => {
-          // Flatten coordinates to [lng, lat][]
-          const coordinates: [number, number][] = shape.features.flatMap((f) => {
-            if (f.geometry.type === "Polygon") {
-              // Type assertion: outer ring coordinates are [lng, lat][]
-              return f.geometry.coordinates[0] as [number, number][];
-            } else if (f.geometry.type === "MultiPolygon") {
-              // Flatten all outer rings, assert type
-              return f.geometry.coordinates.flatMap(
-                (poly) => poly[0] as [number, number][]
-              );
+          if (!isEmpty) {
+            const features = (geojson as FeatureCollection).features;
+
+            // Extract coordinates
+            const coords = features.flatMap((f) => {
+              if (f.geometry.type === "Point") {
+                return [f.geometry.coordinates as [number, number]];
+              }
+              if (f.geometry.type === "LineString") {
+                return f.geometry.coordinates as [number, number][];
+              }
+              if (f.geometry.type === "Polygon") {
+                return f.geometry.coordinates[0] as [number, number][];
+              }
+              if (f.geometry.type === "MultiPolygon") {
+                return f.geometry.coordinates.flatMap(
+                  (poly) => poly[0] as [number, number][]
+                );
+              }
+              return [];
+            });
+
+            if (coords.length > 0) {
+              const lats = coords.map((c) => c[1]);
+              const lngs = coords.map((c) => c[0]);
+
+              const bounds = [
+                [Math.min(...lngs), Math.min(...lats)],
+                [Math.max(...lngs), Math.max(...lats)],
+              ] as mapboxgl.LngLatBoundsLike;
+
+              map.fitBounds(bounds, { padding: 20, maxZoom: 17 });
             }
-            return [];
-          });
 
-          if (coordinates.length > 0) {
-            const lats = coordinates.map((c) => c[1]);
-            const lngs = coordinates.map((c) => c[0]);
-            const bounds = [
-              [Math.min(...lngs), Math.min(...lats)],
-              [Math.max(...lngs), Math.max(...lats)],
-            ] as mapboxgl.LngLatBoundsLike;
+            // Add GeoJSON source
+            map.addSource("geojson-data", {
+              type: "geojson",
+              data: geojson,
+            });
 
-            map.fitBounds(bounds, { padding: 20, maxZoom: 17 });
+            // Add fill layer
+            map.addLayer({
+              id: "geojson-fill",
+              type: "fill",
+              source: "geojson-data",
+              paint: {
+                "fill-color": layerStyle?.fillColor || "#000",
+                "fill-opacity": layerStyle?.fillOpacity ?? 0.4,
+              },
+            });
+
+            // Add line layer
+            map.addLayer({
+              id: "geojson-line",
+              type: "line",
+              source: "geojson-data",
+              paint: {
+                "line-color": layerStyle?.lineColor || "#000",
+                "line-width": layerStyle?.lineWidth ?? 2,
+              },
+            });
           }
 
-          // Add shape layer
-          map.addSource("shape", {
-            type: "geojson",
-            data: shape,
-          });
-
-          map.addLayer({
-            id: "shape-fill",
-            type: "fill",
-            source: "shape",
-            paint: {
-              "fill-color": "#FF0000",
-              "fill-opacity": 0.4,
-            },
-          });
-
-          map.addLayer({
-            id: "shape-line",
-            type: "line",
-            source: "shape",
-            paint: {
-              "line-color": "#FF0000",
-              "line-width": 2,
-            },
-          });
-
-          // Wait for map to be completely idle (all tiles loaded, rendering complete)
+          // Wait for map to be completely rendered
           map.once("idle", () => {
-            const img = map.getCanvas().toDataURL("image/png");
+            const imageDataUrl = map.getCanvas().toDataURL("image/png");
             map.remove();
             container.remove();
-            resolve(img);
+            resolve(imageDataUrl);
           });
-        });
-
-        // Handle map errors
-        map.on("error", (e) => {
-          console.error("Map error:", e);
+        } catch (err) {
+          console.error("snapMapImage inner error:", err);
           map.remove();
           container.remove();
-          reject(e);
-        });
-      } catch (error) {
+          reject(err);
+        }
+      });
+
+      // On map error
+      map.on("error", (e) => {
+        console.error("Mapbox error:", e);
+        map.remove();
         container.remove();
-        reject(error);
-      }
-    });
-  };
-
-  // Sequentially render all shapes
-  for (const shape of shapes) {
-    const img = await renderShapeToImage(shape);
-    imageUrls.push(img);
-  }
-
-  return imageUrls;
+        reject(e);
+      });
+    } catch (err) {
+      console.error("snapMapImage outer error:", err);
+      container.remove();
+      reject(err);
+    }
+  });
 };

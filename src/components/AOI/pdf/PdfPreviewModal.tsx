@@ -1,9 +1,6 @@
 import { Modal, Box, CircularProgress, Typography } from "@mui/material";
 import { PDFViewer } from "@react-pdf/renderer";
 import AoiPdf from "./AoiPdf";
-import { useEffect, useState } from "react";
-import { downloadImagesToPdf } from "@/utils/pdf/downloadImagesToPdf";
-import { sampleFeatureCollections } from "@/constants/dummyCollections";
 import { useTranslation } from "react-i18next";
 
 interface Props {
@@ -13,25 +10,6 @@ interface Props {
 
 const PdfPreviewModal = ({ open, onClose }: Props) => {
   const { t } = useTranslation();
-  const [images, setImages] = useState<string[]>([]);
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (!open) return;
-    setLoading(true);
-    downloadImagesToPdf({
-      shapes: sampleFeatureCollections,
-      mapOptions: {
-        center: [0.5, 0.5],
-        zoom: 15,
-        //Change basemap when its implemented
-        basemap: "mapbox://styles/mapbox/streets-v11",
-        highResolution: false,
-      },
-    })
-      .then((imgs) => setImages(imgs))
-      .finally(() => setLoading(false));
-  }, [open]);  
 
   return (
     <Modal open={open} onClose={onClose}>
@@ -54,14 +32,14 @@ const PdfPreviewModal = ({ open, onClose }: Props) => {
           flexDirection: "column",
         }}
       >
-        {loading ? (
+        {true ? (
           <>
             <CircularProgress />
             <Typography sx={{ mt: 2 }}>{t("app.pdfLoading")}</Typography>
           </>
         ) : (
           <PDFViewer style={{ width: "100%", height: "100%" }}>
-            <AoiPdf t={t} images={images} />
+            <AoiPdf />
           </PDFViewer>
         )}
       </Box>
