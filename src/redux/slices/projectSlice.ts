@@ -1,3 +1,4 @@
+import type { Geometry } from 'geojson';
 import { createSlice } from "@reduxjs/toolkit";
 import type { PayloadAction } from "@reduxjs/toolkit";
 
@@ -7,6 +8,8 @@ export interface Project {
   description?: string;
   created_at?: string;
   updated_at?: string;
+  processed: boolean;
+  geom?: Geometry
 }
 
 interface ProjectState {
@@ -24,11 +27,17 @@ export const projectSlice = createSlice({
   initialState,
   reducers: {
     setProjects: (state, action: PayloadAction<Project[]>) => {
-      state.projects = action.payload;
+      state.projects = action.payload.map(p => ({
+        ...p,
+        processed: p.processed ?? false,
+      }));
     },
 
     addProject: (state, action: PayloadAction<Project>) => {
-      state.projects.unshift(action.payload);
+      state.projects.unshift({
+        ...action.payload,
+        processed: action.payload.processed ?? false,
+      });
     },
 
     updateProjectById: (state, action: PayloadAction<Project>) => {

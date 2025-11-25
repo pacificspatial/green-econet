@@ -10,6 +10,7 @@ export interface ProjectData {
   geom?: Geometry;
   createdAt?: string;
   updatedAt?: string;
+  processed: boolean
 }
 
 export interface ProjectPolygon {
