@@ -13,6 +13,8 @@ import DownloadPopover from "./DownloadPopover";
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import ArrowDropUpIcon from '@mui/icons-material/ArrowDropUp';
 import { useNavigate } from "react-router-dom";
+import { setProjectAoi } from "@/api/project";
+import { Alert } from "@mui/material";
 
 const StyledBox = styled(Box)(({ theme }) => ({
   backgroundColor:
@@ -50,10 +52,34 @@ const AoiRightPanel = () => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const navigate = useNavigate();
   const aoiPolygons = useAppSelector((state) => state.aoi.polygons);
+  const { selectedProject } = useAppSelector((state) => state.project);
   const { t } = useTranslation();
+  const [ loading, setLoading ] = useState(false);
 
+  //Set AOI handler
   const handleConfirmClick = async () => {
-    // Here handle the set AOI action
+    try {
+      setLoading(true);
+      const response = await setProjectAoi(selectedProject!.id);      
+      if(response.success && response.data) {
+        //logic after successful AOI set can be added here
+        setAlert({
+          open: true,
+          message: t("app.aoiSetSuccessMessage"),
+          severity: "success",
+        });
+      }
+      
+    } catch (error) {
+      console.error("Error setting AOI:", error);
+      setAlert({
+        open: true,
+        message: t("app.errorSettingAOI"),
+        severity: "error",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
   
   const handleDownloadClick = (event: React.MouseEvent<HTMLElement>) => {
@@ -129,7 +155,27 @@ const AoiRightPanel = () => {
             )
           }
         >
-          <span>
+          <Box
+            display="flex"
+            flexDirection="column"
+            alignItems="center"
+            justifyContent="center"
+            sx={{ width: "100%" }}
+          >
+
+            {/* Indicator message with balanced spacing */}
+            {loading && (
+              <Alert
+                severity="info"
+                sx={{
+                  width: "100%",
+                  mb: 3.5,
+                  textAlign: "center",
+                }}
+              >
+                {t("app.settingAoiMessage")}
+              </Alert>
+            )}
             <Button
               sx={{ px: 4, py: 2 }}
               color="primary"
@@ -137,12 +183,13 @@ const AoiRightPanel = () => {
               onClick={handleConfirmClick}
               disabled={
                 aoiPolygons.length < MIN_AOI_POLYGON_COUNT ||
-                aoiPolygons.length > MAX_AOI_POLYGON_COUNT
+                aoiPolygons.length > MAX_AOI_POLYGON_COUNT ||
+                loading
               }
             >
               {t("app.setAOI")}
             </Button>
-          </span>
+          </Box>
         </Tooltip>
       </StyledConfirmBox>
       <DownloadPopover

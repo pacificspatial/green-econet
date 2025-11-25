@@ -63,3 +63,9 @@ export const getPolygonsByProject = async (projectId: string) => {
   const res = await axiosInstance.get(`/projects/${projectId}/polygon`);
   return res.data;
 };
+
+// Set AOI for a project
+export const setProjectAoi = async (projectId: string) => {
+  const res = await axiosInstance.post(`/projects/:${projectId}/process/run`);
+  return res.data;
+};
