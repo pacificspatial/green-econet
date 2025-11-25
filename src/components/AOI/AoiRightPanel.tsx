@@ -304,7 +304,7 @@ const AoiRightPanel = () => {
               <ArrowDropDownIcon fontSize="small" />
             )
           }
-          disabled={selectedProject?.processed}
+          disabled={!selectedProject?.processed}
         >
           {t("app.download")}
         </Button>
@@ -365,7 +365,7 @@ const AoiRightPanel = () => {
                 aoiPolygons.length > MAX_AOI_POLYGON_COUNT ||
                 loading ||
                 isRunning || 
-                !selectedProject?.processed
+                selectedProject?.processed
               }
             >
               {t("app.setAOI")}
