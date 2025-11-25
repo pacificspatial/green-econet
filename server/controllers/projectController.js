@@ -1,6 +1,9 @@
+// controllers/projectController.js
+
 import projectService from "../services/projectService.js";
 import pipelineService from "../services/pipelineService.js";
 import { success } from "../utils/response.js";
+import { startMockAoiPipeline } from "../services/mockpipelineservice.js";
 
 /**
  * Create a new project
@@ -36,7 +39,7 @@ const updateProject = async (req, res, next) => {
     console.log("Error in update project:", err.message);
     next(err);
   }
-}
+};
 
 /**
  * Delete a project
@@ -50,7 +53,7 @@ const deleteProject = async (req, res, next) => {
     return success(res, "Project deleted successfully", null);
   } catch (err) {
     console.log("Error in delete project", err.message);
-    
+
     next(err);
   }
 };
@@ -115,7 +118,11 @@ const updateProjectPolygon = async (req, res, next) => {
       req.params.polygonId,
       req.body
     );
-    return success(res, "Project polygon updated successfully", updatedPolygon);
+    return success(
+      res,
+      "Project polygon updated successfully",
+      updatedPolygon
+    );
   } catch (err) {
     console.log("Error in update project polygon:", err.message);
     next(err);
@@ -156,6 +163,30 @@ const getPolygonsByProject = async (req, res, next) => {
   }
 };
 
+/**
+ * MOCK: Set AOI pipeline
+ * @route POST /projects/mock-set-aoi/:projectId
+ * Kicks off a mock AOI pipeline and returns pipelineId immediately.
+ */
+const setProjectMockAoi = async (req, res, next) => {
+  try {
+    const { projectId } = req.params;
+    const io = req.app.get("socket");
+
+    console.log("[CONTROLLER] /mock-set-aoi called for project:", projectId);
+
+    const { pipelineId } = await startMockAoiPipeline({ projectId, io });
+
+    return success(res, "Mock AOI pipeline started", {
+      pipelineId,
+      projectId,
+    });
+  } catch (err) {
+    console.log("Error in setProjectAoi (mock pipeline):", err.message);
+    next(err);
+  }
+};
+
 const runPipeline = async (req, res, next) => {
   pipelineService.runPipeline(req?.params?.projectId);
   return success(res, "Pipeline started successfully", null);
@@ -172,5 +203,5 @@ export default {
   deleteProjectPolygon,
   getPolygonsByProject,
   runPipeline,
+  setProjectMockAoi,
 };
-

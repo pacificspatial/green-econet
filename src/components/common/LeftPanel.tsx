@@ -3,7 +3,6 @@ import React, {
   useEffect,
   useCallback,
   useMemo,
-  useRef,
 } from "react";
 import {
   Box,
@@ -25,6 +24,8 @@ import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import ErrorIcon from "@mui/icons-material/Error";
 import { styled, useTheme } from "@mui/material/styles";
 import { useTranslation } from "react-i18next";
 import DialogueBox from "../utils/DialogueBox";
@@ -32,10 +33,18 @@ import ProjectModal from "./ProjectModal";
 import type { AlertState } from "@/types/AlertState";
 import { useAppDispatch, useAppSelector } from "@/hooks/reduxHooks";
 import { useNavigate } from "react-router-dom";
-import { io, Socket } from "socket.io-client";
 import type { ProjectData } from "@/types/ProjectData";
 import { deleteProject } from "@/api/project";
-import { deleteProjectById, setSelectedProject } from "@/redux/slices/projectSlice";
+import {
+  deleteProjectById,
+  setSelectedProject,
+} from "@/redux/slices/projectSlice";
+import {
+  pipelineStarted,
+  pipelineStageUpdated,
+  pipelineCompleted,
+} from "@/redux/slices/aoiPipelineSlice";
+import { useSocket } from "@/context/SocketContext";
 
 interface LeftPanelProps {
   collapsed: boolean;
@@ -43,7 +52,6 @@ interface LeftPanelProps {
   isProjectListLoading: boolean;
   setAlertState: React.Dispatch<React.SetStateAction<AlertState>>;
 }
-
 
 const StyledBox = styled(Box)(() => ({
   flex: 1,
@@ -123,40 +131,110 @@ const LeftPanel: React.FC<LeftPanelProps> = ({
   collapsed,
   setCollapsed,
   isProjectListLoading,
-  setAlertState
+  setAlertState,
 }) => {
-  const { projects, selectedProject } = useAppSelector((state) => state.project);
+  const { projects, selectedProject } = useAppSelector(
+    (state) => state.project
+  );
+  const aoiPipelineByProject = useAppSelector(
+    (state) => state.aoiPipeline.byProjectId
+  );
+
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [dialogOpen, setDialogOpen] = useState<boolean>(false);
   const [isModalOpen, setModalOpen] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
 
+  // track completions only for this mount
+  const [recentlyCompleted, setRecentlyCompleted] = useState<
+    Record<string, boolean>
+  >({});
 
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const { t } = useTranslation();
   const theme = useTheme();
+  const socket = useSocket();
+
   const iconColor = useMemo(
     () => (theme.palette.mode === "dark" ? "#ffffff" : "inherit"),
     [theme.palette.mode]
   );
-  const socketRef = useRef<Socket | null>(null);
-  
-  const filteredProjects = useMemo(() => {
-    return projects.filter((p) =>
-      p.name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }, [projects, searchTerm]);
 
-  // Set up socket connection to listen for jobStatus events
+  const filteredProjects = useMemo(
+    () =>
+      projects.filter((p) =>
+        p.name.toLowerCase().includes(searchTerm.toLowerCase())
+      ),
+    [projects, searchTerm]
+  );
+
+  // Socket → Redux mapping
   useEffect(() => {
-    const socket = io(import.meta.env.VITE_EP_SOCKET_PORT);
-    socketRef.current = socket;
-    // socket event listeners can be added here
-    return () => {
-      socket.disconnect();
+    if (!socket) return;
+
+    console.log("[LEFT PANEL] using socket:", socket.id);
+
+    const handleStarted = (payload: any) => {
+      console.log("[LEFT PANEL] aoi:pipeline_started:", payload);
+      dispatch(
+        pipelineStarted({
+          projectId: payload.projectId,
+          pipelineId: payload.pipelineId,
+          totalSteps: payload.totalSteps,
+          startedAt: payload.startedAt,
+        })
+      );
+      // when a new run starts, clear previous completion flag for that project
+      setRecentlyCompleted((prev) => {
+        const copy = { ...prev };
+        delete copy[payload.projectId];
+        return copy;
+      });
     };
-  }, [dispatch]);
+
+    const handleStage = (payload: any) => {
+      console.log("[LEFT PANEL] aoi:pipeline_stage:", payload);
+      dispatch(
+        pipelineStageUpdated({
+          projectId: payload.projectId,
+          pipelineId: payload.pipelineId,
+          stageKey: payload.stageKey,
+          label: payload.label,
+          status: payload.status,
+          step: payload.step,
+          totalSteps: payload.totalSteps,
+        })
+      );
+    };
+
+    const handleCompleted = (payload: any) => {
+      console.log("[LEFT PANEL] aoi:pipeline_completed:", payload);
+      dispatch(
+        pipelineCompleted({
+          projectId: payload.projectId,
+          pipelineId: payload.pipelineId,
+          status: payload.status,
+          completedAt: payload.completedAt,
+        })
+      );
+      // mark this project as "recently completed" for this mount
+      setRecentlyCompleted((prev) => ({
+        ...prev,
+        [payload.projectId]: true,
+      }));
+    };
+
+    socket.on("aoi:pipeline_started", handleStarted);
+    socket.on("aoi:pipeline_stage", handleStage);
+    socket.on("aoi:pipeline_completed", handleCompleted);
+
+    return () => {
+      socket.off("aoi:pipeline_started", handleStarted);
+      socket.off("aoi:pipeline_stage", handleStage);
+      socket.off("aoi:pipeline_completed", handleCompleted);
+    };
+  }, [socket, dispatch]);
 
   const handleAlert = useCallback(
     (message: string, severity: "success" | "error") => {
@@ -166,7 +244,7 @@ const LeftPanel: React.FC<LeftPanelProps> = ({
         severity,
       });
     },
-    []
+    [setAlertState]
   );
 
   const handleDeleteConfirm = useCallback(async () => {
@@ -206,7 +284,7 @@ const LeftPanel: React.FC<LeftPanelProps> = ({
   const handleModalClose = useCallback(() => {
     setModalOpen(false);
     dispatch(setSelectedProject(null));
-  }, []);
+  }, [dispatch]);
 
   const handleEditProject = useCallback(
     (e: React.MouseEvent<HTMLButtonElement>, project: ProjectData) => {
@@ -214,7 +292,7 @@ const LeftPanel: React.FC<LeftPanelProps> = ({
       dispatch(setSelectedProject(project));
       setModalOpen(true);
     },
-    []
+    [dispatch]
   );
 
   const handleDeleteIconClick = useCallback(
@@ -223,13 +301,13 @@ const LeftPanel: React.FC<LeftPanelProps> = ({
       dispatch(setSelectedProject(project));
       setDialogOpen(true);
     },
-    []
+    [dispatch]
   );
 
   const handleDialogClose = useCallback(() => {
     setDialogOpen(false);
     dispatch(setSelectedProject(null));
-  }, []);
+  }, [dispatch]);
 
   const toggleCollapse = useCallback(() => {
     setCollapsed(!collapsed);
@@ -321,6 +399,21 @@ const LeftPanel: React.FC<LeftPanelProps> = ({
       ) : !collapsed && filteredProjects.length > 0 ? (
         <StyledList sx={{ mx: 1 }}>
           {filteredProjects?.map((project) => {
+            const pipelineInfo = aoiPipelineByProject[project.id];
+            const aoiStatus = pipelineInfo?.status;
+            const showCompletionIcon = recentlyCompleted[project.id];
+
+            // derive counts from stages if available
+            const totalSteps =
+              pipelineInfo?.stages?.[0]?.totalSteps ??
+              pipelineInfo?.totalSteps ??
+              6;
+            const completedSteps = pipelineInfo?.stages
+              ? pipelineInfo.stages.filter(
+                  (s: { status: string }) => s.status !== "pending"
+                ).length
+              : 0;
+
             return (
               <ListItem
                 key={project.id}
@@ -330,13 +423,60 @@ const LeftPanel: React.FC<LeftPanelProps> = ({
               >
                 <Tooltip title={project.name} arrow>
                   <ListItemText
-                    primary={project.name}
+                    primary={
+                      <Box display="flex" alignItems="center">
+                        <span
+                          style={{
+                            flex: 1,
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {project.name}
+                        </span>
+
+                        {/* AOI pipeline status for this project */}
+                        {aoiStatus === "running" && (
+                          <Box
+                            sx={{
+                              display: "flex",
+                              alignItems: "center",
+                              ml: 1,
+                            }}
+                          >
+                            <CircularProgress size={16} />
+                            <Typography
+                              variant="caption"
+                              sx={{ ml: 0.5, minWidth: 32 }}
+                            >
+                              {completedSteps}/{totalSteps}
+                            </Typography>
+                          </Box>
+                        )}
+
+                        {showCompletionIcon && aoiStatus === "success" && (
+                          <CheckCircleIcon
+                            fontSize="small"
+                            color="success"
+                            sx={{ ml: 1 }}
+                          />
+                        )}
+
+                        {showCompletionIcon &&
+                          (aoiStatus === "failed" ||
+                            aoiStatus === "partial_failure") && (
+                            <ErrorIcon
+                              fontSize="small"
+                              color="error"
+                              sx={{ ml: 1 }}
+                            />
+                          )}
+                      </Box>
+                    }
                     sx={{
                       width: "100%",
                       "& .MuiTypography-root": {
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
-                        overflow: "hidden",
                         cursor: "pointer",
                       },
                     }}
@@ -418,11 +558,11 @@ const LeftPanel: React.FC<LeftPanelProps> = ({
         isOpen={isModalOpen}
         onClose={handleModalClose}
         initialData={selectedProject || null}
-        onSuccess={(project) => {          
+        onSuccess={(project) => {
           navigate(`/project/${project.id}`);
         }}
         setAlertState={setAlertState}
-        socketId={socketRef.current?.id || ""}
+        socketId={socket?.id ?? ""}
       />
     </StyledBox>
   );

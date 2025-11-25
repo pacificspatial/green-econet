@@ -175,5 +175,5 @@ export default {
   createProjectPolygon,
   updateProjectPolygon,
   deleteProjectPolygon,
-  getPolygonsByProject
+  getPolygonsByProject,
 };
