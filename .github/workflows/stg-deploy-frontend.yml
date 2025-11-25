@@ -252,39 +252,35 @@ jobs:
         run: |
           ssh -o StrictHostKeyChecking=no $TARGET_USER@$TARGET_HOST "sudo mkdir -p $TARGET_PATH && sudo chown $TARGET_USER:$TARGET_USER $TARGET_PATH"
 
-      - name: Backup existing remote app (one-line tar)
+      - name: Backup existing remote app
         env:
           TARGET_USER: ${{ secrets.STG_EC2_USER || 'ec2-user' }}
           TARGET_HOST: ${{ secrets.STG_EC2_PUBLIC_IP }}
           TARGET_PATH: /var/www/stg
         run: |
-          # make a quick timestamped tar backup of the current site (keeps on remote)
           TS=$(date +%Y%m%d%H%M%S)
-          ssh -o StrictHostKeyChecking=no $TARGET_USER@$TARGET_HOST "sudo tar -czf /tmp/stg-backup-\${TS}.tar.gz -C $(dirname $TARGET_PATH) $(basename $TARGET_PATH) || true && sudo chown $TARGET_USER:$TARGET_USER /tmp/stg-backup-\${TS}.tar.gz || true"
+          ssh -o StrictHostKeyChecking=no $TARGET_USER@$TARGET_HOST \
+            "sudo tar -czf /tmp/stg-backup-\${TS}.tar.gz -C $(dirname $TARGET_PATH) $(basename $TARGET_PATH) || true && sudo chown $TARGET_USER:$TARGET_USER /tmp/stg-backup-\${TS}.tar.gz"
           echo "Backup created on remote: /tmp/stg-backup-*.tar.gz"
 
-      - name: Rsync server/ → remote (contents)
+      - name: Rsync server/ → remote
         env:
           TARGET_USER: ${{ secrets.STG_EC2_USER || 'ec2-user' }}
           TARGET_HOST: ${{ secrets.STG_EC2_PUBLIC_IP }}
           TARGET_PATH: /var/www/stg
         run: |
-          # NOTE: trailing slash on 'server/' sends the CONTENTS of server into TARGET_PATH
           rsync -avz --delete \
             --chmod=Du=rwx,Dg=rx,Do=rx,Fu=rw,Fg=r,Fo=r \
             --exclude node_modules --exclude .git --exclude .env --exclude uploads --exclude tmp \
             server/ $TARGET_USER@$TARGET_HOST:$TARGET_PATH/
 
-      - name: Write .env on remote (safe heredoc)
-        if: always()
+      - name: Write .env on remote from GitHub secrets
         env:
           TARGET_USER: ${{ secrets.STG_EC2_USER || 'ec2-user' }}
           TARGET_HOST: ${{ secrets.STG_EC2_PUBLIC_IP }}
           TARGET_PATH: /var/www/stg
         run: |
-          # Send the expanded secrets from the runner to the remote file via SSH stdin.
-          # NOTE: The EOF must start at column 1 (no leading spaces) to avoid extra indentation.
-          ssh -o StrictHostKeyChecking=no ${TARGET_USER}@${TARGET_HOST} "cat > ${TARGET_PATH}/.env" <<'EOF'
+          ssh -o StrictHostKeyChecking=no ${TARGET_USER}@${TARGET_HOST} "cat > ${TARGET_PATH}/.env" <<EOF
           PORT=${{ secrets.PORT }}
           NODE_ENV=${{ secrets.NODE_ENV }}
           JWT_SECRET=${{ secrets.JWT_SECRET }}
@@ -295,74 +291,57 @@ jobs:
           DB_PASSWORD=${{ secrets.DB_PASSWORD }}
           DB_PORT=${{ secrets.DB_PORT }}
           EOF
-
-          # Fix ownership so the app user can read it
-          ssh -o StrictHostKeyChecking=no ${TARGET_USER}@${TARGET_HOST} "sudo chown ${TARGET_USER}:${TARGET_USER} ${TARGET_PATH}/.env || true"
+          ssh -o StrictHostKeyChecking=no ${TARGET_USER}@${TARGET_HOST} "sudo chown ${TARGET_USER}:${TARGET_USER} ${TARGET_PATH}/.env"
           echo ".env written to ${TARGET_PATH}/.env"
 
-      - name: Remote install & pm2 restart (single SSH, npm install, keep stg-enp)
+      - name: Remote install & pm2 restart
         env:
           TARGET_USER: ${{ secrets.STG_EC2_USER || 'ec2-user' }}
           TARGET_HOST: ${{ secrets.STG_EC2_PUBLIC_IP }}
           TARGET_PATH: /var/www/stg
         run: |
-          if [ -z "${TARGET_HOST}" ]; then
-            echo "ERROR: TARGET_HOST is empty. Set STG_EC2_PUBLIC_IP secret."
-            exit 1
-          fi
-
-          # single ssh connection — unquoted heredoc so ${TARGET_PATH} is expanded locally
-          ssh -o StrictHostKeyChecking=no ${TARGET_USER}@${TARGET_HOST} <<EOF
+          ssh -o StrictHostKeyChecking=no ${TARGET_USER}@${TARGET_HOST} <<'EOF'
             set -e
             cd ${TARGET_PATH}
 
-            echo "REMOTE HOST: \$(hostname -f || hostname)"
-            echo "PWD: \$(pwd)"
-            echo "Files:"
-            ls -la
+            echo "Remote Host: $(hostname -f || hostname)"
+            echo "PWD: $(pwd)"
 
-            echo "Node: \$(node -v || echo 'node not found')"
-            echo "Npm:  \$(npm -v || echo 'npm not found')"
+            echo "Node: $(node -v || echo 'node not found')"
+            echo "Npm: $(npm -v || echo 'npm not found')"
 
             echo "Running npm install..."
             npm install --no-audit --no-fund
 
-            # Build if script exists
             if npm run | grep -qE ' build'; then
-              echo "Running npm run build"
+              echo "Running npm run build..."
               npm run build
             else
               echo "No build script found, skipping build"
             fi
 
-            # Keep PM2 name stg-enp — attempt restart, fallback to delete+start if needed
+            # Load .env variables for PM2
+            export $(grep -v '^#' .env | xargs)
+
             PROCESS_NAME="stg-enp"
             ENTRY="index.js"
 
-            if pm2 describe "\${PROCESS_NAME}" >/dev/null 2>&1; then
-              echo "PM2 process \${PROCESS_NAME} exists — attempting restart"
-              if pm2 restart "\${PROCESS_NAME}" --update-env; then
-                echo "Restarted \${PROCESS_NAME} successfully"
-              else
-                echo "Restart failed for \${PROCESS_NAME} — deleting and starting fresh"
-                pm2 delete "\${PROCESS_NAME}" || true
-                pm2 start "\${ENTRY}" --name "\${PROCESS_NAME}" --update-env
-              fi
+            if pm2 describe "${PROCESS_NAME}" >/dev/null 2>&1; then
+              echo "Restarting PM2 process ${PROCESS_NAME}..."
+              pm2 restart "${PROCESS_NAME}" --update-env || (pm2 delete "${PROCESS_NAME}" && pm2 start "${ENTRY}" --name "${PROCESS_NAME}" --update-env)
             else
-              echo "PM2 process \${PROCESS_NAME} not found — starting fresh"
-              pm2 start "\${ENTRY}" --name "\${PROCESS_NAME}" --update-env
+              echo "Starting PM2 process ${PROCESS_NAME}..."
+              pm2 start "${ENTRY}" --name "${PROCESS_NAME}" --update-env
             fi
 
-            pm2 save || true
-            pm2 status "\${PROCESS_NAME}" || true
+            pm2 save
+            pm2 status "${PROCESS_NAME}"
             echo "Backend deployment completed."
-          EOF
-
-
+            EOF
 
       - name: Backend Deployed Successfully
         run: |
           echo "Backend deployed successfully!"
           echo "Source: server/ (contents)"
           echo "Target: /var/www/stg on ${{ secrets.STG_EC2_PUBLIC_IP }}"
-          echo "If anything goes wrong you can restore backup from /tmp/stg-backup-<timestamp>.tar.gz on the instance"
+          echo "If anything goes wrong, restore backup from /tmp/stg-backup-<timestamp>.tar.gz on the instance"
