@@ -1,4 +1,5 @@
 import projectService from "../services/projectService.js";
+import pipelineService from "../services/pipelineService.js";
 import { success } from "../utils/response.js";
 
 /**
@@ -155,6 +156,11 @@ const getPolygonsByProject = async (req, res, next) => {
   }
 };
 
+const runPipeline = async (req, res, next) => {
+  pipelineService.runPipeline(req?.params?.projectId);
+  return success(res, "Pipeline started successfully", null);
+};
+
 export default {
   createProject,
   updateProject,
@@ -164,6 +170,7 @@ export default {
   createProjectPolygon,
   updateProjectPolygon,
   deleteProjectPolygon,
-  getPolygonsByProject
+  getPolygonsByProject,
+  runPipeline,
 };
 

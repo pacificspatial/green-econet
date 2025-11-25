@@ -24,5 +24,7 @@ router
   .delete("/polygon/:polygonId", projectController.deleteProjectPolygon)
   .get("/:projectId/polygon", projectController.getPolygonsByProject);
 
+router
+  .post("/:projectId/run", projectController.runPipeline)
 
 export default router;
