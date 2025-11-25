@@ -10,6 +10,8 @@ import {
   Typography,
   Alert,
 } from "@mui/material";
+import AlertBox from "../utils/AlertBox";
+import type { AlertState } from "@/types/AlertState";
 import { useAppSelector } from "@/hooks/reduxHooks";
 import {
   MAX_AOI_POLYGON_COUNT,
@@ -33,12 +35,11 @@ const StyledBox = styled(Box)(({ theme }) => ({
   position: "relative",
 }));
 
-// keep padding so button row has breathing room
 const StyledGridBottom = styled("div")(({ theme }) => ({
   flex: 1,
   width: "100%",
   minHeight: "0px",
-  paddingBottom: theme.spacing(6),
+  paddingBottom: theme.spacing(6), // breathing room above button row
 }));
 
 const StyledConfirmBox = styled(Box)(() => ({
@@ -67,21 +68,28 @@ interface PipelineSummary {
 }
 
 const AoiRightPanel = () => {
-  const { projectId } = useParams<{ projectId: string }>();
-  const socket = useSocket();
-  const { t } = useTranslation();
+  // ✅ incoming-branch alert behaviour
+  const [alert, setAlert] = useState<AlertState>({
+    open: false,
+    message: "",
+    severity: "info",
+  });
 
   const aoiPolygons = useAppSelector((state) => state.aoi.polygons);
+  const { t } = useTranslation();
+  const { projectId } = useParams<{ projectId: string }>();
 
+  // Inline loading for the POST call
+  const [loading, setLoading] = useState(false);
+
+  // 🧠 local mock pipeline state (driven by socket events)
+  const socket = useSocket();
   const [pipelineStatus, setPipelineStatus] =
     useState<PipelineStatus>("idle");
   const [stages, setStages] = useState<LocalStage[]>([]);
   const [summary, setSummary] = useState<PipelineSummary | null>(null);
   const [currentPipelineId, setCurrentPipelineId] =
     useState<string | null>(null);
-
-  // loading just for the initial POST /mock-set-aoi call
-  const [loading, setLoading] = useState(false);
 
   const isRunning = pipelineStatus === "running";
   const isSuccess = pipelineStatus === "success";
@@ -95,22 +103,17 @@ const AoiRightPanel = () => {
     return 6; // default mock total
   }, [stages]);
 
-  // number of completed stages (success or failed) – starts at 0
+  // completed stages (success or failed) – starts at 0
   const completedSteps = useMemo(() => {
     if (stages.length === 0) return 0;
     return stages.filter((s) => s.status !== "pending").length;
   }, [stages]);
 
-  // Socket listeners for AOI events specific to this project
+  // 🔌 Socket listeners for AOI events for this project
   useEffect(() => {
     if (!socket || !projectId) return;
 
-    console.log(
-      "[AOI RIGHT] using socket:",
-      socket.id,
-      "for project:",
-      projectId
-    );
+    console.log("[AOI RIGHT] using socket:", socket.id, "for project:", projectId);
 
     const handleStarted = (payload: any) => {
       console.log("[AOI RIGHT] aoi:pipeline_started:", payload);
@@ -124,10 +127,10 @@ const AoiRightPanel = () => {
       const initialStages: LocalStage[] = Array.from(
         { length: steps },
         (_, idx) => ({
-          stageKey: `STEP_${idx + 1}`,
-          label: `Stage ${idx + 1}`,
+          stageKey: `STEP_${idx}`,
+          label: `Stage ${idx}`,
           status: "pending",
-          step: idx + 1,
+          step: idx,
           totalSteps: steps,
         })
       );
@@ -142,7 +145,7 @@ const AoiRightPanel = () => {
       setPipelineStatus("running");
       setStages((prev) => {
         const steps = payload.totalSteps ?? prev[0]?.totalSteps ?? 6;
-        const stepIndex = (payload.step ?? 1) - 1;
+        const stepIndex = payload.step ?? 0; // we use 0-based for display
 
         const copy: LocalStage[] =
           prev.length === steps
@@ -151,10 +154,10 @@ const AoiRightPanel = () => {
                 const existing = prev[idx];
                 return (
                   existing || {
-                    stageKey: `STEP_${idx + 1}`,
-                    label: `Stage ${idx + 1}`,
+                    stageKey: `STEP_${idx}`,
+                    label: `Stage ${idx}`,
                     status: "pending" as const,
-                    step: idx + 1,
+                    step: idx,
                     totalSteps: steps,
                   }
                 );
@@ -164,7 +167,7 @@ const AoiRightPanel = () => {
           stageKey: payload.stageKey ?? copy[stepIndex].stageKey,
           label: payload.label ?? copy[stepIndex].label,
           status: payload.status === "failed" ? "failed" : "success",
-          step: payload.step,
+          step: stepIndex,
           totalSteps: steps,
         };
 
@@ -199,11 +202,15 @@ const AoiRightPanel = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [socket, projectId, currentPipelineId]);
 
+  // 🔘 Set AOI handler – hits the **mock** API only
   const handleConfirmClick = async () => {
     if (!projectId) {
-      console.warn(
-        "[AOI RIGHT] No project selected, ignoring Set AOI click"
-      );
+      console.warn("[AOI RIGHT] No projectId in route, ignoring Set AOI click");
+      setAlert({
+        open: true,
+        message: t("app.noProjectSelected") || "No project selected",
+        severity: "error",
+      });
       return;
     }
 
@@ -213,18 +220,33 @@ const AoiRightPanel = () => {
     }
 
     try {
+      setLoading(true);
       console.log("[AOI RIGHT] Calling setProjectAoiMock with:", projectId);
+
+      // reset local pipeline state; actual stages arrive via socket
       setPipelineStatus("running");
       setStages([]);
       setSummary(null);
       setCurrentPipelineId(null);
-      setLoading(true);
 
-      await setProjectAoiMock(projectId);
-      // pipeline events handled via socket
-    } catch (err) {
-      console.error("[AOI RIGHT] Error starting AOI pipeline:", err);
+      const response = await setProjectAoiMock(projectId);
+
+      if (response?.success && response?.data) {
+        // keep incoming-branch success AlertBox behaviour
+        setAlert({
+          open: true,
+          message: t("app.aoiSetSuccessMessage"),
+          severity: "success",
+        });
+      }
+    } catch (error) {
+      console.error("[AOI RIGHT] Error starting mock AOI pipeline:", error);
       setPipelineStatus("idle");
+      setAlert({
+        open: true,
+        message: t("app.errorSettingAOI"),
+        severity: "error",
+      });
     } finally {
       setLoading(false);
     }
@@ -232,13 +254,22 @@ const AoiRightPanel = () => {
 
   return (
     <StyledBox>
-      {/* Stats */}
+      {/* ✅ existing AlertBox from incoming branch */}
+      {alert.open && (
+        <AlertBox
+          open={alert.open}
+          onClose={() => setAlert({ ...alert, open: false })}
+          message={alert.message}
+          severity={alert.severity}
+        />
+      )}
+
+      {/* Stats area */}
       <StyledGridBottom>
         <AoiStatistics />
-        {/* no extra stage UI – progress is shown as X/Y next to spinner */}
       </StyledGridBottom>
 
-      {/* Set AOI button + overall status + stage counter */}
+      {/* Set AOI button + overall pipeline status + stage counter */}
       <StyledConfirmBox>
         <Tooltip
           title={
@@ -264,7 +295,7 @@ const AoiRightPanel = () => {
             justifyContent="center"
             sx={{ width: "100%" }}
           >
-            {/* Inline info alert from incoming branch */}
+            {/* inline info while POST is in-flight (from incoming branch) */}
             {loading && (
               <Alert
                 severity="info"
@@ -284,10 +315,10 @@ const AoiRightPanel = () => {
               variant="contained"
               onClick={handleConfirmClick}
               disabled={
-                isRunning ||
                 aoiPolygons.length < MIN_AOI_POLYGON_COUNT ||
                 aoiPolygons.length > MAX_AOI_POLYGON_COUNT ||
-                loading
+                loading ||
+                isRunning
               }
             >
               {t("app.setAOI")}
@@ -295,6 +326,7 @@ const AoiRightPanel = () => {
           </Box>
         </Tooltip>
 
+        {/* Spinner + 0/6 style counter + final icon */}
         <Box sx={{ ml: 2, display: "flex", alignItems: "center" }}>
           {isRunning && (
             <>
