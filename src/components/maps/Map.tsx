@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
+import { PmTilesSource } from "mapbox-pmtiles";
 import { Box } from "@mui/material";
 import type { AlertColor, SxProps, Theme } from "@mui/material";
 import { useBasemap } from "@/hooks/useBasemap";
@@ -47,6 +48,7 @@ interface MapProps {
 }
 
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN || "";
+mapboxgl.Style.setSourceType(PmTilesSource.SOURCE_TYPE, PmTilesSource as any);
 
 const Map: React.FC<MapProps> = ({
   highResolution = false,
@@ -220,10 +222,10 @@ const Map: React.FC<MapProps> = ({
 
   // useEffect to add layers
   useEffect(() => {
-    if (projectId && mapRef.current) {
+    if (projectId && mapRef.current && mapReady) {
       addLayers();
     }
-  }, [projectId, basemap]);
+  }, [projectId, basemap, mapReady]);
 
   return (
     <>

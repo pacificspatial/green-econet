@@ -1,6 +1,7 @@
-import { getS3PreSignedUrl } from "@/api/s3PresignedUrl";
+import { getS3PreSignedUrl } from "@/api/s3PreSignedUrl";
 import { layerVisibilityConfig } from "@/config/layers/initialLayerVisibility";
 import type { LayerConfig } from "@/types/Layers";
+import PmTilesSource from "mapbox-pmtiles";
 import { PMTiles } from "pmtiles";
 
 export interface Metadata {
@@ -23,6 +24,8 @@ export const addStyledLayer = async (
     if (res.success) {
       tileUrl = res.data;
     }
+    const header = await PmTilesSource.getHeader(tileUrl);
+    const bounds = [header.minLon, header.minLat, header.maxLon, header.maxLat];
     const sourceId = `source-${layerConfig.id}`;
     const layerId = `layer-${layerConfig.id}`;
 
@@ -32,8 +35,11 @@ export const addStyledLayer = async (
 
     if (!map.getSource(sourceId)) {
       map.addSource(sourceId, {
-        type: "vector",
-        url: `pmtiles://${tileUrl}`,
+        type: PmTilesSource.SOURCE_TYPE as any,
+        url: tileUrl,
+        minzoom: header.minZoom,
+        maxzoom: header.maxZoom,
+        bounds: bounds as [number, number, number, number],
       });
     }
 
