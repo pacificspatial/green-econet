@@ -66,6 +66,6 @@ export const getPolygonsByProject = async (projectId: string) => {
 
 // Set AOI for a project
 export const setProjectAoi = async (projectId: string) => {
-  const res = await axiosInstance.post(`/projects/set-aoi/${projectId}`);
+  const res = await axiosInstance.post(`/projects/:${projectId}/process/run`);
   return res.data;
 };

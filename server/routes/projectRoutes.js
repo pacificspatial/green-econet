@@ -28,6 +28,6 @@ router
 
 // Set AOI for a project
 router
-  .post("/set-aoi/:projectId", projectController.setProjectAoi);
+  .post("/:project_id/process/run", projectController.setProjectAoi);
   
 export default router;
