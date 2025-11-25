@@ -76,6 +76,7 @@
     "aoiSetSuccessMessage": "AOI が正常に設定されました！",
     "errorSettingAOI": "AOI の設定中にエラーが発生しました",
     "settingAoiMessage": "AOI の設定には少し時間がかかります...",
-    "loadingResult": "結果の読み込み"
+    "loadingResult": "結果の読み込み",
+    "download": "ダウンロード"
   }
 }
