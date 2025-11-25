@@ -294,21 +294,21 @@ jobs:
           ssh -o StrictHostKeyChecking=no ${TARGET_USER}@${TARGET_HOST} "sudo chown ${TARGET_USER}:${TARGET_USER} ${TARGET_PATH}/.env"
           echo ".env written to ${TARGET_PATH}/.env"
 
-      - name: Remote install & pm2 restart
+      - name: Remote install & pm2 restart (single SSH, npm install, keep stg-enp)
         env:
           TARGET_USER: ${{ secrets.STG_EC2_USER || 'ec2-user' }}
           TARGET_HOST: ${{ secrets.STG_EC2_PUBLIC_IP }}
           TARGET_PATH: /var/www/stg
         run: |
-          ssh -o StrictHostKeyChecking=no ${TARGET_USER}@${TARGET_HOST} <<'EOF'
+          ssh -o StrictHostKeyChecking=no ${TARGET_USER}@${TARGET_HOST} <<EOF
             set -e
             cd ${TARGET_PATH}
 
-            echo "Remote Host: $(hostname -f || hostname)"
-            echo "PWD: $(pwd)"
+            echo "Remote Host: \$(hostname -f || hostname)"
+            echo "PWD: \$(pwd)"
 
-            echo "Node: $(node -v || echo 'node not found')"
-            echo "Npm: $(npm -v || echo 'npm not found')"
+            echo "Node: \$(node -v || echo 'node not found')"
+            echo "Npm: \$(npm -v || echo 'npm not found')"
 
             echo "Running npm install..."
             npm install --no-audit --no-fund
@@ -321,23 +321,23 @@ jobs:
             fi
 
             # Load .env variables for PM2
-            export $(grep -v '^#' .env | xargs)
+            export \$(grep -v '^#' .env | xargs)
 
             PROCESS_NAME="stg-enp"
-            ENTRY="index.js"
 
-            if pm2 describe "${PROCESS_NAME}" >/dev/null 2>&1; then
-              echo "Restarting PM2 process ${PROCESS_NAME}..."
-              pm2 restart "${PROCESS_NAME}" --update-env || (pm2 delete "${PROCESS_NAME}" && pm2 start "${ENTRY}" --name "${PROCESS_NAME}" --update-env)
+            if pm2 describe "\${PROCESS_NAME}" >/dev/null 2>&1; then
+              echo "Restarting PM2 process \${PROCESS_NAME}..."
+              pm2 restart "\${PROCESS_NAME}" --update-env || pm2 delete "\${PROCESS_NAME}" && pm2 start npm --name "\${PROCESS_NAME}" -- start --update-env
             else
-              echo "Starting PM2 process ${PROCESS_NAME}..."
-              pm2 start "${ENTRY}" --name "${PROCESS_NAME}" --update-env
+              echo "Starting PM2 process \${PROCESS_NAME}..."
+              pm2 start npm --name "\${PROCESS_NAME}" -- start --update-env
             fi
 
             pm2 save
-            pm2 status "${PROCESS_NAME}"
+            pm2 status "\${PROCESS_NAME}"
             echo "Backend deployment completed."
             EOF
+
 
       - name: Backend Deployed Successfully
         run: |
