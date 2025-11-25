@@ -300,18 +300,25 @@ jobs:
           TARGET_HOST: ${{ secrets.STG_EC2_PUBLIC_IP }}
         run: |
           ssh -o StrictHostKeyChecking=no ${TARGET_USER}@${TARGET_HOST} <<'EOF'
-            cd /var/www/stg
-            echo "Removing existing node_modules and package-lock.json..."
-            rm -rf node_modules package-lock.json
-            echo "Installing fresh dependencies..."
-            npm install --no-audit --no-fund
-            echo "Stopping any old PM2 processes..."
-            pm2 delete stg-enp 2>/dev/null || true
-            echo "Starting PM2 process..."
-            pm2 start index.js --name stg-enp --update-env
-            pm2 save
-            pm2 status stg-enp
+              cd /var/www/stg
+
+              echo "Installing missing dependency: socket.io..."
+              npm install socket.io --save --no-audit --no-fund
+
+              echo "Checking for existing PM2 process using port 4000..."
+              PID=$(lsof -t -i:4000)
+              if [ -n "$PID" ]; then
+                echo "Killing process $PID using port 4000..."
+                kill -9 $PID
+              fi
+
+              echo "Reloading PM2 process safely..."
+              pm2 reload stg-enp --update-env || pm2 start index.js --name stg-enp --update-env
+
+              pm2 save
+              pm2 status stg-enp
           EOF
+
 
 
 
