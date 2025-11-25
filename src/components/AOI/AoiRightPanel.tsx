@@ -3,11 +3,12 @@ import AoiStatistics from "./AoiStatistics";
 import { styled } from "@mui/material/styles";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Button, Tooltip } from "@mui/material";
+import { Button, Tooltip, Typography } from "@mui/material";
 import AlertBox from "../utils/AlertBox";
 import type { AlertState } from "@/types/AlertState";
 import { useAppSelector } from "@/hooks/reduxHooks";
 import { MAX_AOI_POLYGON_COUNT, MIN_AOI_POLYGON_COUNT } from "@/constants/numberConstants";
+import { setProjectAoi } from "@/api/project";
 
 const StyledBox = styled(Box)(({ theme }) => ({
   backgroundColor:
@@ -43,10 +44,34 @@ const AoiRightPanel = () => {
     severity: "info",
   });
   const aoiPolygons = useAppSelector((state) => state.aoi.polygons)
+  const { selectedProject } = useAppSelector((state) => state.project);
   const { t } = useTranslation();
+  const [ loading, setLoading ] = useState(false);
 
+  //Set AOI handler
   const handleConfirmClick = async () => {
-    // Here handle the set AOI action
+    try {
+      setLoading(true);
+      const response = await setProjectAoi(selectedProject!.id);      
+      if(response.success && response.data) {
+        //logic after successful AOI set can be added here
+        setAlert({
+          open: true,
+          message: t("app.aoiSetSuccessMessage"),
+          severity: "success",
+        });
+      }
+      
+    } catch (error) {
+      console.error("Error setting AOI:", error);
+      setAlert({
+        open: true,
+        message: t("app.errorSettingAOI"),
+        severity: "error",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -80,7 +105,19 @@ const AoiRightPanel = () => {
             )
           }
         >
-          <span>
+          <Box
+            display="flex"
+            flexDirection="column"
+            alignItems="center"
+            justifyContent="center"
+            sx={{ width: "100%" }}
+          >
+            {loading && (
+              <Typography sx={{ mb: 1, textAlign: "center" }}>
+                {t("app.settingAoiMessage")}
+              </Typography>
+            )}
+
             <Button
               sx={{ px: 4, py: 2 }}
               color="primary"
@@ -88,12 +125,13 @@ const AoiRightPanel = () => {
               onClick={handleConfirmClick}
               disabled={
                 aoiPolygons.length < MIN_AOI_POLYGON_COUNT ||
-                aoiPolygons.length > MAX_AOI_POLYGON_COUNT
+                aoiPolygons.length > MAX_AOI_POLYGON_COUNT ||
+                loading
               }
             >
               {t("app.setAOI")}
             </Button>
-          </span>
+          </Box>
         </Tooltip>
       </StyledConfirmBox>
     </StyledBox>
