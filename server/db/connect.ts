@@ -3,6 +3,7 @@ import {
   EnGreen,
   Projects,
   ProjectPolygons,
+  ClippedBuffer125Green
 } from "./models/index.js";
 
 export const connectDB = async function () {
@@ -13,6 +14,7 @@ export const connectDB = async function () {
     await EnGreen.sync({ alter: true });
     await Projects.sync({ alter: true });
     await ProjectPolygons.sync({ alter: true });
+    await ClippedBuffer125Green.sync({ alter: true });
   } catch (error) {
     console.error("Unable to connect to the database or sync models:", error);
   }
