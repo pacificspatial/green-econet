@@ -7,6 +7,7 @@ export interface Project {
   description?: string;
   created_at?: string;
   updated_at?: string;
+  processed: boolean
 }
 
 interface ProjectState {
@@ -24,11 +25,17 @@ export const projectSlice = createSlice({
   initialState,
   reducers: {
     setProjects: (state, action: PayloadAction<Project[]>) => {
-      state.projects = action.payload;
+      state.projects = action.payload.map(p => ({
+        ...p,
+        processed: p.processed ?? false,
+      }));
     },
 
     addProject: (state, action: PayloadAction<Project>) => {
-      state.projects.unshift(action.payload);
+      state.projects.unshift({
+        ...action.payload,
+        processed: action.payload.processed ?? false,
+      });
     },
 
     updateProjectById: (state, action: PayloadAction<Project>) => {
