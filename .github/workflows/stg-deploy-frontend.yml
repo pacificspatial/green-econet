@@ -279,7 +279,7 @@ jobs:
         if: always()
         env:
           TARGET_USER: ${{ secrets.STG_EC2_USER || 'ec2-user' }}
-          TARGET_HOST: ${{ secrets.STG_EC2_HOST }}
+          TARGET_HOST: ${{ secrets.STG_EC2_PUBLIC_IP }}
           TARGET_PATH: /var/www/stg
         run: |
           # Send the expanded secrets from the runner to the remote file via SSH stdin.
