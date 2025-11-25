@@ -3,9 +3,7 @@ import AoiStatistics from "./AoiStatistics";
 import { styled } from "@mui/material/styles";
 import { useState, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { Button, Tooltip, CircularProgress } from "@mui/material";
-import AlertBox from "../utils/AlertBox";
-import type { AlertState } from "@/types/AlertState";
+import { Button, Tooltip, CircularProgress, Typography } from "@mui/material";
 import { useAppSelector } from "@/hooks/reduxHooks";
 import {
   MAX_AOI_POLYGON_COUNT,
@@ -15,7 +13,6 @@ import { useParams } from "react-router-dom";
 import { setProjectAoiMock } from "@/api/project";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import ErrorIcon from "@mui/icons-material/Error";
-import FiberManualRecordIcon from "@mui/icons-material/FiberManualRecord";
 import { useSocket } from "@/context/SocketContext";
 
 const StyledBox = styled(Box)(({ theme }) => ({
@@ -30,12 +27,12 @@ const StyledBox = styled(Box)(({ theme }) => ({
   position: "relative",
 }));
 
-// 👇 add bottom padding so content doesn't clash with Set AOI row
+// keep padding so button row has breathing room
 const StyledGridBottom = styled("div")(({ theme }) => ({
   flex: 1,
   width: "100%",
   minHeight: "0px",
-  paddingBottom: theme.spacing(6), // reserve space above the button row
+  paddingBottom: theme.spacing(6),
 }));
 
 const StyledConfirmBox = styled(Box)(() => ({
@@ -64,14 +61,9 @@ interface PipelineSummary {
 }
 
 const AoiRightPanel = () => {
-  const [alert, setAlert] = useState<AlertState>({
-    open: false,
-    message: "",
-    severity: "info",
-  });
-
   const { projectId } = useParams<{ projectId: string }>();
   const socket = useSocket();
+  const { t } = useTranslation();
 
   const aoiPolygons = useAppSelector((state) => state.aoi.polygons);
 
@@ -82,18 +74,23 @@ const AoiRightPanel = () => {
     null
   );
 
-  const { t } = useTranslation();
-
   const isRunning = pipelineStatus === "running";
   const isSuccess = pipelineStatus === "success";
   const isFailed =
     pipelineStatus === "failed" || pipelineStatus === "partial_failure";
 
-  const runningStep = useMemo(() => {
-    if (!isRunning || stages.length === 0) return undefined;
-    const pending = stages.find((s) => s.status === "pending");
-    return pending?.step;
-  }, [isRunning, stages]);
+  const totalSteps = useMemo(() => {
+    if (stages.length > 0) {
+      return stages[0].totalSteps ?? stages.length;
+    }
+    return 6; // default mock total
+  }, [stages]);
+
+  // ✅ number of completed stages (success or failed) – starts at 0
+  const completedSteps = useMemo(() => {
+    if (stages.length === 0) return 0;
+    return stages.filter((s) => s.status !== "pending").length;
+  }, [stages]);
 
   // Socket listeners for AOI events specific to this project
   useEffect(() => {
@@ -109,15 +106,15 @@ const AoiRightPanel = () => {
       setPipelineStatus("running");
       setSummary(null);
 
-      const totalSteps = payload.totalSteps ?? 6;
+      const steps = payload.totalSteps ?? 6;
       const initialStages: LocalStage[] = Array.from(
-        { length: totalSteps },
+        { length: steps },
         (_, idx) => ({
           stageKey: `STEP_${idx + 1}`,
           label: `Stage ${idx + 1}`,
           status: "pending",
           step: idx + 1,
-          totalSteps,
+          totalSteps: steps,
         })
       );
       setStages(initialStages);
@@ -130,13 +127,13 @@ const AoiRightPanel = () => {
 
       setPipelineStatus("running");
       setStages((prev) => {
-        const totalSteps = payload.totalSteps ?? prev[0]?.totalSteps ?? 6;
+        const steps = payload.totalSteps ?? prev[0]?.totalSteps ?? 6;
         const stepIndex = (payload.step ?? 1) - 1;
 
         const copy: LocalStage[] =
-          prev.length === totalSteps
+          prev.length === steps
             ? [...prev]
-            : Array.from({ length: totalSteps }, (_, idx) => {
+            : Array.from({ length: steps }, (_, idx) => {
                 const existing = prev[idx];
                 return (
                   existing || {
@@ -144,7 +141,7 @@ const AoiRightPanel = () => {
                     label: `Stage ${idx + 1}`,
                     status: "pending" as const,
                     step: idx + 1,
-                    totalSteps,
+                    totalSteps: steps,
                   }
                 );
               });
@@ -154,7 +151,7 @@ const AoiRightPanel = () => {
           label: payload.label ?? copy[stepIndex].label,
           status: payload.status === "failed" ? "failed" : "success",
           step: payload.step,
-          totalSteps,
+          totalSteps: steps,
         };
 
         return copy;
@@ -190,11 +187,7 @@ const AoiRightPanel = () => {
 
   const handleConfirmClick = async () => {
     if (!projectId) {
-      setAlert({
-        open: true,
-        message: t("app.noProjectSelected") || "No project selected",
-        severity: "error",
-      });
+      console.warn("[AOI RIGHT] No project selected, ignoring Set AOI click");
       return;
     }
 
@@ -204,12 +197,6 @@ const AoiRightPanel = () => {
     }
 
     try {
-      setAlert({
-        open: true,
-        message: t("app.aoiProcessingStarted") || "AOI processing started",
-        severity: "info",
-      });
-
       console.log("[AOI RIGHT] Calling setProjectAoiMock with:", projectId);
       setPipelineStatus("running");
       setStages([]);
@@ -217,114 +204,22 @@ const AoiRightPanel = () => {
       setCurrentPipelineId(null);
 
       await setProjectAoiMock(projectId);
+      // pipeline events handled via socket
     } catch (err) {
       console.error("[AOI RIGHT] Error starting AOI pipeline:", err);
       setPipelineStatus("idle");
-      setAlert({
-        open: true,
-        message:
-          err instanceof Error
-            ? err.message
-            : t("app.aoiProcessingFailed") || "Failed to start AOI processing",
-        severity: "error",
-      });
     }
   };
 
   return (
     <StyledBox>
-      {alert.open && (
-        <AlertBox
-          open={alert.open}
-          onClose={() => setAlert({ ...alert, open: false })}
-          message={alert.message}
-          severity={alert.severity}
-        />
-      )}
-
-      {/* Stats + compact timeline */}
+      {/* Stats */}
       <StyledGridBottom>
         <AoiStatistics />
-
-        {stages.length > 0 && (
-          <Box
-            sx={{
-              width: "100%",
-              px: 2,
-              pt: 1,
-              mb: 1, // 👈 extra margin so it's clearly above the button
-              display: "flex",
-              justifyContent: "center",
-            }}
-          >
-            <Box
-              sx={{
-                display: "flex",
-                alignItems: "center",
-                width: "100%",
-                maxWidth: 260,
-              }}
-            >
-              {stages.map((stage, idx) => {
-                const isCurrentRunning =
-                  isRunning &&
-                  stage.status === "pending" &&
-                  stage.step === runningStep;
-
-                let icon;
-                if (stage.status === "success") {
-                  icon = <CheckCircleIcon fontSize="small" color="success" />;
-                } else if (stage.status === "failed") {
-                  icon = <ErrorIcon fontSize="small" color="error" />;
-                } else if (isCurrentRunning) {
-                  icon = <CircularProgress size={16} />;
-                } else {
-                  icon = (
-                    <FiberManualRecordIcon
-                      sx={{ fontSize: 12, color: "text.disabled" }}
-                    />
-                  );
-                }
-
-                return (
-                  <Box
-                    key={stage.stageKey}
-                    sx={{
-                      display: "flex",
-                      alignItems: "center",
-                      flex: 1,
-                    }}
-                  >
-                    {idx > 0 && (
-                      <Box
-                        sx={{
-                          flex: 1,
-                          height: 2,
-                          bgcolor: "divider",
-                          mx: 0.5,
-                        }}
-                      />
-                    )}
-                    <Box
-                      sx={{
-                        width: 24,
-                        height: 24,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
-                      {icon}
-                    </Box>
-                  </Box>
-                );
-              })}
-            </Box>
-          </Box>
-        )}
+        {/* no extra stage UI – progress is shown as X/Y next to spinner */}
       </StyledGridBottom>
 
-      {/* Confirm / Set AOI button + overall pipeline status icon */}
+      {/* Set AOI button + overall status + stage counter */}
       <StyledConfirmBox>
         <Tooltip
           title={
@@ -361,7 +256,17 @@ const AoiRightPanel = () => {
         </Tooltip>
 
         <Box sx={{ ml: 2, display: "flex", alignItems: "center" }}>
-          {isRunning && <CircularProgress size={22} />}
+          {isRunning && (
+            <>
+              <CircularProgress size={22} />
+              <Typography
+                variant="body2"
+                sx={{ ml: 1, minWidth: 48 }}
+              >
+                {completedSteps}/{totalSteps}
+              </Typography>
+            </>
+          )}
           {isSuccess && <CheckCircleIcon color="success" />}
           {isFailed && <ErrorIcon color="error" />}
         </Box>
