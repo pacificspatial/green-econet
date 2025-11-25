@@ -36,7 +36,7 @@ const runPipeline = async (projectId) => {
     } catch (err) {
       const formatted = formatDbError(err, step.name);
       console.error(`❌ Pipeline failed at step: ${step.name}`, formatted);
-      throw err; // stop pipeline immediately
+      // throw err; // stop pipeline immediately
     }
   }
 
