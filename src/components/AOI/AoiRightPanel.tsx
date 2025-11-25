@@ -78,6 +78,7 @@ const AoiRightPanel = () => {
   const aoiPolygons = useAppSelector((state) => state.aoi.polygons);
   const { t } = useTranslation();
   const { projectId } = useParams<{ projectId: string }>();
+  const { selectedProject } = useAppSelector((state) => state.project)
 
   // Inline loading for the POST call
   const [loading, setLoading] = useState(false);
@@ -319,7 +320,8 @@ const AoiRightPanel = () => {
                 aoiPolygons.length < MIN_AOI_POLYGON_COUNT ||
                 aoiPolygons.length > MAX_AOI_POLYGON_COUNT ||
                 loading ||
-                isRunning
+                isRunning || 
+                selectedProject?.processed
               }
             >
               {t("app.setAOI")}
