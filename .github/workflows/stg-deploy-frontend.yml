@@ -280,7 +280,7 @@ jobs:
           TARGET_USER: ${{ secrets.STG_EC2_USER || 'ec2-user' }}
           TARGET_HOST: ${{ secrets.STG_EC2_PUBLIC_IP }}
         run: |
-          ssh -o StrictHostKeyChecking=no $TARGET_USER@$TARGET_HOST <<'EOF'
+          ssh -o StrictHostKeyChecking=no $TARGET_USER@$TARGET_HOST <<EOF
             cd /var/www/stg
 
             echo "Installing dependencies..."
