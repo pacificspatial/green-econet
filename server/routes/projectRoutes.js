@@ -11,6 +11,7 @@ router
     validate(projectValidationRules.createProject),
     projectController.createProject
   )
+
   .patch("/:projectId",
     validate(projectValidationRules.updateProject),
     projectController.updateProject
@@ -26,8 +27,7 @@ router
   .delete("/polygon/:polygonId", projectController.deleteProjectPolygon)
   .get("/:projectId/polygon", projectController.getPolygonsByProject);
 
-// Set AOI for a project
 router
-  .post("/:project_id/process/run", projectController.setProjectAoi);
-  
+  .post("/:projectId/run", projectController.runPipeline)
+
 export default router;
