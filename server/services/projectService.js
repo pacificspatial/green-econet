@@ -166,6 +166,15 @@ const getPolygonsByProject = async (projectId) => {
   };
 };
 
+/** 
+ * Set AOI for a project
+ */
+const setProjectAoi = async (projectId) => {
+  await new Promise(resolve => setTimeout(resolve, 2500)); 
+  return true;
+};
+
+
 export default {
   createProject,
   updateProject,
@@ -175,5 +184,6 @@ export default {
   createProjectPolygon,
   updateProjectPolygon,
   deleteProjectPolygon,
-  getPolygonsByProject
+  getPolygonsByProject,
+  setProjectAoi
 };

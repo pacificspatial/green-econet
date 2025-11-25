@@ -5,6 +5,7 @@ import validate from "../validators/validator.js";
 
 const router = express.Router();
 
+// Project routes
 router
   .post("/",
     validate(projectValidationRules.createProject),
@@ -18,11 +19,15 @@ router
   .get("/", projectController.getAllProjects)
   .get("/:projectId", projectController.getProject);
 
+// Project Polygon routes
 router
   .post("/polygon", projectController.createProjectPolygon)
   .patch("/polygon/:polygonId", projectController.updateProjectPolygon)
   .delete("/polygon/:polygonId", projectController.deleteProjectPolygon)
   .get("/:projectId/polygon", projectController.getPolygonsByProject);
 
-
+// Set AOI for a project
+router
+  .post("/set-aoi/:projectId", projectController.setProjectAoi);
+  
 export default router;
