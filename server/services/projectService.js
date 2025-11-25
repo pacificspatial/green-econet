@@ -1,8 +1,19 @@
+import { v4 as uuidv4 } from "uuid";
 import { Op } from "sequelize";
 import { ProjectPolygons, Projects } from "../db/models/index.js";
 import CustomError from "../utils/customError.js";
 import { calcArea, calcPerimeter, toGeometry } from "../utils/geoUtil.js";
 import { reorderPolygonIndexes } from "../utils/reorderPolygonIndexes.js";
+
+// 1 validation + 5 query stages
+const MOCK_AOI_STAGES = [
+  { key: "VALIDATE_AOI", label: "Validating AOI configuration" },   // stage 1
+  { key: "QUERY_1",      label: "Running AOI query 1" },           // stage 2
+  { key: "QUERY_2",      label: "Running AOI query 2" },           // stage 3
+  { key: "QUERY_3",      label: "Running AOI query 3" },           // stage 4
+  { key: "QUERY_4",      label: "Running AOI query 4" },           // stage 5
+  { key: "QUERY_5",      label: "Running AOI query 5" },           // stage 6
+];
 
 /**
  * Create a new project
@@ -166,6 +177,98 @@ const getPolygonsByProject = async (projectId) => {
   };
 };
 
+
+
+
+/**
+ * Start a mock AOI pipeline for Set AOI.
+ * - 6 stages: 1 validation + 5 "query" stages
+ * - Failure simulation controlled via env:
+ *     AOI_MOCK_SIMULATE_FAILURE=true|false
+ * - Emits:
+ *     aoi:pipeline_started
+ *     aoi:pipeline_stage
+ *     aoi:pipeline_completed
+ */
+const startMockAoiPipeline = async ({ projectId, io }) => {
+  const project = await Projects.findByPk(projectId);
+  if (!project) {
+    throw new CustomError("Project not found", 404, "PROJECT_NOT_FOUND");
+  }
+
+  const pipelineId = uuidv4();
+  const totalSteps = MOCK_AOI_STAGES.length;
+
+  // env flag to control failure simulation
+  const simulateFailure = (process.env.AOI_MOCK_SIMULATE_FAILURE || "false") === "true";
+
+  const emit = (event, payload) => {
+    if (!io) {
+      console.warn("Socket.IO instance not found on app; cannot emit:", event);
+      return;
+    }
+    io.emit(event, payload);
+  };
+
+  emit("aoi:pipeline_started", {
+    pipelineId,
+    projectId,
+    totalSteps,
+    startedAt: new Date().toISOString(),
+  });
+
+  let succeeded = 0;
+  let failed = 0;
+
+  MOCK_AOI_STAGES.forEach((stage, index) => {
+    const delayMs = (index + 1) * 2000; // 2s between stages – tweak if needed
+
+    setTimeout(() => {
+      let status = "success";
+
+      // For mock: if simulateFailure=true, fail exactly one middle "query" stage (e.g. QUERY_2)
+      if (simulateFailure && stage.key === "QUERY_2") {
+        status = "failed";
+        failed += 1;
+      } else {
+        succeeded += 1;
+      }
+
+      emit("aoi:pipeline_stage", {
+        pipelineId,
+        projectId,
+        stageKey: stage.key,
+        label: stage.label,
+        status,                // "success" | "failed"
+        step: index + 1,       // 1..6
+        totalSteps,
+        timestamp: new Date().toISOString(),
+      });
+
+      if (index === totalSteps - 1) {
+        const overallStatus =
+          failed === 0 ? "success" : succeeded === 0 ? "failed" : "partial_failure";
+
+        emit("aoi:pipeline_completed", {
+          pipelineId,
+          projectId,
+          status: overallStatus,
+          summary: {
+            totalSteps,
+            succeeded,
+            failed,
+          },
+          completedAt: new Date().toISOString(),
+        });
+      }
+    }, delayMs);
+  });
+
+  // return immediately; pipeline continues in background
+  return { pipelineId };
+};
+
+
 export default {
   createProject,
   updateProject,
@@ -175,5 +278,6 @@ export default {
   createProjectPolygon,
   updateProjectPolygon,
   deleteProjectPolygon,
-  getPolygonsByProject
+  getPolygonsByProject,
+  startMockAoiPipeline,
 };

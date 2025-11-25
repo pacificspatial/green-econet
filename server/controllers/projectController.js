@@ -155,6 +155,38 @@ const getPolygonsByProject = async (req, res, next) => {
   }
 };
 
+
+/**
+ * MOCK: Kick off AOI pipeline for a project
+ * @route POST /projects/mock-set-aoi/:projectId
+ */
+const setProjectAoi = async (req, res, next) => {
+  try {
+    const { projectId } = req.params;
+
+    if (!projectId) {
+      throw new CustomError("projectId is required", 400, "PROJECT_ID_REQUIRED");
+    }
+
+    const io = req.app.get("socket");
+
+    const { pipelineId } = await projectService.startMockAoiPipeline({
+      projectId,
+      io, // simulateFailure is read from env
+    });
+
+    return success(
+      res,
+      "Mock AOI pipeline started",
+      { pipelineId, projectId },
+      202
+    );
+  } catch (err) {
+    console.log("Error in setProjectAoi:", err.message);
+    next(err);
+  }
+};
+
 export default {
   createProject,
   updateProject,
@@ -164,6 +196,7 @@ export default {
   createProjectPolygon,
   updateProjectPolygon,
   deleteProjectPolygon,
-  getPolygonsByProject
+  getPolygonsByProject,
+  setProjectAoi
 };
 
