@@ -75,6 +75,13 @@
     "polygonDeletedSuccessfully": "Polygon deleted successfully!",
     "download": "Download",
     "pdf": "PDF",
-    "csv": "CSV"
+    "csv": "CSV",
+    "pdfLoading": "Loading PDF content...",
+    "page1_heading": "Assumed Index Value When the Green Space Is Considered Isolated",
+    "page1_subheading1": "125 m buffer (blue area) from the edges of green spaces within the 1 km radius area, excluding the applicant’s green space.",
+    "page1_subheading2": "Within the 125 m buffer, merge connected green spaces into single clusters (pink areas), and calculate the area (green) of each cluster (in hectares).",
+    "page2_heading": "Index Value Reflecting the Actual Network Conditions",
+    "page2_subheading1": "Using GIS, extract the area of the applicant’s green space (shown in red) and generate a 125 m buffer (blue area) from the edges of green spaces within the 1 km radius.",
+    "page2_subheading2": "Within the 125 m buffer, merge connected green spaces into single clusters (pink areas), and calculate the area (green) of each cluster (in hectares)."
   }
 }

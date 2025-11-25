@@ -1,5 +1,7 @@
 import { Popover, List, ListItemButton, ListItemText, Box } from "@mui/material";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import PdfPreviewModal from "./pdf/PdfPreviewModal";
 
 interface Props {
   anchorEl: HTMLElement | null;
@@ -9,35 +11,44 @@ interface Props {
 
 const DownloadPopover = ({ anchorEl, onClose, onSelect }: Props) => {
   const { t } = useTranslation();
+  const [pdfOpen, setPdfOpen] = useState(false);
 
-  const open = Boolean(anchorEl);
+  const handlePdf = () => {
+    onClose();      
+    setPdfOpen(true);
+  };
 
   return (
-    <Popover
-      open={open}
-      anchorEl={anchorEl}
-      onClose={onClose}
-      anchorOrigin={{
-        vertical: "bottom",
-        horizontal: "right",
-      }}
-      transformOrigin={{
-        vertical: "top",
-        horizontal: "right",
-      }}
-    >
-      <Box sx={{ minWidth: 160 }}>
-        <List>
-          <ListItemButton onClick={() => onSelect("pdf")}>
-            <ListItemText primary={t("app.pdf")} />
-          </ListItemButton>
+    <>
+      <Popover
+        open={Boolean(anchorEl)}
+        anchorEl={anchorEl}
+        onClose={onClose}
+        anchorOrigin={{
+          vertical: "bottom",
+          horizontal: "right",
+        }}
+        transformOrigin={{
+          vertical: "top",
+          horizontal: "right",
+        }}
+      >
+        <Box sx={{ minWidth: 160 }}>
+          <List>
+            <ListItemButton onClick={handlePdf}>
+              <ListItemText primary={t("app.pdf")} />
+            </ListItemButton>
 
-          <ListItemButton onClick={() => onSelect("csv")}>
-            <ListItemText primary={t("app.csv")} />
-          </ListItemButton>
-        </List>
-      </Box>
-    </Popover>
+            <ListItemButton onClick={() => onSelect("csv")}>
+              <ListItemText primary={t("app.csv")} />
+            </ListItemButton>
+          </List>
+        </Box>
+      </Popover>
+
+      {/* PDF Modal */}
+      <PdfPreviewModal open={pdfOpen} onClose={() => setPdfOpen(false)} />
+    </>
   );
 };
 
