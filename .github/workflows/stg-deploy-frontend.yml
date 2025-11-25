@@ -300,30 +300,48 @@ jobs:
           ssh -o StrictHostKeyChecking=no ${TARGET_USER}@${TARGET_HOST} "sudo chown ${TARGET_USER}:${TARGET_USER} ${TARGET_PATH}/.env || true"
           echo ".env written to ${TARGET_PATH}/.env"
 
-      - name: Remote install & pm2 restart (use npm install)
+      - name: Remote install & pm2 restart (always use npm install)
         env:
           TARGET_USER: ${{ secrets.STG_EC2_USER || 'ec2-user' }}
           TARGET_HOST: ${{ secrets.STG_EC2_PUBLIC_IP }}
           TARGET_PATH: /var/www/stg
         run: |
-          ssh -o StrictHostKeyChecking=no ${TARGET_USER}@${TARGET_HOST} <<EOF
+          ssh -o StrictHostKeyChecking=no ${TARGET_USER}@${TARGET_HOST} <<'EOF'
             set -e
             cd ${TARGET_PATH}
-            echo "PWD: \$(pwd)"
-            echo "Listing files:"
+
+            echo "PWD: $(pwd)"
             ls -la
 
-            echo "Node version: \$(node -v || echo 'node not found')"
-            # Install dependencies
-            npm install --no-audit --no-fund
-            # Build if present
-            npm run build --if-present
+            echo "Node: $(node -v)"
+            echo "Npm:  $(npm -v)"
 
-            # Restart pm2 app (zero downtime)
-            pm2 restart stg-enp || pm2 start dist/index.js --name stg-enp --update-env
+            # Install dependencies (always using npm install)
+            echo "Running npm install..."
+            npm install --no-audit --no-fund
+
+            # If a build script exists, run it (your project does not need this, but safe)
+            if npm run | grep -qE ' build'; then
+              echo "Running npm run build"
+              npm run build
+            else
+              echo "No build script found, skipping build"
+            fi
+
+            # PM2 — run project using "npm start" script from package.json
+            if pm2 describe stg-enp >/dev/null 2>&1; then
+              echo "Restarting PM2 app: stg-enp"
+              pm2 restart stg-enp --update-env
+            else
+              echo "Starting PM2 app: stg-enp"
+              pm2 start npm --name stg-enp -- run start --update-env
+            fi
+
             pm2 save || true
-            echo "Remote install/build/restart complete"
+            pm2 status stg-enp || true
+            echo "Backend deployment completed."
           EOF
+
 
       - name: Backend Deployed Successfully
         run: |
