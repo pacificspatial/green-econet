@@ -23,7 +23,8 @@ CREATE TABLE IF NOT EXISTS public.projects (
 
     -- AOI centroid and 1000m buffer
     aoi_centroid GEOMETRY(POINT, 4326),
-    geom GEOMETRY(POLYGON, 4326)
+    geom GEOMETRY(POLYGON, 4326),
+    processed BOOLEAN NOT NULL DEFAULT FALSE
 );
 
 -- User-drawn polygons for a project

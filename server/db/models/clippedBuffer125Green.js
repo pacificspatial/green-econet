@@ -1,8 +1,9 @@
 import { DataTypes } from "sequelize";
 import { sequelize } from "../../config/dbConfig.js";
 
-export const ProjectPolygons = sequelize.define(
-  "project_polygons",
+
+export const ClippedBuffer125Green = sequelize.define(
+  "clipped_buffer125_green",
   {
     id: {
       type: DataTypes.UUID,
@@ -13,31 +14,33 @@ export const ProjectPolygons = sequelize.define(
       type: DataTypes.UUID,
       allowNull: false,
       references: {
-        model: "projects",
+        model: {
+          tableName: "projects",
+          schema: "public",
+        },
         key: "id",
       },
       onDelete: "CASCADE",
     },
-    polygon_index: {
+    src_id: {
       type: DataTypes.INTEGER,
       allowNull: false,
     },
+    uid: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
     geom: {
-      type: DataTypes.GEOMETRY("POLYGON", 4326),
-      allowNull: false,
-    },
-    area_m2: {
-      type: DataTypes.DECIMAL,
+      type: DataTypes.GEOMETRY("MULTIPOLYGON", 4326),
       allowNull: true,
     },
-    perimeter_m: {
-      type: DataTypes.DECIMAL,
+    properties: {
+      type: DataTypes.JSONB,
       allowNull: true,
-    }, 
-  }, 
-  {
-    tableName: "project_polygons",
-    timestamps: true,
-    underscored: true,
+    }
+  }, {
+    tableName: "clipped_buffer125_green",
+    schema: "processing",
+    timestamps: false,
   }
 );

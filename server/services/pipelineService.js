@@ -1,4 +1,6 @@
-import { db } from "../db/connect.ts";
+import { db } from "../db/connect.js";
+import { Projects } from "../db/models/index.js";
+
 
 // Util for consistent error formatting
 function formatDbError(err, step) {
@@ -75,6 +77,12 @@ const runPipeline = async ({ projectId, io }) => {
 
       // last stage → emit pipeline_completed
       if (index === totalSteps) {
+
+        await Projects.update(
+          { processed: true },
+          { where: { id: projectId } }
+        );
+
         const overallStatus =
           failed === 0
             ? "success"

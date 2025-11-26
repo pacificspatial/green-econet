@@ -1,5 +1,5 @@
 import { DataTypes } from "sequelize";
-import { sequelize } from "../../config/dbConfig.ts";
+import { sequelize } from "../../config/dbConfig.js";
 
 
 export const Projects = sequelize.define(
@@ -29,6 +29,10 @@ export const Projects = sequelize.define(
     geom: {
       type: DataTypes.GEOMETRY("POLYGON", 4326),
       allowNull: true,
+    },
+    processed: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false
     }
   }, {
     tableName: "projects",
