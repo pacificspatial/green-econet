@@ -70,7 +70,8 @@ const ProjectsList: React.FC = () => {
                 setCollapsed={setCollapsed}
                 isProjectListLoading={isProjectListLoading}
                 setAlertState={setAlertState}
-              />            </Paper>
+              />            
+            </Paper>
           </Grid>
         )}
         {/* Map Component */}
