@@ -1,34 +1,38 @@
 // src/utils/draw/initilizeDrawtool.ts
-import type mapboxgl from "mapbox-gl";
-import MapboxDraw from "@mapbox/mapbox-gl-draw";
+import type maplibregl from "maplibre-gl";
+import MaplibreDraw from "maplibre-gl-draw";
+import "maplibre-gl-draw/dist/mapbox-gl-draw.css";
+import type { Theme } from "@mui/material/styles";
 
-export const initializeDrawTool = (
-  map: mapboxgl.Map,
-  editable: boolean,
-  handleDrawCreate: (e: MapboxDraw.DrawCreateEvent) => void,
-  handleDrawUpdate: (e: MapboxDraw.DrawUpdateEvent) => void,
-  handleDrawDelete: (e: MapboxDraw.DrawDeleteEvent) => void,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  theme: unknown // keep if you use theme for custom styles later
-): MapboxDraw => {
-  const draw = new MapboxDraw({
+export type DrawInstance = MaplibreDraw;
+
+export function initializeDrawTool(
+  map: maplibregl.Map,
+  isEditable: boolean,
+  handleDrawCreate: (e: any) => void,
+  handleDrawUpdate: (e: any) => void,
+  handleDrawDelete: (e: any) => void,
+  _theme?: Theme
+): DrawInstance {
+  // Configure draw – you can tweak modes/controls here if needed
+  const draw = new MaplibreDraw({
     displayControlsDefault: false,
-    controls: editable
+    controls: isEditable
       ? {
           polygon: true,
-          line_string: true,
-          point: true,
           trash: true,
         }
       : {},
     defaultMode: "simple_select",
   });
 
+  // Add control to the map
   map.addControl(draw, "top-left");
 
+  // Wire events
   map.on("draw.create", handleDrawCreate);
   map.on("draw.update", handleDrawUpdate);
   map.on("draw.delete", handleDrawDelete);
 
   return draw;
-};
+}

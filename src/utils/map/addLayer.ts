@@ -1,14 +1,37 @@
+import maplibregl from "maplibre-gl";
+import { PMTiles, Protocol } from "pmtiles";
 import { getS3PreSignedUrl } from "@/api/s3PreSignedUrl";
 import { layerVisibilityConfig } from "@/config/layers/initialLayerVisibility";
 import type { LayerConfig } from "@/types/Layers";
-import PmTilesSource from "mapbox-pmtiles";
-import { PMTiles } from "pmtiles";
 
 export interface Metadata {
   vector_layers: { id: string }[];
 }
+
+// Global pmtiles protocol instance (register once per app)
+let pmtilesProtocol: Protocol | null = null;
+
+function ensurePmTilesProtocol() {
+  if (!pmtilesProtocol) {
+    pmtilesProtocol = new Protocol();
+    try {
+      // register "pmtiles://" scheme with MapLibre
+      (maplibregl as any).addProtocol(
+        "pmtiles",
+        pmtilesProtocol.tile.bind(pmtilesProtocol)
+      );
+    } catch (err) {
+      // if already registered, ignore
+      console.debug("pmtiles protocol already registered (or failed):", err);
+    }
+  }
+}
+
+/**
+ * Add a styled vector layer backed by a PMTiles file from S3.
+ */
 export const addStyledLayer = async (
-  map: mapboxgl.Map | null,
+  map: maplibregl.Map | null,
   layerConfig: LayerConfig,
   fileName: string
 ): Promise<void> => {
@@ -18,35 +41,37 @@ export const addStyledLayer = async (
     await removeStyledLayer(map, layerConfig.id);
 
     let tileUrl = "";
-    //step 1: fetch presigned url from server
     const res = await getS3PreSignedUrl({ fileName });
 
     if (res.success) {
       tileUrl = res.data;
+    } else {
+      console.error("Failed to get presigned URL for PMTiles:", res);
+      return;
     }
-    const header = await PmTilesSource.getHeader(tileUrl);
-    const bounds = [header.minLon, header.minLat, header.maxLon, header.maxLat];
+
+    // Ensure pmtiles protocol is registered with MapLibre
+    ensurePmTilesProtocol();
+
+    // Read metadata to grab vector_layers[0].id for source-layer
+    const pmtiles = new PMTiles(tileUrl);
+    const metadata = (await pmtiles.getMetadata()) as Metadata;
+    const sourceLayer = metadata?.vector_layers?.[0]?.id;
+
     const sourceId = `source-${layerConfig.id}`;
     const layerId = `layer-${layerConfig.id}`;
 
-    const pmtiles = new PMTiles(tileUrl);
-    const metadata = (await pmtiles.getMetadata()) as Metadata;
-    const sourceLayer = metadata?.vector_layers[0]?.id;
-
     if (!map.getSource(sourceId)) {
       map.addSource(sourceId, {
-        type: PmTilesSource.SOURCE_TYPE as any,
-        url: tileUrl,
-        minzoom: header.minZoom,
-        maxzoom: header.maxZoom,
-        bounds: bounds as [number, number, number, number],
-      });
+        type: "vector",
+        // use pmtiles protocol
+        url: `pmtiles://${tileUrl}`,
+      } as any);
     }
 
     const isVisible = layerVisibilityConfig[layerId] ?? true;
 
-    // Add layer
-    const layerOptions: mapboxgl.LayerSpecification = {
+    const layerOptions: any = {
       id: layerId,
       type: layerConfig.style.type,
       source: sourceId,
@@ -65,7 +90,6 @@ export const addStyledLayer = async (
         map.addLayer(layerOptions);
       }
     } else {
-      // Update visibility if layer already exists
       map.setLayoutProperty(
         layerId,
         "visibility",
@@ -79,7 +103,7 @@ export const addStyledLayer = async (
 };
 
 export const removeStyledLayer = async (
-  map: mapboxgl.Map,
+  map: maplibregl.Map,
   layerId: string
 ): Promise<void> => {
   if (!map) return;
@@ -100,28 +124,21 @@ export const removeStyledLayer = async (
     throw error;
   }
 };
-import type {
-  Map as MapboxMap,
-  AnySourceData,
-  AnyLayer,
-} from "mapbox-gl";
 
 /**
- * Safely adds a layer with its source.
- * Removes existing layer/source with the same ID before adding.
+ * Generic GeoJSON layer helpers (used for clipped_* & project layers)
  */
 export function addLayer(
-  map: MapboxMap,
+  map: maplibregl.Map,
   layerId: string,
-  source: AnySourceData,
-  layer: Omit<AnyLayer, "id" | "source"> 
+  source: any,
+  layer: any
 ): void {
   if (!map || !map.isStyleLoaded()) {
     console.warn("Map style not loaded yet");
     return;
   }
 
-  // Remove if exists
   if (map.getLayer(layerId)) {
     map.removeLayer(layerId);
   }
@@ -129,21 +146,16 @@ export function addLayer(
     map.removeSource(layerId);
   }
 
-  // Add source
   map.addSource(layerId, source);
 
-  // Add layer
   map.addLayer({
     id: layerId,
     source: layerId,
     ...layer,
-  });
+  } as any);
 }
 
-/**
- * Safely removes a layer + its source.
- */
-export function removeLayer(map: MapboxMap, layerId: string): void {
+export function removeLayer(map: maplibregl.Map, layerId: string): void {
   if (map.getLayer(layerId)) {
     map.removeLayer(layerId);
   }

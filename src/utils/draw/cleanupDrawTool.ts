@@ -1,13 +1,13 @@
 // src/utils/draw/drawToolCleanUp.ts
-import type mapboxgl from "mapbox-gl";
-import type MapboxDraw from "@mapbox/mapbox-gl-draw";
+import maplibregl from "maplibre-gl";
+import MapboxDraw from "@mapbox/mapbox-gl-draw";
 
 interface CleanupParams {
-  mapRef: mapboxgl.Map | null;
+  mapRef: React.RefObject<maplibregl.Map | null>;
   drawInstance: MapboxDraw | null;
-  handleDrawCreate: (e: any) => void;
-  handleDrawUpdate: (e: any) => void;
-  handleDrawDelete: (e: any) => void;
+  handleDrawCreate: (e: MapboxDraw.DrawCreateEvent) => void;
+  handleDrawUpdate: (e: MapboxDraw.DrawUpdateEvent) => void;
+  handleDrawDelete: (e: MapboxDraw.DrawDeleteEvent) => void;
 }
 
 export const cleanupDrawTool = ({
@@ -17,17 +17,13 @@ export const cleanupDrawTool = ({
   handleDrawUpdate,
   handleDrawDelete,
 }: CleanupParams) => {
-  if (!mapRef || !drawInstance) return;
+  const map = mapRef.current;
+  if (!map || !drawInstance) return;
 
-  // Remove event listeners
-  mapRef.off("draw.create", handleDrawCreate);
-  mapRef.off("draw.update", handleDrawUpdate);
-  mapRef.off("draw.delete", handleDrawDelete);
+  map.off("draw.create", handleDrawCreate);
+  map.off("draw.update", handleDrawUpdate);
+  map.off("draw.delete", handleDrawDelete);
 
-  // 🔴 Critical: remove the control from the map
-  try {
-    mapRef.removeControl(drawInstance);
-  } catch (err) {
-    console.warn("Error removing draw control:", err);
-  }
+  // Remove the control from MapLibre
+  map.removeControl(drawInstance as any);
 };

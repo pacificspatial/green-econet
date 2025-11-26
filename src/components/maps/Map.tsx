@@ -1,12 +1,19 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
-import mapboxgl from "mapbox-gl";
-import "mapbox-gl/dist/mapbox-gl.css";
-import { PmTilesSource } from "mapbox-pmtiles";
+import React, {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+import maplibregl from "maplibre-gl";
+import "maplibre-gl/dist/maplibre-gl.css";
+
+import MaplibreDraw from "maplibre-gl-draw";
+import "maplibre-gl-draw/dist/mapbox-gl-draw.css";
+
 import { Box } from "@mui/material";
 import type { AlertColor, SxProps, Theme } from "@mui/material";
 import { useBasemap } from "@/hooks/useBasemap";
-import MapboxDraw from "@mapbox/mapbox-gl-draw";
-import "@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css";
+
 import { initializeMap } from "@/utils/map/mapUtils";
 import { useAppDispatch, useAppSelector } from "@/hooks/reduxHooks";
 import { useParams } from "react-router-dom";
@@ -28,7 +35,7 @@ import type {
   DrawUpdateHandlerParams,
 } from "@/utils/draw/drawHandlers";
 import { layerConfigs } from "@/config/layers/layerStyleConfig";
-import { addStyledLayer } from "@/utils/map/addLayer";
+import { addStyledLayer, addLayer, removeLayer } from "@/utils/map/addLayer";
 import Legend from "./Legend";
 import { getPolygonsByProject } from "@/api/project";
 import { setAoiPolygons } from "@/redux/slices/aoiSlice";
@@ -37,7 +44,6 @@ import {
   getClippedBuffer125GreenResult,
   getClippedGreenResult,
 } from "@/api/result";
-import { addLayer, removeLayer } from "@/utils/map/addLayer";
 import {
   CLIPPED_BUFFER125_LAYER_CONFIG,
   CLIPPED_GREEN_LAYER_CONFIG,
@@ -46,12 +52,9 @@ import {
 import type { ClippedBuffer125Green } from "@/types/ClippedData";
 import type { Feature, Geometry } from "geojson";
 
-declare global {
-  interface Window {
-    mapboxgl: typeof mapboxgl;
-  }
-}
-
+// ---------------------------------------------------------------------------
+// Props
+// ---------------------------------------------------------------------------
 interface MapProps {
   center?: [number, number];
   zoom?: number;
@@ -60,15 +63,9 @@ interface MapProps {
   sx?: SxProps<Theme>;
 }
 
-// Mapbox token + PMTiles registration
-mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN || "";
-mapboxgl.Style.setSourceType(PmTilesSource.SOURCE_TYPE, PmTilesSource as any);
-
-// Expose global for plugins that expect window.mapboxgl
-if (typeof window !== "undefined") {
-  window.mapboxgl = mapboxgl;
-}
-
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
 const Map: React.FC<MapProps> = ({
   highResolution = false,
   collapsed = false,
@@ -86,8 +83,10 @@ const Map: React.FC<MapProps> = ({
   });
 
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
-  const mapRef = useRef<mapboxgl.Map | null>(null);
-  const drawInstance = useRef<MapboxDraw | null>(null);
+  const mapRef = useRef<maplibregl.Map | null>(null);
+  // Use `any` so it’s compatible with Draw*HandlerParams (which still reference MapboxDraw types)
+  const drawInstance = useRef<any>(null);
+
   const aoiPolygons = useAppSelector((state) => state.aoi.polygons);
   const { selectedProject } = useAppSelector((state) => state.project);
   const [clippedBufferFeatures, setClippedBufferFeatures] = useState<
@@ -100,6 +99,9 @@ const Map: React.FC<MapProps> = ({
   const { t } = useTranslation();
   const dispatch = useAppDispatch();
 
+  // -------------------------------------------------------------------------
+  // Alert helper
+  // -------------------------------------------------------------------------
   const handleSetAlert = useCallback(
     (message: string, severity: AlertColor) => {
       setAlert({ open: true, message, severity });
@@ -107,8 +109,11 @@ const Map: React.FC<MapProps> = ({
     []
   );
 
+  // -------------------------------------------------------------------------
+  // Draw handlers (sync wrappers → call async handlers)
+  // -------------------------------------------------------------------------
   const handleDrawCreateSync = useCallback(
-    (e: MapboxDraw.DrawCreateEvent) => {
+    (e: any) => {
       const params: DrawCreateHandlerParams = {
         event: e,
         projectId: projectId || "",
@@ -124,7 +129,7 @@ const Map: React.FC<MapProps> = ({
   );
 
   const handleDrawUpdateSync = useCallback(
-    (e: MapboxDraw.DrawUpdateEvent) => {
+    (e: any) => {
       const params: DrawUpdateHandlerParams = {
         event: e,
         projectId: projectId || "",
@@ -141,7 +146,7 @@ const Map: React.FC<MapProps> = ({
   );
 
   const handleDrawDeleteSync = useCallback(
-    (e: MapboxDraw.DrawDeleteEvent) => {
+    (e: any) => {
       const params: DrawDeleteHandlerParams = {
         event: e,
         projectId: projectId || "",
@@ -152,15 +157,14 @@ const Map: React.FC<MapProps> = ({
         setLoading,
         setLoadingText,
       };
-
       handleDrawDelete(params).catch(console.error);
     },
     [projectId, dispatch, handleSetAlert]
   );
 
-  /**
-   * Load project polygons from API
-   */
+  // -------------------------------------------------------------------------
+  // Fetch project AOI polygons
+  // -------------------------------------------------------------------------
   const fetchProjectPolygons = useCallback(async () => {
     if (selectedProject?.processed === false) {
       setLoading(true);
@@ -204,9 +208,9 @@ const Map: React.FC<MapProps> = ({
     }
   }, [projectId, dispatch, t, handleSetAlert, selectedProject?.processed]);
 
-  /**
-   * Load and add clipped layers to map
-   */
+  // -------------------------------------------------------------------------
+  // Load clipped layers (buffer + green + project boundary)
+  // -------------------------------------------------------------------------
   const getClippedLayers = useCallback(async () => {
     const map = mapRef.current;
     if (!map || !map.isStyleLoaded() || !projectId) return null;
@@ -224,7 +228,7 @@ const Map: React.FC<MapProps> = ({
 
       let allFeatures: Feature<Geometry>[] = [];
 
-      // Buffer 125
+      // clipped-buffer-125-green
       if (buffer125Response.success && buffer125Response.data) {
         const records = Array.isArray(buffer125Response.data)
           ? buffer125Response.data
@@ -253,7 +257,7 @@ const Map: React.FC<MapProps> = ({
           };
 
           addLayer(
-            map,
+            map as any,
             CLIPPED_BUFFER125_LAYER_CONFIG.id,
             {
               type: "geojson",
@@ -272,7 +276,7 @@ const Map: React.FC<MapProps> = ({
         }
       }
 
-      // Green
+      // clipped-green
       if (greenResponse.success && greenResponse.data) {
         const records = Array.isArray(greenResponse.data)
           ? greenResponse.data
@@ -301,7 +305,7 @@ const Map: React.FC<MapProps> = ({
           };
 
           addLayer(
-            map,
+            map as any,
             CLIPPED_GREEN_LAYER_CONFIG.id,
             {
               type: "geojson",
@@ -315,7 +319,7 @@ const Map: React.FC<MapProps> = ({
         }
       }
 
-      // Project boundary
+      // project boundary
       if (selectedProject?.geom) {
         const boundaryFeature = {
           type: "Feature" as const,
@@ -337,7 +341,7 @@ const Map: React.FC<MapProps> = ({
         });
 
         addLayer(
-          map,
+          map as any,
           PROJECT_LAYER_CONFIG.id,
           {
             type: "geojson",
@@ -363,9 +367,9 @@ const Map: React.FC<MapProps> = ({
     return null;
   }, [projectId, selectedProject?.processed, selectedProject?.geom, t]);
 
-  /**
-   * Setup map (runs once)
-   */
+  // -------------------------------------------------------------------------
+  // Initialize map (once)
+  // -------------------------------------------------------------------------
   useEffect(() => {
     if (mapRef.current || !mapContainerRef.current) return;
 
@@ -392,11 +396,12 @@ const Map: React.FC<MapProps> = ({
         mapRef.current.remove();
         mapRef.current = null;
       }
-      drawInstance.current = null;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [basemap, highResolution, collapsed, center, zoom]);
 
+  // -------------------------------------------------------------------------
+  // Add pmtiles layers (green + bufferGreen) once map is ready
+  // -------------------------------------------------------------------------
   const addLayers = () => {
     const layers = [
       { name: "Green Layers", config: layerConfigs.green },
@@ -404,22 +409,29 @@ const Map: React.FC<MapProps> = ({
     ];
 
     layers.forEach(({ config }) => {
-      addStyledLayer(mapRef.current, config, config.fileName || "");
+      addStyledLayer(mapRef.current as any, config, config.fileName || "");
     });
   };
 
-  /**
-   * Setup draw tool & load AOI polygons
-   */
+  useEffect(() => {
+    if (projectId && mapRef.current && mapReady) {
+      addLayers();
+    }
+  }, [projectId, basemap, mapReady]);
+
+  // -------------------------------------------------------------------------
+  // Draw tool: create ONE instance per project
+  // -------------------------------------------------------------------------
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !projectId || !mapReady) return;
+    if (!map) return;
+    if (!projectId) return;
 
-    const setupDrawTools = () => {
-      // cleanup any old instance
+    // If project is processed, AOI is read-only: ensure draw is removed
+    if (selectedProject?.processed) {
       if (drawInstance.current) {
         cleanupDrawTool({
-          mapRef: mapRef.current,
+          mapRef,
           drawInstance: drawInstance.current,
           handleDrawCreate: handleDrawCreateSync,
           handleDrawUpdate: handleDrawUpdateSync,
@@ -427,53 +439,83 @@ const Map: React.FC<MapProps> = ({
         });
         drawInstance.current = null;
       }
+      return;
+    }
 
-      // processed project → no editing
-      if (selectedProject?.processed) return;
+    // Already initialized for this project
+    if (drawInstance.current) return;
 
-      // init fresh draw
-      drawInstance.current = initializeDrawTool(
-        map,
-        true,
-        handleDrawCreateSync,
-        handleDrawUpdateSync,
-        handleDrawDeleteSync,
-        theme
-      );
+    // Initialize draw tool once
+    drawInstance.current = initializeDrawTool(
+      map,
+      true,
+      handleDrawCreateSync,
+      handleDrawUpdateSync,
+      handleDrawDeleteSync,
+      theme
+    );
 
-      // load existing polygons
-      if (aoiPolygons?.length) {
-        aoiPolygons.forEach((polygon) => {
-          try {
-            drawInstance.current?.add(polygon.geom);
-          } catch (err) {
-            console.error("Error adding polygon to draw:", err);
-          }
+    // Cleanup when effect deps change/unmount
+    return () => {
+      if (drawInstance.current) {
+        cleanupDrawTool({
+          mapRef,
+          drawInstance: drawInstance.current,
+          handleDrawCreate: handleDrawCreateSync,
+          handleDrawUpdate: handleDrawUpdateSync,
+          handleDrawDelete: handleDrawDeleteSync,
         });
+        drawInstance.current = null;
       }
     };
-
-    setupDrawTools();
   }, [
     projectId,
-    aoiPolygons,
     selectedProject?.processed,
+    theme,
     handleDrawCreateSync,
     handleDrawUpdateSync,
     handleDrawDeleteSync,
-    mapReady,
-    theme,
   ]);
 
-  /**
-   * Load project data when projectId changes
-   */
+  // -------------------------------------------------------------------------
+  // Sync AOI polygons into current draw instance
+  // -------------------------------------------------------------------------
+  useEffect(() => {
+    if (!drawInstance.current) return;
+    if (selectedProject?.processed) return;
+
+    const draw = drawInstance.current;
+
+    // Clear existing features
+    const current = draw.getAll();
+    if (current && current.features.length > 0) {
+      current.features.forEach((f: any) => {
+        if (f.id) draw.delete(f.id as string);
+      });
+    }
+
+    if (aoiPolygons && aoiPolygons.length > 0) {
+      aoiPolygons.forEach((polygon) => {
+        try {
+          draw.add(polygon.geom);
+        } catch (err) {
+          console.error("Error adding polygon to draw:", err);
+        }
+      });
+    }
+  }, [aoiPolygons, selectedProject?.processed]);
+
+  // -------------------------------------------------------------------------
+  // Load project data when projectId changes
+  // -------------------------------------------------------------------------
   useEffect(() => {
     const map = mapRef.current;
     if (!projectId) return;
 
+    // Always fetch polygons
     fetchProjectPolygons();
 
+    // Load clipped layers if map exists
     if (map) {
       const loadClippedLayers = async () => {
         if (map.isStyleLoaded() && map.loaded()) {
@@ -490,17 +532,18 @@ const Map: React.FC<MapProps> = ({
       loadClippedLayers();
     }
 
+    // Cleanup clipped layers on project change/unmount
     return () => {
       try {
         if (map && map.getStyle()) {
           if (map.getLayer(CLIPPED_BUFFER125_LAYER_CONFIG.id)) {
-            removeLayer(map, CLIPPED_BUFFER125_LAYER_CONFIG.id);
+            removeLayer(map as any, CLIPPED_BUFFER125_LAYER_CONFIG.id);
           }
           if (map.getLayer(CLIPPED_GREEN_LAYER_CONFIG.id)) {
-            removeLayer(map, CLIPPED_GREEN_LAYER_CONFIG.id);
+            removeLayer(map as any, CLIPPED_GREEN_LAYER_CONFIG.id);
           }
           if (map.getLayer(PROJECT_LAYER_CONFIG.id)) {
-            removeLayer(map, PROJECT_LAYER_CONFIG.id);
+            removeLayer(map as any, PROJECT_LAYER_CONFIG.id);
           }
         }
       } catch (error) {
@@ -508,19 +551,20 @@ const Map: React.FC<MapProps> = ({
       }
       setClippedBufferFeatures([]);
     };
-  }, [projectId, fetchProjectPolygons, getClippedLayers]);
+  }, [projectId, basemap, fetchProjectPolygons, getClippedLayers]);
 
-  /**
-   * Auto-fit map to polygons / clipped features
-   */
+  // -------------------------------------------------------------------------
+  // Autofit map to AOIs / clipped features
+  // -------------------------------------------------------------------------
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
 
     try {
-      const bounds = new mapboxgl.LngLatBounds();
+      const bounds = new maplibregl.LngLatBounds();
       let hasCoordinates = false;
 
+      // Processed project → use clipped buffer features
       if (selectedProject?.processed && clippedBufferFeatures.length > 0) {
         clippedBufferFeatures.forEach((feature) => {
           const geom = feature.geometry;
@@ -544,9 +588,9 @@ const Map: React.FC<MapProps> = ({
           }
         });
       } else if (aoiPolygons && aoiPolygons.length > 0) {
+        // Unprocessed project → use AOI polygons
         aoiPolygons.forEach((polygon) => {
           const geom = polygon.geom.geometry;
-
           if (geom.type === "Polygon") {
             geom.coordinates[0].forEach(([lng, lat]) => {
               bounds.extend([lng, lat]);
@@ -567,18 +611,12 @@ const Map: React.FC<MapProps> = ({
     }
   }, [aoiPolygons, clippedBufferFeatures, selectedProject?.processed]);
 
-  /**
-   * Add styled layers once map ready
-   */
-  useEffect(() => {
-    if (projectId && mapRef.current && mapReady) {
-      addLayers();
-    }
-  }, [projectId, basemap, mapReady]);
-
+  // -------------------------------------------------------------------------
+  // Render
+  // -------------------------------------------------------------------------
   return (
     <>
-      {loading && <Loader text={loadingText} />}
+      {loading && <Loader text={t(loadingText)} />}
       {alert.open && (
         <AlertBox
           open={alert.open}
@@ -597,19 +635,7 @@ const Map: React.FC<MapProps> = ({
             ...sx,
           }}
         />
-
-        {projectId && mapReady && (
-          <Box
-            sx={{
-              position: "absolute",
-              bottom: 16,
-              left: 16,
-              zIndex: 2,
-            }}
-          >
-            <Legend map={mapRef.current} />
-          </Box>
-        )}
+        {projectId && mapReady && <Legend map={mapRef.current} />}
       </Box>
     </>
   );
