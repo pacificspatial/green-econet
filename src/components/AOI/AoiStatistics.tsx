@@ -32,6 +32,7 @@ const AoiStatistics = () => {
   const { t } = useTranslation();
   const theme = useTheme();
   const aoiPolygons = useAppSelector((state) => state.aoi.polygons);  
+  
   // Total values now come from stored area/perimeter
   const totalArea = aoiPolygons
     ? aoiPolygons.reduce((sum, p) => sum + Number(p.area || 0), 0)
@@ -77,13 +78,15 @@ const AoiStatistics = () => {
             </StyledTypography>
           </Box>
         ) : (
-          aoiPolygons.map((polygon, idx) => {
+          aoiPolygons.map((polygon, idx) => {            
             const area = polygon.area;
             const perimeter = polygon.perimeter;
 
             const rawName = polygon.geom?.properties?.name || "";
+            console.log(polygon);
+            
             const [label, number] = rawName.split(" ");
-            const translatedLabel = t(`app.${label?.toLowerCase()}`);
+            const translatedLabel = t(`app.${label?.toLowerCase()}`);            
 
             return (
               <Box

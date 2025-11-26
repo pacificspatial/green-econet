@@ -61,13 +61,18 @@ export const ClippedItemsMap: React.FC<ClippedItemsMapProp> = ({ center, zoom })
       if (response.success && response.data.polygons) {
         const polygonData = response.data.polygons.map((polygon: ProjectPolygon, index: number) => {
           return {
-            geom: polygon.geom,
-            properties: {
+            id: polygon.id,
+            geom: {
+              type: "Feature",
               id: polygon.id,
-              name: `Shape ${index + 1}`,
-              area: polygon.area_m2,
-              perimeter: polygon.perimeter_m,
-            },
+              geometry: polygon.geom,
+              properties: {
+                name: `Shape ${index + 1}`,
+                _id: polygon.id,
+              }
+            } as Feature,
+            area: polygon.area_m2,
+            perimeter: polygon.perimeter_m,
           };
         });
 
@@ -94,15 +99,15 @@ export const ClippedItemsMap: React.FC<ClippedItemsMapProp> = ({ center, zoom })
             properties: {
               id: string;
               name: string;
-              area?: number;
-              perimeter?: number;
             };
+            area?: number;
+            perimeter?: number;
           }
 
           const features: Feature<Geometry>[] = polygonData.map((data: PolygonLayerItem) => ({
-          type: "Feature" as const,
-          geometry: data.geom,
-          properties: data.properties,
+            type: "Feature" as const,
+            geometry: data.geom,
+            properties: data.properties,
           }));
 
           dispatch(setAoiPolygons(polygonData));

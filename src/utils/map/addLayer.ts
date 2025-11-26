@@ -30,11 +30,29 @@ export const removeLayer = (
   if (map.getSource(sourceId)) map.removeSource(sourceId);
 };
 
+/* ---------------------- HELPER TO NORMALIZE DATA ---------------------- */
+const normalizeLayerData = (data: any[]): LayerData[] => {
+  return data.map((item) => {
+    // Check if this is the nested polygon format with geom.geometry
+    if (item.geom && typeof item.geom === 'object' && 'geometry' in item.geom) {
+      return {
+        geom: item.geom.geometry,
+        properties: item.geom.properties ?? {},
+      };
+    }
+    // Otherwise, assume it's already in LayerData format
+    return {
+      geom: item.geom,
+      properties: item.properties ?? {},
+    };
+  });
+};
+
 /* ---------------------- ADD LAYER GENERIC ---------------------- */
 export const addLayer = async (
   map: MapboxMap,
   config: GenericLayerConfig,
-  data: LayerData[],
+  data: LayerData[] | any[],
   options: LayerOptions = {}
 ) => {
   if (!map) return;
@@ -46,10 +64,13 @@ export const addLayer = async (
   // Cleanup old layer/source
   removeLayer(map, layerId, sourceId);
 
+  // Normalize data to LayerData format
+  const normalizedData = normalizeLayerData(data);
+
   // Convert to GeoJSON
   const geoJson: FeatureCollection = {
     type: "FeatureCollection",
-    features: data.map((f) => ({
+    features: normalizedData.map((f) => ({
       type: "Feature",
       geometry: f.geom,
       properties: f.properties ?? {},

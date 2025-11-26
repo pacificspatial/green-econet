@@ -1,6 +1,6 @@
 import { ClippedItemsMap } from "@/components/result/ClippedItemsMap";
 import { MergedItemsMap } from "@/components/result/MergedItemsMap";
-import { ResultRightPanel } from "@/components/result/ResultRightpanel";
+import ResultRightPanel from "@/components/result/ResultRightpanel";
 import { Box, Grid, styled } from "@mui/system";
 
 const Container = styled(Box)({
