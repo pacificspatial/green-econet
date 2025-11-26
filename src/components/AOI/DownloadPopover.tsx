@@ -1,7 +1,5 @@
 import { Popover, List, ListItemButton, ListItemText, Box } from "@mui/material";
-import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import PdfPreviewModal from "./pdf/PdfPreviewModal";
 
 interface Props {
   anchorEl: HTMLElement | null;
@@ -11,11 +9,10 @@ interface Props {
 
 const DownloadPopover = ({ anchorEl, onClose, onSelect }: Props) => {
   const { t } = useTranslation();
-  const [pdfOpen, setPdfOpen] = useState(false);
 
   const handlePdf = () => {
     onClose();      
-    setPdfOpen(true);
+    // handle pdf logic here
   };
 
   return (
@@ -46,8 +43,6 @@ const DownloadPopover = ({ anchorEl, onClose, onSelect }: Props) => {
         </Box>
       </Popover>
 
-      {/* PDF Modal */}
-      <PdfPreviewModal open={pdfOpen} onClose={() => setPdfOpen(false)} />
     </>
   );
 };
