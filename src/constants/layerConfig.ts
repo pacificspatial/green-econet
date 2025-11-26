@@ -27,3 +27,13 @@ export const PROJECT_LAYER_CONFIG = {
     "line-opacity": 0.8,
   },
 };
+
+export const PROJECT_POLYGONS_LAYER_CONFIG = {
+  id: 'project-polygons',
+  type: "line" as const,
+  paint: {
+    "line-color": "#000",
+    "line-width": 1,
+    "line-opacity": 0.8,
+  },
+};

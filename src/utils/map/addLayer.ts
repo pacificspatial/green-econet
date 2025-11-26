@@ -1,53 +1,83 @@
-import type {
-  Map as MapboxMap,
-  AnySourceData,
-  AnyLayer,
-} from "mapbox-gl";
+import type { Map as MapboxMap } from "mapbox-gl";
+import type { FeatureCollection } from "geojson";
 
-/**
- * Safely adds a layer with its source.
- * Removes existing layer/source with the same ID before adding.
- */
-export function addLayer(
+export interface LayerData {
+  geom: GeoJSON.Geometry;
+  properties?: Record<string, any>;
+}
+
+export interface GenericLayerConfig {
+  id: string; // e.g., "parks" → becomes layer-parks & source-parks
+  type: "fill" | "line" | "symbol" | "circle" | "heatmap" | "fill-extrusion";
+  paint?: mapboxgl.PaintSpecification;
+  layout?: mapboxgl.LayoutSpecification;
+}
+
+export interface LayerOptions {
+  visible?: boolean;
+  beforeId?: string;
+  sourceId?: string;
+  layerId?: string;
+}
+
+/* ---------------------- REMOVE LAYER GENERIC ---------------------- */
+export const removeLayer = (
   map: MapboxMap,
   layerId: string,
-  source: AnySourceData,
-  layer: Omit<AnyLayer, "id" | "source"> 
-): void {
-  if (!map || !map.isStyleLoaded()) {
-    console.warn("Map style not loaded yet");
-    return;
+  sourceId: string
+) => {
+  if (map.getLayer(layerId)) map.removeLayer(layerId);
+  if (map.getSource(sourceId)) map.removeSource(sourceId);
+};
+
+/* ---------------------- ADD LAYER GENERIC ---------------------- */
+export const addLayer = async (
+  map: MapboxMap,
+  config: GenericLayerConfig,
+  data: LayerData[],
+  options: LayerOptions = {}
+) => {
+  if (!map) return;
+
+  const sourceId = options.sourceId ?? `source-${config.id}`;
+  const layerId = options.layerId ?? `layer-${config.id}`;
+  const visible = options.visible ?? true;
+
+  // Cleanup old layer/source
+  removeLayer(map, layerId, sourceId);
+
+  // Convert to GeoJSON
+  const geoJson: FeatureCollection = {
+    type: "FeatureCollection",
+    features: data.map((f) => ({
+      type: "Feature",
+      geometry: f.geom,
+      properties: f.properties ?? {},
+    })),
+  };
+
+  // Add or update source
+  if (!map.getSource(sourceId)) {
+    map.addSource(sourceId, {
+      type: "geojson",
+      data: geoJson,
+    });
+  } else {
+    (map.getSource(sourceId) as mapboxgl.GeoJSONSource).setData(geoJson);
   }
 
-  // Remove if exists
-  if (map.getLayer(layerId)) {
-    map.removeLayer(layerId);
-  }
-  if (map.getSource(layerId)) {
-    map.removeSource(layerId);
-  }
-
-  // Add source
-  map.addSource(layerId, source);
+  // Build layer spec
+  const layerSpec: mapboxgl.LayerSpecification = {
+    id: layerId,
+    type: config.type,
+    source: sourceId,
+    paint: config.paint ?? {},
+    layout: {
+      ...config.layout,
+      visibility: visible ? "visible" : "none",
+    },
+  };
 
   // Add layer
-  map.addLayer({
-    id: layerId,
-    source: layerId,
-    ...layer,
-  });
-}
-
-/**
- * Safely removes a layer + its source.
- */
-export function removeLayer(map: MapboxMap, layerId: string): void {
-  if (map.getLayer(layerId)) {
-    map.removeLayer(layerId);
-  }
-  if (map.getSource(layerId)) {
-    map.removeSource(layerId);
-  }
-
-  console.log(`Layer "${layerId}" removed`);
-}
+  map.addLayer(layerSpec, options.beforeId);
+};
