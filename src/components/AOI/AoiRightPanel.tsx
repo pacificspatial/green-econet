@@ -80,12 +80,12 @@ const AoiRightPanel = () => {
     message: "",
     severity: "info",
   });
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const navigate = useNavigate();
-
   const aoiPolygons = useAppSelector((state) => state.aoi.polygons);
   const { t } = useTranslation();
   const { projectId } = useParams<{ projectId: string }>();
+  const { selectedProject } = useAppSelector((state) => state.project);
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const navigate = useNavigate();
 
   // Inline loading for the POST call
   const [loading, setLoading] = useState(false);
@@ -281,6 +281,7 @@ const AoiRightPanel = () => {
           severity={alert.severity}
         />
       )}
+      {/* Header with Back and Download buttons */}
       <Box 
         sx={{ 
           height: 60, 
@@ -293,12 +294,10 @@ const AoiRightPanel = () => {
           borderBottom: (theme) => `1px solid ${theme.palette.divider}`
         }} 
       >
-        {/* Back Button with Icon */}
         <IconButton onClick={() => navigate(-1)} sx={{ p: 0.5 }}>
           <ArrowBackIcon fontSize="medium" />
         </IconButton>
 
-        {/* Download Button */}
         <Button
           variant="outlined"
           sx={{ ml: "auto", mr: 1, textTransform: "none", px: 2, py: 0.5 }}
@@ -310,6 +309,7 @@ const AoiRightPanel = () => {
               <ArrowDropDownIcon fontSize="small" />
             )
           }
+          disabled={!selectedProject?.processed}
         >
           {t("app.download")}
         </Button>
@@ -369,7 +369,8 @@ const AoiRightPanel = () => {
                 aoiPolygons.length < MIN_AOI_POLYGON_COUNT ||
                 aoiPolygons.length > MAX_AOI_POLYGON_COUNT ||
                 loading ||
-                isRunning
+                isRunning || 
+                selectedProject?.processed
               }
             >
               {t("app.setAOI")}

@@ -79,6 +79,8 @@
     "pdfLoading": "Loading PDF content...",
     "aoiSetSuccessMessage": "AOI set successfully!",
     "errorSettingAOI": "Error setting AOI",
-    "settingAoiMessage": "Setting AOI will take a few moments..."
+    "settingAoiMessage": "Setting AOI will take a few moments...",
+    "loadingResult": "Loading result...",
+    "download": "Download"
   }
 }
