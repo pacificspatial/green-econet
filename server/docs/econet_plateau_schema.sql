@@ -24,7 +24,10 @@ CREATE TABLE IF NOT EXISTS public.projects (
     -- AOI centroid and 1000m buffer
     aoi_centroid GEOMETRY(POINT, 4326),
     geom GEOMETRY(POLYGON, 4326),
-    processed BOOLEAN NOT NULL DEFAULT FALSE
+    processed BOOLEAN NOT NULL DEFAULT FALSE,
+    indexa TEXT,
+    indexb TEXT,
+    indexba TEXT
 );
 
 -- User-drawn polygons for a project
@@ -87,6 +90,7 @@ CREATE TABLE IF NOT EXISTS processing.clipped_green (
     project_id UUID NOT NULL
         REFERENCES public.projects(id) ON DELETE CASCADE,
     src_id INT NOT NULL,                 -- layers.enp_green.id
+    uid UUID DEFAULT NULL,               -- optional unique identifier
     geom GEOMETRY(MULTIPOLYGON, 4326) NOT NULL,
     properties JSONB                     -- copy/derived attributes
 );
@@ -104,7 +108,7 @@ CREATE TABLE IF NOT EXISTS processing.clipped_buffer125_green (
     project_id UUID NOT NULL
         REFERENCES public.projects(id) ON DELETE CASCADE,
     src_id INT NOT NULL,                 -- layers.enp_buffer125_green.id
-    uid TEXT,                            -- per-project UID if needed
+    uid UUID DEFAULT uuid_generate_v4(),
     geom GEOMETRY(MULTIPOLYGON, 4326) NOT NULL,
     properties JSONB
 );
@@ -123,6 +127,7 @@ CREATE TABLE IF NOT EXISTS processing.merged_green (
         REFERENCES public.projects(id) ON DELETE CASCADE,
     src_type TEXT NOT NULL,         -- 'user_polygon' or 'clipped_green'
     src_ref TEXT NOT NULL,          -- project_polygon.id or clipped_green.id
+    uid UUID DEFAULT NULL,          -- optional unique identifier
     geom GEOMETRY(MULTIPOLYGON, 4326) NOT NULL,
     properties JSONB
 );
@@ -139,7 +144,7 @@ CREATE TABLE IF NOT EXISTS processing.buffer125_merged_green (
     id SERIAL PRIMARY KEY,
     project_id UUID NOT NULL
         REFERENCES public.projects(id) ON DELETE CASCADE,
-    uid TEXT NOT NULL,                   -- group identifier
+    uid UUID DEFAULT uuid_generate_v4(),
     geom GEOMETRY(MULTIPOLYGON, 4326) NOT NULL,
     properties JSONB
 );
@@ -150,40 +155,4 @@ CREATE INDEX IF NOT EXISTS idx_buffer125_merged_green_geom
 CREATE INDEX IF NOT EXISTS idx_buffer125_merged_green_project_id
     ON processing.buffer125_merged_green (project_id);
 
-
--- Spatial join result: assigning UID/group to clipped_green & merged_green
-CREATE TABLE IF NOT EXISTS processing.green_group_assignment (
-    id SERIAL PRIMARY KEY,
-    project_id UUID NOT NULL
-        REFERENCES public.projects(id) ON DELETE CASCADE,
-
-    target_table TEXT NOT NULL,      -- 'clipped_green' or 'merged_green'
-    target_id INT NOT NULL,          -- id from that table
-    uid TEXT NOT NULL,               -- UID from buffer layer
-
-    area_ratio NUMERIC,              -- optional: overlap ratio
-    intersects BOOLEAN,              -- true if ST_Intersects
-
-    geom GEOMETRY(MULTIPOLYGON, 4326) -- optional for debugging/QA
-);
-
-CREATE INDEX IF NOT EXISTS idx_green_group_project_id
-    ON processing.green_group_assignment (project_id);
-
-
--- Final calculated indices per UID (for Excel export)
-CREATE TABLE IF NOT EXISTS processing.indices (
-    id SERIAL PRIMARY KEY,
-    project_id UUID NOT NULL
-        REFERENCES public.project(id) ON DELETE CASCADE,
-    uid TEXT NOT NULL,
-    index_name TEXT NOT NULL,
-    index_value NUMERIC,
-    extra JSONB
-);
-
-CREATE INDEX IF NOT EXISTS idx_indices_project_id
-    ON processing.indices (project_id);
-
-CREATE INDEX IF NOT EXISTS idx_indices_uid
-    ON processing.indices (uid);
+----------------------------------------
