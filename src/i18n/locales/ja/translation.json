@@ -75,8 +75,11 @@
     "polygonDeletedSuccessfully": "ポリゴンが正常に削除されました！",
     "aoiSetSuccessMessage": "AOI が正常に設定されました！",
     "errorSettingAOI": "AOI の設定中にエラーが発生しました",
+    "errorLoadingLayers": "レイヤの読み込み中にエラーが発生しました...",
     "settingAoiMessage": "AOI の設定には少し時間がかかります...",
     "loadingResult": "結果の読み込み",
-    "download": "ダウンロード"
+    "download": "ダウンロード",
+    "pdf": "PDF",
+    "xlsx": "XLSX"
   }
 }

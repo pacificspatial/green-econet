@@ -75,8 +75,11 @@
     "polygonDeletedSuccessfully": "Polygon deleted successfully!",
     "aoiSetSuccessMessage": "AOI set successfully!",
     "errorSettingAOI": "Error setting AOI",
+    "errorLoadingLayers": "Error loading layers...",
     "settingAoiMessage": "Setting AOI will take a few moments...",
     "loadingResult": "Loading result...",
-    "download": "Download"
+    "download": "Download",
+    "pdf": "PDF",
+    "xlsx": "XLSX"
   }
 }
