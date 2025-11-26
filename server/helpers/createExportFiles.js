@@ -1,4 +1,6 @@
 import ExcelJS from "exceljs";
+import PDFDocument from "pdfkit";
+
 export const createExcelFile = async ({
   projectName,
   valueBA,
@@ -13,8 +15,8 @@ export const createExcelFile = async ({
 
   sheet.getColumn(1).width = 45; // Column A
   sheet.getColumn(2).width = 20; // Column B
-  sheet.getColumn(3).width = 20; // Column C 
-  sheet.getColumn(4).width = 20; // Column D 
+  sheet.getColumn(3).width = 20; // Column C
+  sheet.getColumn(4).width = 20; // Column D
 
   /**
    * -------------------------
@@ -74,4 +76,31 @@ export const createExcelFile = async ({
   // Convert workbook to a buffer and return it
   const buffer = await workbook.xlsx.writeBuffer();
   return Buffer.from(buffer);
+};
+
+export const createPdfFile = async (projectId) => {
+  return new Promise((resolve, reject) => {
+    try {
+      const doc = new PDFDocument();
+      const chunks = [];
+
+      doc.on("data", (c) => chunks.push(c));
+      doc.on("end", () => {
+        const buffer = Buffer.concat(chunks);
+        resolve(buffer);
+      });
+
+      doc.fontSize(18).text("Ecosystem Export Report", { bold: true });
+      doc.moveDown();
+      doc.fontSize(12).text(`Project: ${projectId}`);
+      doc.moveDown();
+      doc
+        .fontSize(12)
+        .text("⚠ Placeholder PDF — full report format pending spec.");
+
+      doc.end();
+    } catch (err) {
+      reject(err);
+    }
+  });
 };

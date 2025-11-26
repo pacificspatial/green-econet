@@ -14,7 +14,7 @@ export async function uploadToExportBucket(
   mimeType,
   fileType = "pdf"
 ) {
-  const bucketName = process.env.S3_EXPORT_BUCKET_NAME;
+  const bucketName = process.env.DOWNLOAD_BUCKET_NAME;
 
   const cmd = new PutObjectCommand({
     Bucket: bucketName,
@@ -26,8 +26,6 @@ export async function uploadToExportBucket(
   await s3.send(cmd);
 
   return {
-    fileName,
-    url: `https://${bucketName}.s3.${process.env.AWS_REGION}.amazonaws.com/${fileType}/${fileName}`,
     key: `${fileType}/${fileName}`,
   };
 }
