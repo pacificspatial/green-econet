@@ -33,20 +33,25 @@ import Legend from "./Legend";
 import { getPolygonsByProject } from "@/api/project";
 import { setAoiPolygons } from "@/redux/slices/aoiSlice";
 import type { ProjectPolygon } from "@/types/ProjectData";
-import { getClippedBuffer125GreenResult, getClippedGreenResult } from "@/api/result";
+import {
+  getClippedBuffer125GreenResult,
+  getClippedGreenResult,
+} from "@/api/result";
 import { addLayer, removeLayer } from "@/utils/map/addLayer";
-import { CLIPPED_BUFFER125_LAYER_CONFIG, CLIPPED_GREEN_LAYER_CONFIG, PROJECT_LAYER_CONFIG } from "@/constants/layerConfig";
+import {
+  CLIPPED_BUFFER125_LAYER_CONFIG,
+  CLIPPED_GREEN_LAYER_CONFIG,
+  PROJECT_LAYER_CONFIG,
+} from "@/constants/layerConfig";
 import type { ClippedBuffer125Green } from "@/types/ClippedData";
 import type { Feature, Geometry } from "geojson";
 
-// Declare mapbox-gl module augmentation for the accessToken
 declare global {
   interface Window {
     mapboxgl: typeof mapboxgl;
   }
 }
 
-// Type for the Map component props
 interface MapProps {
   center?: [number, number];
   zoom?: number;
@@ -55,8 +60,14 @@ interface MapProps {
   sx?: SxProps<Theme>;
 }
 
+// Mapbox token + PMTiles registration
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN || "";
 mapboxgl.Style.setSourceType(PmTilesSource.SOURCE_TYPE, PmTilesSource as any);
+
+// Expose global for plugins that expect window.mapboxgl
+if (typeof window !== "undefined") {
+  window.mapboxgl = mapboxgl;
+}
 
 const Map: React.FC<MapProps> = ({
   highResolution = false,
@@ -78,9 +89,11 @@ const Map: React.FC<MapProps> = ({
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const drawInstance = useRef<MapboxDraw | null>(null);
   const aoiPolygons = useAppSelector((state) => state.aoi.polygons);
-  const { selectedProject } = useAppSelector((state) => state.project)
-  const [clippedBufferFeatures, setClippedBufferFeatures] = useState<Feature<Geometry>[]>([])
-  
+  const { selectedProject } = useAppSelector((state) => state.project);
+  const [clippedBufferFeatures, setClippedBufferFeatures] = useState<
+    Feature<Geometry>[]
+  >([]);
+
   const { basemap } = useBasemap();
   const theme = useTheme();
   const { projectId } = useParams();
@@ -105,10 +118,9 @@ const Map: React.FC<MapProps> = ({
         setLoading,
         setLoadingText,
       };
-      // Fire and forget the async operation
       handleDrawCreate(params).catch(console.error);
     },
-    [projectId, dispatch, t, handleSetAlert]
+    [projectId, dispatch, handleSetAlert]
   );
 
   const handleDrawUpdateSync = useCallback(
@@ -125,7 +137,7 @@ const Map: React.FC<MapProps> = ({
       };
       handleDrawUpdate(params).catch(console.error);
     },
-    [projectId, dispatch, t, handleSetAlert]
+    [projectId, dispatch, handleSetAlert]
   );
 
   const handleDrawDeleteSync = useCallback(
@@ -143,39 +155,40 @@ const Map: React.FC<MapProps> = ({
 
       handleDrawDelete(params).catch(console.error);
     },
-    [projectId, dispatch, t, handleSetAlert]
-  ); 
+    [projectId, dispatch, handleSetAlert]
+  );
 
   /**
    * Load project polygons from API
    */
   const fetchProjectPolygons = useCallback(async () => {
-    // Only show loader for unprocessed projects
     if (selectedProject?.processed === false) {
       setLoading(true);
       setLoadingText(t("app.loadingProjectPolygons"));
     }
-    
+
     try {
       const response = await getPolygonsByProject(projectId as string);
-      if (response.success && response.data.polygons) {    
-        const polygonData = response.data.polygons.map((polygon: ProjectPolygon, index: number) => {
-          return {
-            id: polygon.id,
-            geom: {
-              type: "Feature",
+      if (response.success && response.data.polygons) {
+        const polygonData = response.data.polygons.map(
+          (polygon: ProjectPolygon, index: number) => {
+            return {
               id: polygon.id,
-              geometry: polygon.geom,
-              properties: {
-                name: `Shape ${index + 1}`,
-                _id: polygon.id,
-              }
-            } as Feature,
-            area: polygon.area_m2,
-            perimeter: polygon.perimeter_m,
-          };
-        });
-          
+              geom: {
+                type: "Feature",
+                id: polygon.id,
+                geometry: polygon.geom,
+                properties: {
+                  name: `Shape ${index + 1}`,
+                  _id: polygon.id,
+                },
+              } as Feature,
+              area: polygon.area_m2,
+              perimeter: polygon.perimeter_m,
+            };
+          }
+        );
+
         dispatch(setAoiPolygons(polygonData));
       } else {
         handleSetAlert(t("errorFetchingPolygons"), "error");
@@ -192,33 +205,31 @@ const Map: React.FC<MapProps> = ({
   }, [projectId, dispatch, t, handleSetAlert, selectedProject?.processed]);
 
   /**
-   * Load and add clipped buffer 125 green layer to map
+   * Load and add clipped layers to map
    */
   const getClippedLayers = useCallback(async () => {
     const map = mapRef.current;
     if (!map || !map.isStyleLoaded() || !projectId) return null;
 
-    // Show loader for processed projects
     if (selectedProject?.processed === true) {
       setLoading(true);
       setLoadingText(t("app.loadingResult") || "Loading results...");
     }
 
     try {
-      // Fetch both layers in parallel
       const [buffer125Response, greenResponse] = await Promise.all([
         getClippedBuffer125GreenResult(projectId as string),
-        getClippedGreenResult(projectId as string)
+        getClippedGreenResult(projectId as string),
       ]);
-      
+
       let allFeatures: Feature<Geometry>[] = [];
 
-      // Process clipped-buffer-125-green layer
+      // Buffer 125
       if (buffer125Response.success && buffer125Response.data) {
-        const records = Array.isArray(buffer125Response.data) 
-          ? buffer125Response.data 
+        const records = Array.isArray(buffer125Response.data)
+          ? buffer125Response.data
           : [buffer125Response.data];
-        
+
         const features = (records as ClippedBuffer125Green[])
           .filter((record) => record.geom)
           .map((record) => ({
@@ -235,7 +246,7 @@ const Map: React.FC<MapProps> = ({
 
         if (features.length > 0) {
           allFeatures = [...allFeatures, ...features];
-          
+
           const geojsonData = {
             type: "FeatureCollection" as const,
             features,
@@ -253,24 +264,20 @@ const Map: React.FC<MapProps> = ({
               paint: CLIPPED_BUFFER125_LAYER_CONFIG.paint,
             }
           );
-          
-          // Wait for map to be idle before adding next layer
+
           await new Promise<void>((resolve) => {
-            if (map.loaded()) {
-              resolve();
-            } else {
-              map.once('idle', () => resolve());
-            }
+            if (map.loaded()) resolve();
+            else map.once("idle", () => resolve());
           });
         }
       }
 
-      // Process clipped-green layer
+      // Green
       if (greenResponse.success && greenResponse.data) {
-        const records = Array.isArray(greenResponse.data) 
-          ? greenResponse.data 
-          : [greenResponse.data];      
-        
+        const records = Array.isArray(greenResponse.data)
+          ? greenResponse.data
+          : [greenResponse.data];
+
         const features = (records as ClippedBuffer125Green[])
           .filter((record) => record.geom)
           .map((record) => ({
@@ -287,7 +294,7 @@ const Map: React.FC<MapProps> = ({
 
         if (features.length > 0) {
           allFeatures = [...allFeatures, ...features];
-          
+
           const geojsonData = {
             type: "FeatureCollection" as const,
             features,
@@ -308,9 +315,7 @@ const Map: React.FC<MapProps> = ({
         }
       }
 
-      // ============================================
-      // ADD PROJECT BOUNDARY LAYER HERE
-      // ============================================
+      // Project boundary
       if (selectedProject?.geom) {
         const boundaryFeature = {
           type: "Feature" as const,
@@ -326,13 +331,9 @@ const Map: React.FC<MapProps> = ({
           features: [boundaryFeature],
         };
 
-        // Wait for map to be idle before adding boundary layer
         await new Promise<void>((resolve) => {
-          if (map.loaded()) {
-            resolve();
-          } else {
-            map.once('idle', () => resolve());
-          }
+          if (map.loaded()) resolve();
+          else map.once("idle", () => resolve());
         });
 
         addLayer(
@@ -348,7 +349,7 @@ const Map: React.FC<MapProps> = ({
           }
         );
       }
-      
+
       return allFeatures.length > 0 ? allFeatures : null;
     } catch (error) {
       console.error("Error in fetching clipped layers", error);
@@ -358,17 +359,16 @@ const Map: React.FC<MapProps> = ({
         setLoadingText("");
       }
     }
-    
+
     return null;
   }, [projectId, selectedProject?.processed, selectedProject?.geom, t]);
 
   /**
-   * Setup map (runs only once)
+   * Setup map (runs once)
    */
   useEffect(() => {
     if (mapRef.current || !mapContainerRef.current) return;
 
-    // initializeMap is an app utility that configures the map object
     mapRef.current = initializeMap({
       container: mapContainerRef.current,
       center,
@@ -387,27 +387,20 @@ const Map: React.FC<MapProps> = ({
       }
     });
 
-    // Cleanup function
     return () => {
       if (mapRef.current) {
         mapRef.current.remove();
         mapRef.current = null;
       }
+      drawInstance.current = null;
     };
-  }, [basemap, highResolution, collapsed]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  // fetch and add layers
   const addLayers = () => {
-    // Create an array of promises with their identifiers and corresponding configs
     const layers = [
-      {
-        name: "Green Layers",
-        config: layerConfigs.green,
-      },
-      {
-        name: "BufferGreen Layers",
-        config: layerConfigs.bufferGreen,
-      },
+      { name: "Green Layers", config: layerConfigs.green },
+      { name: "BufferGreen Layers", config: layerConfigs.bufferGreen },
     ];
 
     layers.forEach(({ config }) => {
@@ -416,15 +409,14 @@ const Map: React.FC<MapProps> = ({
   };
 
   /**
-   * Setup draw tool & load polygons into it
+   * Setup draw tool & load AOI polygons
    */
-  /** * Setup draw tool & load polygons into it */
   useEffect(() => {
     const map = mapRef.current;
-    if (!map) return;
+    if (!map || !projectId || !mapReady) return;
 
     const setupDrawTools = () => {
-      // Cleanup old instance if it exists
+      // cleanup any old instance
       if (drawInstance.current) {
         cleanupDrawTool({
           mapRef: mapRef.current,
@@ -436,10 +428,10 @@ const Map: React.FC<MapProps> = ({
         drawInstance.current = null;
       }
 
-      // If project IS processed, do NOT create a draw tool
+      // processed project → no editing
       if (selectedProject?.processed) return;
 
-      // Initialize draw tool for editable AOI
+      // init fresh draw
       drawInstance.current = initializeDrawTool(
         map,
         true,
@@ -449,7 +441,7 @@ const Map: React.FC<MapProps> = ({
         theme
       );
 
-      // Load AOI polygons into Draw only if not processed      
+      // load existing polygons
       if (aoiPolygons?.length) {
         aoiPolygons.forEach((polygon) => {
           try {
@@ -461,22 +453,27 @@ const Map: React.FC<MapProps> = ({
       }
     };
 
-    if (projectId) setupDrawTools();
-  }, [projectId, basemap, aoiPolygons, selectedProject?.processed]);
+    setupDrawTools();
+  }, [
+    projectId,
+    aoiPolygons,
+    selectedProject?.processed,
+    handleDrawCreateSync,
+    handleDrawUpdateSync,
+    handleDrawDeleteSync,
+    mapReady,
+    theme,
+  ]);
 
   /**
    * Load project data when projectId changes
-   * - Fetch polygons (for unprocessed projects)
-   * - Load clipped buffer layer (for processed projects)
    */
   useEffect(() => {
     const map = mapRef.current;
     if (!projectId) return;
 
-    // Always fetch polygons
     fetchProjectPolygons();
 
-    // Load clipped layers if map exists
     if (map) {
       const loadClippedLayers = async () => {
         if (map.isStyleLoaded() && map.loaded()) {
@@ -493,7 +490,6 @@ const Map: React.FC<MapProps> = ({
       loadClippedLayers();
     }
 
-    // Cleanup: remove both layers
     return () => {
       try {
         if (map && map.getStyle()) {
@@ -512,10 +508,10 @@ const Map: React.FC<MapProps> = ({
       }
       setClippedBufferFeatures([]);
     };
-  }, [projectId, basemap, fetchProjectPolygons, getClippedLayers]);
+  }, [projectId, fetchProjectPolygons, getClippedLayers]);
 
   /**
-   * Auto-fit map to polygons
+   * Auto-fit map to polygons / clipped features
    */
   useEffect(() => {
     const map = mapRef.current;
@@ -525,11 +521,10 @@ const Map: React.FC<MapProps> = ({
       const bounds = new mapboxgl.LngLatBounds();
       let hasCoordinates = false;
 
-      // If project is processed, use clipped buffer features
       if (selectedProject?.processed && clippedBufferFeatures.length > 0) {
         clippedBufferFeatures.forEach((feature) => {
           const geom = feature.geometry;
-          
+
           if (geom.type === "Polygon") {
             geom.coordinates.forEach((ring) => {
               ring.forEach((coord) => {
@@ -548,9 +543,7 @@ const Map: React.FC<MapProps> = ({
             });
           }
         });
-      }
-      // Otherwise use AOI polygons
-      else if (aoiPolygons && aoiPolygons.length > 0) {
+      } else if (aoiPolygons && aoiPolygons.length > 0) {
         aoiPolygons.forEach((polygon) => {
           const geom = polygon.geom.geometry;
 
@@ -574,7 +567,9 @@ const Map: React.FC<MapProps> = ({
     }
   }, [aoiPolygons, clippedBufferFeatures, selectedProject?.processed]);
 
-  // useEffect to add layers
+  /**
+   * Add styled layers once map ready
+   */
   useEffect(() => {
     if (projectId && mapRef.current && mapReady) {
       addLayers();
@@ -583,7 +578,7 @@ const Map: React.FC<MapProps> = ({
 
   return (
     <>
-      {loading && <Loader text={t(loadingText)} />}
+      {loading && <Loader text={loadingText} />}
       {alert.open && (
         <AlertBox
           open={alert.open}
@@ -593,9 +588,7 @@ const Map: React.FC<MapProps> = ({
         />
       )}
 
-      {/* Wrapper div to contain both map and legend */}
       <Box sx={{ position: "relative", width: "100%", height: "100%" }}>
-        {/* Map container */}
         <Box
           ref={mapContainerRef}
           sx={{
@@ -604,7 +597,19 @@ const Map: React.FC<MapProps> = ({
             ...sx,
           }}
         />
-        {projectId && mapReady && <Legend map={mapRef.current} />}
+
+        {projectId && mapReady && (
+          <Box
+            sx={{
+              position: "absolute",
+              bottom: 16,
+              left: 16,
+              zIndex: 2,
+            }}
+          >
+            <Legend map={mapRef.current} />
+          </Box>
+        )}
       </Box>
     </>
   );
