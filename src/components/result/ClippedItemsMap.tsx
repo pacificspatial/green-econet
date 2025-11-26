@@ -118,7 +118,7 @@ export const ClippedItemsMap: React.FC<ClippedItemsMapProp> = ({ center, zoom })
       return null;
     } catch (error) {
       console.error("Error adding project polygons layer", error);
-      handleSetAlert(t("errorFetchingPolygons"), "error");
+      handleSetAlert(t("app.errorFetchingPolygons"), "error");
       return null;
     }
   }, [projectId, dispatch, t, handleSetAlert]);
