@@ -21,9 +21,10 @@ function MyAppRoutes({ loading, t }: MyAppRoutesProps) {
   if (loading) {
     return <div>{t("app.loading")}...</div>;
   }
+  
   return (
     <Routes>
-      {routes().map((route, index) => (
+      {routes.map((route, index) => (
         <Route key={index} path={route.path} element={route.element} />
       ))}
     </Routes>
