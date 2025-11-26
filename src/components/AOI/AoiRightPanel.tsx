@@ -23,10 +23,8 @@ import { setProjectAoiMock } from "@/api/project";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import ErrorIcon from "@mui/icons-material/Error";
 import { useSocket } from "@/context/SocketContext";
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
-import ArrowDropUpIcon from '@mui/icons-material/ArrowDropUp';
 import { useNavigate } from "react-router-dom";
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 
 const StyledBox = styled(Box)(({ theme }) => ({
   backgroundColor:
@@ -84,7 +82,6 @@ const AoiRightPanel = () => {
   const { t } = useTranslation();
   const { projectId } = useParams<{ projectId: string }>();
   const { selectedProject } = useAppSelector((state) => state.project);
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const navigate = useNavigate();
 
   // Inline loading for the POST call
@@ -261,10 +258,6 @@ const AoiRightPanel = () => {
     }
   };
 
-  const handleDownloadClick = (event: React.MouseEvent<HTMLElement>) => {
-    setAnchorEl(event.currentTarget);
-  };
-
   return (
     <StyledBox>
       {/* ✅ existing AlertBox from incoming branch */}
@@ -276,39 +269,19 @@ const AoiRightPanel = () => {
           severity={alert.severity}
         />
       )}
-      {/* Header with Back and Download buttons */}
-      <Box 
-        sx={{ 
-          height: 60, 
-          width: "100%", 
-          display: "flex", 
-          alignItems: "center", 
-          justifyContent: "flex-start",
-          px: 1,
-          gap: 1,
-          borderBottom: (theme) => `1px solid ${theme.palette.divider}`
-        }} 
-      >
-        <IconButton onClick={() => navigate(-1)} sx={{ p: 0.5 }}>
-          <ArrowBackIcon fontSize="medium" />
-        </IconButton>
 
-        <Button
-          variant="outlined"
-          sx={{ ml: "auto", mr: 1, textTransform: "none", px: 2, py: 0.5 }}
-          onClick={handleDownloadClick}
-          endIcon={
-            anchorEl ? (
-              <ArrowDropUpIcon fontSize="small" />
-            ) : (
-              <ArrowDropDownIcon fontSize="small" />
-            )
-          }
-          disabled={!selectedProject?.processed}
-        >
-          {t("app.download")}
-        </Button>
-      </Box>
+      <IconButton 
+        onClick={() => navigate(-1)}
+        sx={{
+          position: "absolute",
+          top: 16,
+          left: 16,
+          zIndex: 10,
+        }}
+      >
+        <ArrowBackIcon fontSize="medium" />
+      </IconButton>
+
 
       {/* Stats area */}
       <StyledGridBottom>
