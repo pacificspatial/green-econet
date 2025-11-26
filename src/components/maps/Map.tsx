@@ -172,11 +172,11 @@ const Map: React.FC<MapProps> = ({
           
         dispatch(setAoiPolygons(polygonData));
       } else {
-        handleSetAlert(t("errorFetchingPolygons"), "error");
+        handleSetAlert(t("app.errorFetchingPolygons"), "error");
       }
     } catch (error) {
       console.error("Error in fetching polygons", error);
-      handleSetAlert(t("errorFetchingPolygons"), "error");
+      handleSetAlert(t("app.errorFetchingPolygons"), "error");
     } finally {
       if (selectedProject?.processed === false) {
         setLoading(false);
