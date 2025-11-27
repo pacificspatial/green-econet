@@ -395,6 +395,7 @@ const Map: React.FC<MapProps> = ({
       if (mapRef.current) {
         mapRef.current.remove();
         mapRef.current = null;
+        setMapReady(false);
       }
     };
   }, [basemap, highResolution, collapsed, center, zoom]);
@@ -426,6 +427,7 @@ const Map: React.FC<MapProps> = ({
     const map = mapRef.current;
     if (!map) return;
     if (!projectId) return;
+    if(!mapReady) return;
 
     // If project is processed, AOI is read-only: ensure draw is removed
     if (selectedProject?.processed) {
@@ -475,6 +477,7 @@ const Map: React.FC<MapProps> = ({
     handleDrawCreateSync,
     handleDrawUpdateSync,
     handleDrawDeleteSync,
+    mapReady
   ]);
 
   // -------------------------------------------------------------------------
