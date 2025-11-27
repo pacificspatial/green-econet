@@ -3,7 +3,7 @@ name: Full CI/CD -> Frontend + Backend (Staging)
 on:
   push:
     branches:
-      - aws-infrastructuresss
+      - aws-infrastructure-2
     paths:
       - 'server/**'      # backend
       - '**/*.ts'         # frontend
@@ -11,7 +11,7 @@ on:
       - '**/*.js'
       - '**/*.jsx'
       - 'vite.config.*'
-      - '.github/workflows/stg-deploy-frontend.yml'
+      - '.github/workflows/stg-deploy-app.yml'
   workflow_dispatch: {}
 
 permissions:
