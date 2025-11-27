@@ -23,8 +23,8 @@ const PanelGrid = styled(Grid)({
 });
 
 export const Result = () => {
-  const center: [number, number] = [138.2529, 36.2048];
-  const zoom = 5.5;
+  const center: [number, number] = [139.7545870646046, 35.68260566814629];
+  const zoom = 10;
 
   return (
     <Box
