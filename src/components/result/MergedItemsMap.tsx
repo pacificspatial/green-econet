@@ -10,14 +10,11 @@ import type { ClippedBuffer125Green } from "@/types/ClippedData";
 import { addLayer, removeLayer } from "@/utils/map/addLayer";
 import { MERGED_BUFFER125_LAYER_CONFIG, MERGED_GREEN_LAYER_CONFIG, PROJECT_LAYER_CONFIG, PROJECT_POLYGONS_LAYER_CONFIG } from "@/constants/layerConfig";
 import { useTranslation } from "react-i18next";
-import { useAppDispatch, useAppSelector } from "@/hooks/reduxHooks";
+import { useAppSelector } from "@/hooks/reduxHooks";
 import AlertBox from "../utils/AlertBox";
 import Loader from "../common/Loader";
 import type { AlertState } from "@/types/AlertState";
 import { fitMapToFeatures } from "@/utils/map/fitMapToFeature";
-import { getPolygonsByProject } from "@/api/project";
-import type { ProjectPolygon } from "@/types/ProjectData";
-import { setAoiPolygons } from "@/redux/slices/aoiSlice";
 import type { AlertColor } from "@mui/material";
 
 interface MergedItemsMapProp {
@@ -53,7 +50,6 @@ export const MergedItemsMap: React.FC<MergedItemsMapProp> = ({ center, zoom }) =
   const { basemap } = useBasemap();
   const { projectId } = useParams();
   const { t } = useTranslation();
-  const dispatch = useAppDispatch();
   const { polygons: storedPolygons } = useAppSelector((state) => state.aoi);
   
   const [ loading, setLoading ] = useState<boolean>(false);
@@ -79,39 +75,8 @@ export const MergedItemsMap: React.FC<MergedItemsMapProp> = ({ center, zoom }) =
     if (!map || !map.isStyleLoaded()) return;
 
     try {
-      let polygonData;
-
-      // Check if polygons are already in Redux store
-      if (storedPolygons && storedPolygons.length > 0) {
-        // Use polygons from Redux store
-        polygonData = storedPolygons;
-      } else {
-        // Fetch project polygons data from API
-        const response = await getPolygonsByProject(projectId as string);
-        if (response.success && response.data.polygons) {
-          polygonData = response.data.polygons.map((polygon: ProjectPolygon, index: number) => {
-            return {
-              id: polygon.id,
-              geom: {
-                type: "Feature",
-                id: polygon.id,
-                geometry: polygon.geom,
-                properties: {
-                  name: `Shape ${index + 1}`,
-                  _id: polygon.id,
-                }
-              } as Feature,
-              area: polygon.area_m2,
-              perimeter: polygon.perimeter_m,
-            };
-          });
-
-          // Store in Redux for future use
-          if (polygonData.length > 0) {
-            dispatch(setAoiPolygons(polygonData));
-          }
-        }
-      }
+      // Get polygons from Redux store
+      const polygonData = storedPolygons;
 
       if (polygonData && polygonData.length > 0) {
         // Add layer using the generic addLayer function
@@ -184,8 +149,8 @@ export const MergedItemsMap: React.FC<MergedItemsMapProp> = ({ center, zoom }) =
       handleSetAlert(t("app.errorFetchingPolygons"), "error");
       return null;
     }
-  }, [projectId, storedPolygons, dispatch, t, handleSetAlert]);
-
+  }, [storedPolygons, t, handleSetAlert]);
+  
   /**
    * Load and add merged buffer 125 green layer to map
    */

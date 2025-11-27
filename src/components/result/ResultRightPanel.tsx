@@ -98,7 +98,7 @@ const ResultRightPanel = () => {
 
       {/* Stats area */}
       <StyledGridBottom>
-        <AoiStatistics />
+        <AoiStatistics showResultMetrics={true}/>
       </StyledGridBottom>
     </StyledBox>
   );
