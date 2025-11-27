@@ -234,24 +234,6 @@ const AoiStatistics = ({ showResultMetrics = false }: AoiStatisticsProps) => {
                 {t("app.indexValue")}
               </StyledTypography>
 
-              {/* Metric rows – same font size for labels + values */}
-              <StatItem>
-                <Typography
-                  sx={{ fontSize: "16px", color: theme.palette.text.primary }}
-                >
-                  {t("app.indexba")}
-                </Typography>
-                <Typography
-                  sx={{
-                    fontSize: "16px",
-                    fontWeight: 500,
-                    color: theme.palette.text.primary,
-                  }}
-                >
-                  {indexBA.toFixed(3)}
-                </Typography>
-              </StatItem>
-
               <StatItem>
                 <Typography
                   sx={{ fontSize: "16px", color: theme.palette.text.primary }}
@@ -283,6 +265,23 @@ const AoiStatistics = ({ showResultMetrics = false }: AoiStatisticsProps) => {
                   }}
                 >
                   {indexB.toFixed(3)}
+                </Typography>
+              </StatItem>
+
+              <StatItem>
+                <Typography
+                  sx={{ fontSize: "16px", color: theme.palette.text.primary }}
+                >
+                  {t("app.indexba")}
+                </Typography>
+                <Typography
+                  sx={{
+                    fontSize: "16px",
+                    fontWeight: 500,
+                    color: theme.palette.text.primary,
+                  }}
+                >
+                  {indexBA.toFixed(3)}
                 </Typography>
               </StatItem>
             </>
