@@ -41,6 +41,7 @@ import { getPolygonsByProject } from "@/api/project";
 import { setAoiPolygons } from "@/redux/slices/aoiSlice";
 import type { ProjectPolygon } from "@/types/ProjectData";
 import type { Feature } from "geojson";
+import { mapCenter, mapZoom } from "@/constants/mapConstants";
 
 // ---------------------------------------------------------------------------
 // Props
@@ -60,8 +61,8 @@ const Map: React.FC<MapProps> = ({
   highResolution = false,
   collapsed = false,
   sx = {},
-  zoom = 10,
-  center = [139.7545870646046, 35.68260566814629],
+  zoom = mapZoom,
+  center = mapCenter,
 }) => {
   const [loading, setLoading] = useState(false);
   const [loadingText, setLoadingText] = useState("");

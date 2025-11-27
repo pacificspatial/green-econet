@@ -11,6 +11,7 @@ import { getAllProjects } from "@/api/project";
 import { setProjects } from "@/redux/slices/projectSlice";
 import type { AlertState } from "@/types/AlertState";
 import AlertBox from "@/components/utils/AlertBox";
+import { mapCenter, mapZoom } from "@/constants/mapConstants";
 
 const ProjectsList: React.FC = () => {
   const [collapsed, setCollapsed] = useState<boolean>(false);
@@ -22,8 +23,6 @@ const ProjectsList: React.FC = () => {
   });
   const theme = useTheme();
   const { t } = useTranslation();
-  const center: [number, number] = [139.7545870646046, 35.68260566814629];
-  const zoom = 11;
 
   const dispatch = useAppDispatch();
 
@@ -92,7 +91,7 @@ const ProjectsList: React.FC = () => {
                 width: "100%",
               }}
             >
-              <Map center={center} zoom={zoom} collapsed={collapsed} />
+              <Map center={mapCenter} zoom={mapZoom} collapsed={collapsed} />
             </Box>
           </Paper>
         </Grid>
