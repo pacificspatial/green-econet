@@ -1,16 +1,16 @@
 import type { Geometry, Feature } from "geojson";
-import mapboxgl from "mapbox-gl";
+import maplibregl from "maplibre-gl";
 
 /**
  * Calculate bounds from features and fit map
  */
 export const fitMapToFeatures = (
-  map: mapboxgl.Map,
+  map: maplibregl.Map,
   features: Feature<Geometry>[]
 ) => {
   if (!features || features.length === 0) return;
 
-  const bounds = new mapboxgl.LngLatBounds();
+  const bounds = new maplibregl.LngLatBounds();
 
   features.forEach((feature) => {
     const geometry = feature.geometry;

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { initializeMap } from "@/utils/map/mapUtils";
-import "mapbox-gl/dist/mapbox-gl.css";
+import maplibregl from "maplibre-gl";
+import "maplibre-gl/dist/maplibre-gl.css";
 import { useBasemap } from "@/hooks/useBasemap";
 import { useParams } from "react-router-dom";
 import { getMergedBuffer125GreenResult, getMergedGreenResult } from "@/api/result";
@@ -24,14 +25,36 @@ interface MergedItemsMapProp {
   zoom: number;
 }
 
+interface PolygonFeatureProperties {
+  id: string;
+  name?: string;
+  [key: string]: any;
+}
+
+interface PolygonFeature {
+  type: 'Feature';
+  geometry: Geometry;
+  properties: PolygonFeatureProperties;
+}
+
+interface PolygonGeoJSON {
+  type: 'FeatureCollection';
+  features: PolygonFeature[];
+}
+
+interface AddLayerOptions {
+  type: string;
+  paint: Record<string, any>;
+}
+
 export const MergedItemsMap: React.FC<MergedItemsMapProp> = ({ center, zoom }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<mapboxgl.Map | null>(null);
+  const mapRef = useRef<maplibregl.Map | null>(null);
   const { basemap } = useBasemap();
   const { projectId } = useParams();
   const { t } = useTranslation();
-  const { selectedProject } = useAppSelector((state) => state.project)
   const dispatch = useAppDispatch();
+  const { polygons: storedPolygons } = useAppSelector((state) => state.aoi);
   
   const [ loading, setLoading ] = useState<boolean>(false);
   const [loadingText, setLoadingText ] = useState<string>("");
@@ -47,9 +70,6 @@ export const MergedItemsMap: React.FC<MergedItemsMapProp> = ({ center, zoom }) =
     },
     []
   );
-
-  // Get polygons from Redux store
-  const { polygons: storedPolygons } = useAppSelector((state) => state.aoi);
 
   /**
    * Load and add project polygons as layers
@@ -95,10 +115,33 @@ export const MergedItemsMap: React.FC<MergedItemsMapProp> = ({ center, zoom }) =
 
       if (polygonData && polygonData.length > 0) {
         // Add layer using the generic addLayer function
-        await addLayer(
-          map,
-          PROJECT_POLYGONS_LAYER_CONFIG,
-          polygonData
+        addLayer(
+          map as maplibregl.Map,
+          `layer-${PROJECT_POLYGONS_LAYER_CONFIG.id}`,
+          {
+            type: 'geojson',
+            data: {
+              type: 'FeatureCollection',
+              features: polygonData.map((d: {
+                id: string;
+                geom: Feature | Geometry;
+              }) => {
+                // Handle both Feature and Geometry types
+                const geometry: Geometry = 'geometry' in d.geom ? d.geom.geometry as Geometry : d.geom as Geometry;
+                const properties: PolygonFeatureProperties = 'properties' in d.geom ? d.geom.properties as PolygonFeatureProperties : { id: d.id };
+                
+                return {
+                  type: 'Feature',
+                  geometry: geometry,
+                  properties: properties
+                };
+              })
+            } as PolygonGeoJSON
+          },
+          {
+            type: PROJECT_POLYGONS_LAYER_CONFIG.type,
+            paint: PROJECT_POLYGONS_LAYER_CONFIG.paint
+          } as AddLayerOptions
         );
 
         // Wait for layer to be added
@@ -191,10 +234,24 @@ export const MergedItemsMap: React.FC<MergedItemsMapProp> = ({ center, zoom }) =
           allFeatures = [...allFeatures, ...features];
 
           // Add layer using new generic function
-          await addLayer(
+          addLayer(
             map,
-            MERGED_BUFFER125_LAYER_CONFIG,
-            layerData
+            `layer-${MERGED_BUFFER125_LAYER_CONFIG.id}`,
+            {
+              type: 'geojson',
+              data: {
+                type: 'FeatureCollection',
+                features: layerData.map(d => ({
+                  type: 'Feature',
+                  geometry: d.geom,
+                  properties: d.properties
+                }))
+              }
+            },
+            {
+              type: MERGED_BUFFER125_LAYER_CONFIG.type,
+              paint: MERGED_BUFFER125_LAYER_CONFIG.paint
+            }
           );
           
           // Wait for layer to be added
@@ -237,10 +294,24 @@ export const MergedItemsMap: React.FC<MergedItemsMapProp> = ({ center, zoom }) =
           allFeatures = [...allFeatures, ...features];
 
           // Add layer using new generic function
-          await addLayer(
+          addLayer(
             map,
-            MERGED_GREEN_LAYER_CONFIG,
-            layerData
+            `layer-${MERGED_GREEN_LAYER_CONFIG.id}`,
+            {
+              type: 'geojson',
+              data: {
+                type: 'FeatureCollection',
+                features: layerData.map(d => ({
+                  type: 'Feature',
+                  geometry: d.geom,
+                  properties: d.properties
+                }))
+              }
+            },
+            {
+              type: MERGED_GREEN_LAYER_CONFIG.type,
+              paint: MERGED_GREEN_LAYER_CONFIG.paint
+            }
           );
 
           // Wait for layer to be added
@@ -267,7 +338,7 @@ export const MergedItemsMap: React.FC<MergedItemsMapProp> = ({ center, zoom }) =
       setLoading(false);
       setLoadingText("");
     }
-  }, [projectId, selectedProject, t]);
+  }, [projectId, t]);
 
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
@@ -342,17 +413,17 @@ export const MergedItemsMap: React.FC<MergedItemsMapProp> = ({ center, zoom }) =
         if (map && map.getStyle()) {
           // Remove project polygons layer
           if (map.getLayer(`layer-${PROJECT_POLYGONS_LAYER_CONFIG.id}`)) {
-            removeLayer(map, `layer-${PROJECT_POLYGONS_LAYER_CONFIG.id}`, `source-${PROJECT_POLYGONS_LAYER_CONFIG.id}`);
+            removeLayer(map, `layer-${PROJECT_POLYGONS_LAYER_CONFIG.id}`);
           }
           // Remove other layers...
           if (map.getLayer(`layer-${MERGED_BUFFER125_LAYER_CONFIG.id}`)) {
-            removeLayer(map, `layer-${MERGED_BUFFER125_LAYER_CONFIG.id}`, `source-${MERGED_BUFFER125_LAYER_CONFIG.id}`);
+            removeLayer(map, `layer-${MERGED_BUFFER125_LAYER_CONFIG.id}`);
           }
           if (map.getLayer(`layer-${MERGED_GREEN_LAYER_CONFIG.id}`)) {
-            removeLayer(map, `layer-${MERGED_GREEN_LAYER_CONFIG.id}`, `source-${MERGED_GREEN_LAYER_CONFIG.id}`);
+            removeLayer(map, `layer-${MERGED_GREEN_LAYER_CONFIG.id}`);
           }
           if (map.getLayer(`layer-${PROJECT_LAYER_CONFIG.id}`)) {
-            removeLayer(map, `layer-${PROJECT_LAYER_CONFIG.id}`, `source-${PROJECT_LAYER_CONFIG.id}`);
+            removeLayer(map, `layer-${PROJECT_LAYER_CONFIG.id}`);
           }
         }
       } catch (error) {

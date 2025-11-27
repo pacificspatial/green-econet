@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { initializeMap } from "@/utils/map/mapUtils";
-import "mapbox-gl/dist/mapbox-gl.css";
+import maplibregl from "maplibre-gl";
+import "maplibre-gl/dist/maplibre-gl.css";
 import { useBasemap } from "@/hooks/useBasemap";
 import { useParams } from "react-router-dom";
 import { getClippedBuffer125GreenResult, getClippedGreenResult } from "@/api/result";
@@ -26,7 +27,7 @@ interface ClippedItemsMapProp {
 
 export const ClippedItemsMap: React.FC<ClippedItemsMapProp> = ({ center, zoom }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<mapboxgl.Map | null>(null);
+  const mapRef = useRef<maplibregl.Map | null>(null);
   const { basemap } = useBasemap();
   const { projectId } = useParams();
   const { t } = useTranslation();
@@ -78,12 +79,31 @@ export const ClippedItemsMap: React.FC<ClippedItemsMapProp> = ({ center, zoom })
 
         if (polygonData.length > 0) {
           // Add layer using the generic addLayer function
-          await addLayer(
+          addLayer(
             map,
-            PROJECT_POLYGONS_LAYER_CONFIG,
-            polygonData
+            `layer-${PROJECT_POLYGONS_LAYER_CONFIG.id}`,
+            {
+              type: 'geojson',
+              data: {
+                type: 'FeatureCollection',
+                features: polygonData.map((d: { geom: { geometry: any; properties: any; }; id: any; }) => {
+                  // Handle both Feature and Geometry types
+                  const geometry = 'geometry' in d.geom ? d.geom.geometry : d.geom;
+                  const properties = 'properties' in d.geom ? d.geom.properties : { id: d.id };
+                  
+                  return {
+                    type: 'Feature',
+                    geometry: geometry,
+                    properties: properties
+                  };
+                })
+              }
+            },
+            {
+              type: PROJECT_POLYGONS_LAYER_CONFIG.type,
+              paint: PROJECT_POLYGONS_LAYER_CONFIG.paint
+            }
           );
-
           // Wait for layer to be added
           await new Promise<void>((resolve) => {
             if (map.loaded() && map.getLayer(`layer-${PROJECT_POLYGONS_LAYER_CONFIG.id}`)) {
@@ -171,12 +191,25 @@ export const ClippedItemsMap: React.FC<ClippedItemsMapProp> = ({ center, zoom })
           allFeatures = [...allFeatures, ...features];
 
           // Add layer using new generic function
-          await addLayer(
+          addLayer(
             map,
-            CLIPPED_BUFFER125_LAYER_CONFIG,
-            layerData
+            `layer-${CLIPPED_BUFFER125_LAYER_CONFIG.id}`,
+            {
+              type: 'geojson',
+              data: {
+                type: 'FeatureCollection',
+                features: layerData.map(d => ({
+                  type: 'Feature',
+                  geometry: d.geom,
+                  properties: d.properties
+                }))
+              }
+            },
+            {
+              type: CLIPPED_BUFFER125_LAYER_CONFIG.type,
+              paint: CLIPPED_BUFFER125_LAYER_CONFIG.paint
+            }
           );
-          
           // Wait for layer to be added
           await new Promise<void>((resolve) => {
             if (map.loaded() && map.getLayer(`layer-${CLIPPED_BUFFER125_LAYER_CONFIG.id}`)) {
@@ -217,11 +250,26 @@ export const ClippedItemsMap: React.FC<ClippedItemsMapProp> = ({ center, zoom })
           allFeatures = [...allFeatures, ...features];
 
           // Add layer using new generic function
-          await addLayer(
+          addLayer(
             map,
-            CLIPPED_GREEN_LAYER_CONFIG,
-            layerData
+            `layer-${CLIPPED_GREEN_LAYER_CONFIG.id}`,
+            {
+              type: 'geojson',
+              data: {
+                type: 'FeatureCollection',
+                features: layerData.map(d => ({
+                  type: 'Feature',
+                  geometry: d.geom,
+                  properties: d.properties
+                }))
+              }
+            },
+            {
+              type: CLIPPED_GREEN_LAYER_CONFIG.type,
+              paint: CLIPPED_GREEN_LAYER_CONFIG.paint
+            }
           );
+
 
           // Wait for layer to be added
           await new Promise<void>((resolve) => {
@@ -254,12 +302,25 @@ export const ClippedItemsMap: React.FC<ClippedItemsMapProp> = ({ center, zoom })
         });
         
         // Add layer using new generic function
-        await addLayer(
+        addLayer(
           map,
-          PROJECT_LAYER_CONFIG,
-          boundaryLayerData
+          `layer-${PROJECT_LAYER_CONFIG.id}`,
+          {
+            type: 'geojson',
+            data: {
+              type: 'FeatureCollection',
+              features: boundaryLayerData.map(d => ({
+                type: 'Feature',
+                geometry: d.geom,
+                properties: d.properties
+              }))
+            }
+          },
+          {
+            type: PROJECT_LAYER_CONFIG.type,
+            paint: PROJECT_LAYER_CONFIG.paint
+          }
         );
-
         // Wait for boundary layer to be added
         await new Promise<void>((resolve) => {
           if (map.loaded() && map.getLayer(`layer-${PROJECT_LAYER_CONFIG.id}`)) {
@@ -283,7 +344,7 @@ export const ClippedItemsMap: React.FC<ClippedItemsMapProp> = ({ center, zoom })
       setLoading(false);
       setLoadingText("");
     }
-  }, [projectId, t]);
+  }, [projectId, selectedProject, t]);
 
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
@@ -358,17 +419,17 @@ export const ClippedItemsMap: React.FC<ClippedItemsMapProp> = ({ center, zoom })
         if (map && map.getStyle()) {
           // Remove project polygons layer
           if (map.getLayer(`layer-${PROJECT_POLYGONS_LAYER_CONFIG.id}`)) {
-            removeLayer(map, `layer-${PROJECT_POLYGONS_LAYER_CONFIG.id}`, `source-${PROJECT_POLYGONS_LAYER_CONFIG.id}`);
+            removeLayer(map, `layer-${PROJECT_POLYGONS_LAYER_CONFIG.id}`);
           }
           // Remove other layers...
           if (map.getLayer(`layer-${CLIPPED_BUFFER125_LAYER_CONFIG.id}`)) {
-            removeLayer(map, `layer-${CLIPPED_BUFFER125_LAYER_CONFIG.id}`, `source-${CLIPPED_BUFFER125_LAYER_CONFIG.id}`);
+            removeLayer(map, `layer-${CLIPPED_BUFFER125_LAYER_CONFIG.id}`);
           }
           if (map.getLayer(`layer-${CLIPPED_GREEN_LAYER_CONFIG.id}`)) {
-            removeLayer(map, `layer-${CLIPPED_GREEN_LAYER_CONFIG.id}`, `source-${CLIPPED_GREEN_LAYER_CONFIG.id}`);
+            removeLayer(map, `layer-${CLIPPED_GREEN_LAYER_CONFIG.id}`);
           }
           if (map.getLayer(`layer-${PROJECT_LAYER_CONFIG.id}`)) {
-            removeLayer(map, `layer-${PROJECT_LAYER_CONFIG.id}`, `source-${PROJECT_LAYER_CONFIG.id}`);
+            removeLayer(map, `layer-${PROJECT_LAYER_CONFIG.id}`);
           }
         }
       } catch (error) {
