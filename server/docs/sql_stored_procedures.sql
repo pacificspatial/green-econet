@@ -170,8 +170,8 @@ BEGIN
     INSERT INTO processing.clipped_green_joined (project_id, uid, geom)
     SELECT
         p_project_id,
-        buf.uid,
-        geom_int
+        j.uid,
+        j.geom_int
     FROM (
         SELECT
             cg.project_id,
@@ -206,8 +206,8 @@ BEGIN
     INSERT INTO processing.merged_green_joined (project_id, uid, geom)
     SELECT
         p_project_id,
-        buf.uid,
-        geom_int
+        j.uid,
+        j.geom_int
     FROM (
         SELECT
             mg.project_id,
