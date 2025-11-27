@@ -1,0 +1,44 @@
+service: enp-rds
+frameworkVersion: ">=2.25.0"
+variablesResolutionMode: 20210326
+provider:
+  name: aws
+  runtime: nodejs18.x
+  stage: ${opt:stage, 'stg'}
+  region: ${opt:region, 'ap-northeast-1'}
+  profile: ${self:provider.stage}
+  deploymentBucket:
+    name: ${self:custom.namespaceShort}.${self:provider.region}.deploy
+    blockPublicAccess: true
+    maxPreviousDeploymentArtifacts: 3
+  stackName: ${self:provider.stage}-${self:service}
+  stackPolicy:
+    - Effect: Allow
+      Principal: "*"
+      Action: "Update:*"
+      Resource: "*"
+    - Effect: Deny
+      Principal: "*"
+      Resource: "*"
+      Action:
+        - Update:Replace
+        - Update:Delete
+      Condition:
+        StringEquals:
+          ResourceType:
+            - AWS::RDS::DBCluster
+            - AWS::RDS::DBInstance
+package:
+  exclude:
+    - .git/**
+    - node_modules/**
+custom:
+  environment: ${file(./environment.yml):${self:provider.stage}}
+  namespace: econetplateau # Used to tag resources with a "Namespace".
+  namespaceShort: enp # Used to prefix stack name, deployment bucket, resource "Name" tags, etc.
+resources:
+  - ${file(./resources-rds.yml)}
+  - ${file(./resources-secrets.yml)}
+  - ${file(./resources-iam.yml)}
+  - ${file(./resources-proxy.yml)}
+  - ${file(./resources-DB-Security-Group.yml)}
