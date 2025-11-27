@@ -161,32 +161,170 @@ $$ LANGUAGE plpgsql;
 
 ------------------------------------------------------------------------------------------------
 
-CREATE OR REPLACE FUNCTION processing.assign_uids(p_project_id UUID)
+CREATE OR REPLACE FUNCTION processing.join_clip_green(p_project_id UUID)
 RETURNS void AS $$
 BEGIN
-    ---------------------------------------------------------
-    -- 1) Assign UID to clipped_green from clipped_buffer125_green
-    ---------------------------------------------------------
-    UPDATE processing.clipped_green cg
-    SET uid = buf.uid
-    FROM processing.clipped_buffer125_green buf
-    WHERE cg.project_id = p_project_id
-      AND buf.project_id = p_project_id
-      AND cg.uid IS NULL
-      AND ST_Intersects(cg.geom, buf.geom);
+    DELETE FROM processing.clipped_green_joined
+    WHERE project_id = p_project_id;
 
-    ---------------------------------------------------------
-    -- 2) Assign UID to merged_green from buffer125_merged_green
-    ---------------------------------------------------------
-    UPDATE processing.merged_green mg
-    SET uid = buf.uid
-    FROM processing.buffer125_merged_green buf
-    WHERE mg.project_id = p_project_id
-      AND buf.project_id = p_project_id
-      AND mg.uid IS NULL
-      AND ST_Intersects(mg.geom, buf.geom);
+    INSERT INTO processing.clipped_green_joined (project_id, uid, geom)
+    SELECT
+        p_project_id,
+        buf.uid,
+        geom_int
+    FROM (
+        SELECT
+            cg.project_id,
+            buf.uid,
+            ST_Multi(
+                ST_CollectionExtract(
+                    ST_Intersection(cg.geom, buf.geom),
+                    3
+                )
+            ) AS geom_int
+        FROM processing.clipped_green cg
+        JOIN processing.clipped_buffer125_green buf
+            ON cg.project_id = buf.project_id
+            AND cg.project_id = p_project_id
+            AND ST_Intersects(cg.geom, buf.geom)
+    ) AS j
+    WHERE geom_int IS NOT NULL
+    AND NOT ST_IsEmpty(geom_int);
+END;
+$$ LANGUAGE plpgsql;
+
+-------------------------------------------------------------------------------------
+
+CREATE OR REPLACE FUNCTION processing.join_merged_green(p_project_id UUID)
+RETURNS void AS $$
+BEGIN
+    -- 1) Clear previous joined data for this project
+    DELETE FROM processing.merged_green_joined
+    WHERE project_id = p_project_id;
+
+    -- 2) merged_green_joined : merged_green  ∩  buffer125_merged_green
+    INSERT INTO processing.merged_green_joined (project_id, uid, geom)
+    SELECT
+        p_project_id,
+        buf.uid,
+        geom_int
+    FROM (
+        SELECT
+            mg.project_id,
+            buf.uid,
+            ST_Multi(
+                ST_CollectionExtract(
+                    ST_Intersection(mg.geom, buf.geom),
+                    3
+                )
+            ) AS geom_int
+        FROM processing.merged_green mg
+        JOIN processing.buffer125_merged_green buf
+            ON mg.project_id = buf.project_id
+            AND mg.project_id = p_project_id
+            AND ST_Intersects(mg.geom, buf.geom)
+    ) AS j
+    WHERE geom_int IS NOT NULL
+        AND NOT ST_IsEmpty(geom_int);
 
 END;
 $$ LANGUAGE plpgsql;
 
-------------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------
+
+
+CREATE OR REPLACE FUNCTION processing.compute_indexes(p_project_id UUID)
+RETURNS void AS $$
+DECLARE
+    v_indexA NUMERIC;
+    v_indexB NUMERIC;
+    v_indexBA NUMERIC;
+BEGIN
+    ----------------------------------------------------------------------
+    -- SECTION A: Compute indexA using clipped_green_joined
+    ----------------------------------------------------------------------
+    WITH joinedA AS (
+        SELECT uid, geom
+        FROM processing.clipped_green_joined
+        WHERE project_id = p_project_id
+    ),
+    areas_by_uidA AS (
+        SELECT
+            uid,
+            SUM(ST_Area(geom::geography)) AS area_m2
+        FROM joinedA
+        GROUP BY uid
+    ),
+    sum_clip_green AS (
+        SELECT
+            COALESCE(SUM(ST_Area(geom::geography)), 0) AS total_clip_green_area_m2
+        FROM processing.clipped_green
+        WHERE project_id = p_project_id
+    ),
+    poly_union AS (
+        SELECT ST_Union(geom) AS geom
+        FROM public.project_polygons
+        WHERE project_id = p_project_id
+    ),
+    poly_area AS (
+        SELECT ST_Area(geom::geography) AS poly_area_m2
+        FROM poly_union
+    ),
+    aggA AS (
+        SELECT
+            COALESCE((SELECT SUM(POWER(area_m2, 2)) FROM areas_by_uidA), 0) AS sum_uid_area_sq,
+            (SELECT poly_area_m2 FROM poly_area) AS poly_area_m2,
+            (SELECT total_clip_green_area_m2 FROM sum_clip_green) AS total_clip_green_area_m2
+    )
+    SELECT
+        (
+            (sum_uid_area_sq + POWER(poly_area_m2, 2))
+            / NULLIF(POWER(total_clip_green_area_m2 + poly_area_m2, 2), 0)
+        ) * 100.0
+    INTO v_indexA
+    FROM aggA;
+
+    ----------------------------------------------------------------------
+    -- SECTION B: Compute indexB using merged_green_joined (already created)
+    ----------------------------------------------------------------------
+    WITH joinedB AS (
+        SELECT uid, geom
+        FROM processing.merged_green_joined
+        WHERE project_id = p_project_id
+    ),
+    areas_by_uidB AS (
+        SELECT
+            uid,
+            SUM(ST_Area(geom::geography)) AS area_m2
+        FROM joinedB
+        GROUP BY uid
+    ),
+    aggB AS (
+        SELECT
+            COALESCE(SUM(POWER(area_m2, 2)), 0) AS sum_area_sq,
+            COALESCE(SUM(area_m2), 0) AS sum_area
+        FROM areas_by_uidB
+    )
+    SELECT
+        (sum_area_sq / NULLIF(POWER(sum_area, 2), 0)) * 100.0
+    INTO v_indexB
+    FROM aggB;
+
+    ----------------------------------------------------------------------
+    -- SECTION C: Compute indexBA
+    ----------------------------------------------------------------------
+    v_indexBA := v_indexB - v_indexA;
+
+    ----------------------------------------------------------------------
+    -- SECTION D: Store results in public.projects
+    ----------------------------------------------------------------------
+    UPDATE public.projects
+    SET
+        indexA  = v_indexA,
+        indexB  = v_indexB,
+        indexBA = v_indexBA
+    WHERE id = p_project_id;
+
+END;
+$$ LANGUAGE plpgsql;
+--------------------------------------------------------------------------------------------
