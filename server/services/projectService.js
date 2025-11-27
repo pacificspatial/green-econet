@@ -59,7 +59,10 @@ const deleteProject = async (projectId) => {
  * Fetch all projects
  */
 const getAllProjects = async () => {
-  const projects = await Projects.findAll({ raw: true });    
+  const projects = await Projects.findAll({
+    order: [["created_at", "DESC"]],
+    raw: true,
+  });
   return projects;
 };
 

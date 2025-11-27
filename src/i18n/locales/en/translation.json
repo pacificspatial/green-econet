@@ -62,6 +62,8 @@
     "total": "Total",
     "aoiPolygonsLimitMessage": "Only {{minCount}} - {{maxCount}} shapes are allowed",
     "shape": "Shape",
+    "green": "Green Layer",
+    "bufferGreen": "Buffer Green Layer",
     "loadingProjectPolygons": "Loading project polygons...",
     "errorFetchingPolygons": "Error fetching polygons",
     "creatingPolygon": "Creating project polygon...",

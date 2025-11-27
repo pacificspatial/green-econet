@@ -1,43 +1,33 @@
-import MapboxDraw from "@mapbox/mapbox-gl-draw";
-import mapboxgl from "mapbox-gl";
-// Types
-type MapInstance = mapboxgl.Map | null;
-type DrawInstance = MapboxDraw | null;
+// src/utils/draw/drawToolCleanUp.ts
+import type React from "react";
+import type maplibregl from "maplibre-gl";
+import type MaplibreDraw from "maplibre-gl-draw";
+import type { IControl } from "maplibre-gl";
 
-interface CleanupDrawToolParams {
-  mapRef: MapInstance;
-  drawInstance: DrawInstance;
-  handleDrawCreate: (e: MapboxDraw.DrawCreateEvent) => void;
-  handleDrawUpdate: (e: MapboxDraw.DrawUpdateEvent) => void;
-  handleDrawDelete: (e: MapboxDraw.DrawDeleteEvent) => void;
+interface CleanupParams {
+  mapRef: React.RefObject<maplibregl.Map | null>;
+  drawInstance: MaplibreDraw | null;
+  handleDrawCreate: (e: any) => void;
+  handleDrawUpdate: (e: any) => void;
+  handleDrawDelete: (e: any) => void;
 }
 
-// Clean up draw tool and event listeners
-export const cleanupDrawTool = ({
+export function cleanupDrawTool({
   mapRef,
   drawInstance,
   handleDrawCreate,
   handleDrawUpdate,
   handleDrawDelete,
-}: CleanupDrawToolParams) => {
-  try {
-    // Ensure mapRef is valid
-    if (!mapRef || !(mapRef instanceof mapboxgl.Map)) {
-      return;
-    }
+}: CleanupParams): void {
+  const map = mapRef.current;
+  if (!map || !drawInstance) return;
+console.log(map);
 
-    // Ensure drawInstance is valid before removing
-    if (drawInstance && mapRef.hasControl(drawInstance)) {
-      mapRef.removeControl(drawInstance);
-    }
+  // Remove listeners
+  map.off("draw.create", handleDrawCreate);
+  map.off("draw.update", handleDrawUpdate);
+  map.off("draw.delete", handleDrawDelete);
 
-    // Remove event listeners safely
-    if (typeof mapRef.off === "function") {
-      mapRef.off("draw.create", handleDrawCreate);
-      mapRef.off("draw.update", handleDrawUpdate);
-      mapRef.off("draw.delete", handleDrawDelete);
-    }
-  } catch (error) {
-    console.error("Draw tool cleanup error:", error);
-  }
-};
+  // Remove control
+  map.removeControl(drawInstance as unknown as IControl);
+}
