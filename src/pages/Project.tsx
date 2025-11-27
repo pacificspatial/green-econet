@@ -1,12 +1,11 @@
 import RightPanel from "@/components/common/RightPanel";
 import Map from "@/components/maps/Map";
-import { useAppDispatch, useAppSelector } from "@/hooks/reduxHooks";
+import { useAppDispatch } from "@/hooks/reduxHooks";
 import { clearAoiPolygons } from "@/redux/slices/aoiSlice";
 import { setSelectedProject } from "@/redux/slices/projectSlice";
 import Grid from "@mui/material/Grid";
 import { Box, styled } from "@mui/system";
 import { useEffect } from "react";
-import { useParams } from "react-router-dom";
 
 const Container = styled(Box)({
   display: "flex",
@@ -28,27 +27,10 @@ const PanelGrid = styled(Grid)({
 });
 
 const Project = () => {
-  const { projects } = useAppSelector((state) => state.project);
   const dispatch = useAppDispatch();
-  const { projectId } = useParams()
   const center: [number, number] = [138.2529, 36.2048];
   const zoom = 5.5;
 
-  useEffect(() => {
-    const availableProjectIds = projects.map((project) =>
-      project.id?.toString()
-    );
-    if (!availableProjectIds.includes(projectId as string)) {
-      window.location.href = "/";
-    } else {
-      const selectedProject = projects.find(
-        (project) => project.id?.toString() === projectId
-      );
-      dispatch(setSelectedProject(selectedProject || null));
-    }
-  }, [projectId, projects]);
-
-  //cleanup on unmount
   useEffect(() => {
     return () => {
       dispatch(setSelectedProject(null));
@@ -73,7 +55,7 @@ const Project = () => {
         <MapGrid>
           <Map center={center} zoom={zoom} />
         </MapGrid>
-        <PanelGrid sx={{ height: "calc(100vh-64px)" }}>
+        <PanelGrid sx={{ height: "calc(100vh - 64px)" }}>
           <RightPanel />
         </PanelGrid>
       </Container>

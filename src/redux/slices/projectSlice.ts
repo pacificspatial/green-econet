@@ -9,7 +9,10 @@ export interface Project {
   created_at?: string;
   updated_at?: string;
   processed: boolean;
-  geom?: Geometry
+  geom?: Geometry;
+  indexa?: string;
+  indexb?: string;
+  indexba?: string;
 }
 
 interface ProjectState {

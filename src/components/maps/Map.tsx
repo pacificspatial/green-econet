@@ -35,22 +35,12 @@ import type {
   DrawUpdateHandlerParams,
 } from "@/utils/draw/drawHandlers";
 import { layerConfigs } from "@/config/layers/layerStyleConfig";
-import { addStyledLayer, addLayer, removeLayer } from "@/utils/map/addLayer";
+import { addStyledLayer } from "@/utils/map/addLayer";
 import Legend from "./Legend";
 import { getPolygonsByProject } from "@/api/project";
 import { setAoiPolygons } from "@/redux/slices/aoiSlice";
 import type { ProjectPolygon } from "@/types/ProjectData";
-import {
-  getClippedBuffer125GreenResult,
-  getClippedGreenResult,
-} from "@/api/result";
-import {
-  CLIPPED_BUFFER125_LAYER_CONFIG,
-  CLIPPED_GREEN_LAYER_CONFIG,
-  PROJECT_LAYER_CONFIG,
-} from "@/constants/layerConfig";
-import type { ClippedBuffer125Green } from "@/types/ClippedData";
-import type { Feature, Geometry } from "geojson";
+import type { Feature } from "geojson";
 
 // ---------------------------------------------------------------------------
 // Props
@@ -89,9 +79,6 @@ const Map: React.FC<MapProps> = ({
 
   const aoiPolygons = useAppSelector((state) => state.aoi.polygons);
   const { selectedProject } = useAppSelector((state) => state.project);
-  const [clippedBufferFeatures, setClippedBufferFeatures] = useState<
-    Feature<Geometry>[]
-  >([]);
 
   const { basemap } = useBasemap();
   const theme = useTheme();
@@ -195,177 +182,16 @@ const Map: React.FC<MapProps> = ({
 
         dispatch(setAoiPolygons(polygonData));
       } else {
-        handleSetAlert(t("errorFetchingPolygons"), "error");
+        handleSetAlert(t("app.errorFetchingPolygons"), "error");
       }
     } catch (error) {
       console.error("Error in fetching polygons", error);
-      handleSetAlert(t("errorFetchingPolygons"), "error");
+      handleSetAlert(t("app.errorFetchingPolygons"), "error");
     } finally {
-      if (selectedProject?.processed === false) {
-        setLoading(false);
-        setLoadingText("");
-      }
+      setLoading(false);
+      setLoadingText("");
     }
   }, [projectId, dispatch, t, handleSetAlert, selectedProject?.processed]);
-
-  // -------------------------------------------------------------------------
-  // Load clipped layers (buffer + green + project boundary)
-  // -------------------------------------------------------------------------
-  const getClippedLayers = useCallback(async () => {
-    const map = mapRef.current;
-    if (!map || !map.isStyleLoaded() || !projectId) return null;
-
-    if (selectedProject?.processed === true) {
-      setLoading(true);
-      setLoadingText(t("app.loadingResult") || "Loading results...");
-    }
-
-    try {
-      const [buffer125Response, greenResponse] = await Promise.all([
-        getClippedBuffer125GreenResult(projectId as string),
-        getClippedGreenResult(projectId as string),
-      ]);
-
-      let allFeatures: Feature<Geometry>[] = [];
-
-      // clipped-buffer-125-green
-      if (buffer125Response.success && buffer125Response.data) {
-        const records = Array.isArray(buffer125Response.data)
-          ? buffer125Response.data
-          : [buffer125Response.data];
-
-        const features = (records as ClippedBuffer125Green[])
-          .filter((record) => record.geom)
-          .map((record) => ({
-            type: "Feature" as const,
-            geometry: record.geom!,
-            properties: {
-              id: record.id,
-              project_id: record.project_id,
-              src_id: record.src_id,
-              uid: record.uid,
-              ...record.properties,
-            },
-          }));
-
-        if (features.length > 0) {
-          allFeatures = [...allFeatures, ...features];
-
-          const geojsonData = {
-            type: "FeatureCollection" as const,
-            features,
-          };
-
-          addLayer(
-            map as any,
-            CLIPPED_BUFFER125_LAYER_CONFIG.id,
-            {
-              type: "geojson",
-              data: geojsonData,
-            },
-            {
-              type: CLIPPED_BUFFER125_LAYER_CONFIG.type,
-              paint: CLIPPED_BUFFER125_LAYER_CONFIG.paint,
-            }
-          );
-
-          await new Promise<void>((resolve) => {
-            if (map.loaded()) resolve();
-            else map.once("idle", () => resolve());
-          });
-        }
-      }
-
-      // clipped-green
-      if (greenResponse.success && greenResponse.data) {
-        const records = Array.isArray(greenResponse.data)
-          ? greenResponse.data
-          : [greenResponse.data];
-
-        const features = (records as ClippedBuffer125Green[])
-          .filter((record) => record.geom)
-          .map((record) => ({
-            type: "Feature" as const,
-            geometry: record.geom!,
-            properties: {
-              id: record.id,
-              project_id: record.project_id,
-              src_id: record.src_id,
-              uid: record.uid,
-              ...record.properties,
-            },
-          }));
-
-        if (features.length > 0) {
-          allFeatures = [...allFeatures, ...features];
-
-          const geojsonData = {
-            type: "FeatureCollection" as const,
-            features,
-          };
-
-          addLayer(
-            map as any,
-            CLIPPED_GREEN_LAYER_CONFIG.id,
-            {
-              type: "geojson",
-              data: geojsonData,
-            },
-            {
-              type: CLIPPED_GREEN_LAYER_CONFIG.type,
-              paint: CLIPPED_GREEN_LAYER_CONFIG.paint,
-            }
-          );
-        }
-      }
-
-      // project boundary
-      if (selectedProject?.geom) {
-        const boundaryFeature = {
-          type: "Feature" as const,
-          geometry: selectedProject.geom,
-          properties: {
-            id: selectedProject.id,
-            name: selectedProject.name,
-          },
-        };
-
-        const boundaryData = {
-          type: "FeatureCollection" as const,
-          features: [boundaryFeature],
-        };
-
-        await new Promise<void>((resolve) => {
-          if (map.loaded()) resolve();
-          else map.once("idle", () => resolve());
-        });
-
-        addLayer(
-          map as any,
-          PROJECT_LAYER_CONFIG.id,
-          {
-            type: "geojson",
-            data: boundaryData,
-          },
-          {
-            type: PROJECT_LAYER_CONFIG.type,
-            paint: PROJECT_LAYER_CONFIG.paint,
-          }
-        );
-      }
-
-      return allFeatures.length > 0 ? allFeatures : null;
-    } catch (error) {
-      console.error("Error in fetching clipped layers", error);
-    } finally {
-      if (selectedProject?.processed === true) {
-        setLoading(false);
-        setLoadingText("");
-      }
-    }
-
-    return null;
-  }, [projectId, selectedProject?.processed, selectedProject?.geom, t]);
 
   // -------------------------------------------------------------------------
   // Initialize map (once)
@@ -512,49 +338,10 @@ const Map: React.FC<MapProps> = ({
   // Load project data when projectId changes
   // -------------------------------------------------------------------------
   useEffect(() => {
-    const map = mapRef.current;
-    if (!projectId) return;
-
-    // Always fetch polygons
-    fetchProjectPolygons();
-
-    // Load clipped layers if map exists
-    if (map) {
-      const loadClippedLayers = async () => {
-        if (map.isStyleLoaded() && map.loaded()) {
-          const features = await getClippedLayers();
-          if (features) setClippedBufferFeatures(features);
-        } else {
-          map.once("idle", async () => {
-            const features = await getClippedLayers();
-            if (features) setClippedBufferFeatures(features);
-          });
-        }
-      };
-
-      loadClippedLayers();
+    if(projectId) {
+      fetchProjectPolygons()
     }
-
-    // Cleanup clipped layers on project change/unmount
-    return () => {
-      try {
-        if (map && map.getStyle()) {
-          if (map.getLayer(CLIPPED_BUFFER125_LAYER_CONFIG.id)) {
-            removeLayer(map as any, CLIPPED_BUFFER125_LAYER_CONFIG.id);
-          }
-          if (map.getLayer(CLIPPED_GREEN_LAYER_CONFIG.id)) {
-            removeLayer(map as any, CLIPPED_GREEN_LAYER_CONFIG.id);
-          }
-          if (map.getLayer(PROJECT_LAYER_CONFIG.id)) {
-            removeLayer(map as any, PROJECT_LAYER_CONFIG.id);
-          }
-        }
-      } catch (error) {
-        console.debug("Could not remove layers on cleanup:", error);
-      }
-      setClippedBufferFeatures([]);
-    };
-  }, [projectId, basemap, fetchProjectPolygons, getClippedLayers]);
+  }, [projectId, basemap, fetchProjectPolygons]);
 
   // -------------------------------------------------------------------------
   // Autofit map to AOIs / clipped features
@@ -567,30 +354,7 @@ const Map: React.FC<MapProps> = ({
       const bounds = new maplibregl.LngLatBounds();
       let hasCoordinates = false;
 
-      // Processed project → use clipped buffer features
-      if (selectedProject?.processed && clippedBufferFeatures.length > 0) {
-        clippedBufferFeatures.forEach((feature) => {
-          const geom = feature.geometry;
-
-          if (geom.type === "Polygon") {
-            geom.coordinates.forEach((ring) => {
-              ring.forEach((coord) => {
-                bounds.extend([coord[0], coord[1]]);
-                hasCoordinates = true;
-              });
-            });
-          } else if (geom.type === "MultiPolygon") {
-            geom.coordinates.forEach((polygon) => {
-              polygon.forEach((ring) => {
-                ring.forEach((coord) => {
-                  bounds.extend([coord[0], coord[1]]);
-                  hasCoordinates = true;
-                });
-              });
-            });
-          }
-        });
-      } else if (aoiPolygons && aoiPolygons.length > 0) {
+       if (aoiPolygons && aoiPolygons.length > 0) {
         // Unprocessed project → use AOI polygons
         aoiPolygons.forEach((polygon) => {
           const geom = polygon.geom.geometry;
@@ -612,7 +376,7 @@ const Map: React.FC<MapProps> = ({
     } catch (err) {
       console.error("Error fitting map bounds:", err);
     }
-  }, [aoiPolygons, clippedBufferFeatures, selectedProject?.processed]);
+  }, [aoiPolygons]);
 
   // -------------------------------------------------------------------------
   // Render
