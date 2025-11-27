@@ -241,7 +241,7 @@ const Map: React.FC<MapProps> = ({
   };
 
   useEffect(() => {
-    if (projectId && mapRef.current && mapReady) {
+    if (mapRef.current && mapReady) {
       addLayers();
     }
   }, [projectId, basemap, mapReady]);
@@ -402,7 +402,7 @@ const Map: React.FC<MapProps> = ({
             ...sx,
           }}
         />
-        {projectId && mapReady && <Legend map={mapRef.current} />}
+        {mapReady && <Legend map={mapRef.current} />}
       </Box>
     </>
   );
