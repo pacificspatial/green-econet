@@ -1,6 +1,6 @@
 import { db } from "../db/connect.js";
 import { Projects } from "../db/models/index.js";
-import { handleExports } from "./exportsServices.js";
+import { exportsServices } from "./exportsServices.js";
 
 
 // Util for consistent error formatting
@@ -27,6 +27,7 @@ const runPipeline = async ({ projectId, io }) => {
     // { name: "Buffer Service", fn: bufferService },
     // { name: "Group Service", fn: groupService },
     // { name: "Indices Service", fn: indicesService },
+    { name: "Export Service", fn: exportsServices },
   ];
   let status = "success";
   const totalSteps = steps.length;
@@ -105,10 +106,6 @@ const runPipeline = async ({ projectId, io }) => {
           },
           completedAt: new Date().toISOString(),
         });
-
-        // call the export flow
-        const res = await handleExports(projectId);
-        console.log(`📦 Exports generated for project ${projectId}:`, res);
       }
     }
   }

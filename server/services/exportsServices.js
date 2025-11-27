@@ -50,7 +50,7 @@ async function handlePDFExport(projectId) {
   }
 }
 
-export async function handleExports(projectId) {
+export async function exportsServices(projectId) {
   const results = {};
   results["xlsx"] = await handleExcelExport(projectId);
   results["pdf"] = await handlePDFExport(projectId);
