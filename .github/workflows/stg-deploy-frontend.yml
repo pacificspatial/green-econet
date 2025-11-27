@@ -1,144 +1,9 @@
-# name: Frontend CI/CD -> S3
-
-
-# # Trigger only when frontend files or workflow changes (aws-infrastructure-1)
-# on:
-#   push:
-#     branches:
-#       - aws-infrastructure-12
-#     paths:
-#       - '**/*.ts'
-#       - '**/*.tsx'
-#       - '**/*.js'
-#       - '**/*.jsx'
-#       - 'vite.config.*'
-#       - '.github/workflows/stg-deploy-frontend.yml'
-#   workflow_dispatch: {} # optional manual trigger
-
-# permissions:
-#   id-token: write
-#   contents: read
-
-# env:
-#   DEFAULT_AWS_REGION: ap-northeast-1
-#   FRONTEND_DIR: .           # root folder
-#   FRONTEND_BUILD_DIR: dist  # Vite build output
-
-# jobs:
-#   build-and-deploy:
-#     name: Build (tsc + vite) and Deploy to S3 (aws-infrastructure-1)
-#     runs-on: ubuntu-latest
-
-#     # ensure the job only runs for the exact branch
-#     if: ${{ github.ref_name == 'aws-infrastructure-1' }}
-
-#     env:
-#       BRANCH_NAME: ${{ github.ref_name }}
-#       ENV_NAME: ${{ github.ref_name == 'aws-infrastructure-1' && 'stg' || 'skip' }}
-#       S3_BUCKET: ${{ secrets.STG_S3_BUCKET }}
-#       AWS_REGION: ${{ secrets.STG_AWS_REGION }}
-#       CLOUDFRONT_DISTRIBUTION_ID: ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID || '' }}
-#       VITE_PORT: ${{ secrets.VITE_PORT }}
-#       VITE_MAPBOX_TOKEN: ${{ secrets.VITE_MAPBOX_TOKEN }}
-#       VITE_BACKEND_URL: ${{ secrets.VITE_BACKEND_URL }}
-#       VITE_EP_SOCKET_PORT: ${{ secrets.VITE_EP_SOCKET_PORT }}
-
-#     defaults:
-#       run:
-#         shell: bash -l {0}
-
-#     steps:
-#       - name: Checkout repo
-#         uses: actions/checkout@v4
-#         with:
-#           fetch-depth: 0
-
-#       - name: Use Node.js 20
-#         uses: actions/setup-node@v4
-#         with:
-#           node-version: '20'
-
-#       - name: Show CI info
-#         run: |
-#           echo "Branch: $BRANCH_NAME"
-#           echo "Environment: $ENV_NAME"
-#           echo "S3 bucket: $S3_BUCKET"
-#           echo "AWS region: $AWS_REGION"
-
-#       - name: Install dependencies
-#         working-directory: ${{ env.FRONTEND_DIR }}
-#         run: |
-#           npm i
-
-#       - name: Build (tsc + vite)
-#         working-directory: ${{ env.FRONTEND_DIR }}
-#         run: |
-#           set -euo pipefail
-#           echo "Running build..."
-#           npm run build
-#         env:
-#           VITE_PORT: ${{ secrets.VITE_PORT }}
-#           VITE_MAPBOX_TOKEN: ${{ secrets.VITE_MAPBOX_TOKEN }}
-#           VITE_BACKEND_URL: ${{ secrets.VITE_BACKEND_URL }}
-#           VITE_EP_SOCKET_PORT: ${{ secrets.VITE_EP_SOCKET_PORT }} 
-
-#       - name: Debug list build output
-#         run: |
-#           echo "Listing ${{ env.FRONTEND_BUILD_DIR }}:"
-#           ls -la "${{ env.FRONTEND_BUILD_DIR }}" || echo "No build output found"
-
-#       - name: Upload build artifact (optional)
-#         if: always()
-#         uses: actions/upload-artifact@v4
-#         with:
-#           name: frontend-dist-${{ env.ENV_NAME }}-${{ github.run_id }}
-#           path: ${{ env.FRONTEND_BUILD_DIR }}
-
-#       - name: Configure AWS credentials
-#         uses: aws-actions/configure-aws-credentials@v2
-#         with:
-#           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-#           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-#           aws-region: ${{ env.AWS_REGION }}
-
-#       - name: Sync dist to S3
-#         working-directory: ${{ env.FRONTEND_DIR }}
-#         run: |
-#           set -euo pipefail
-#           # safety checks
-#           if [[ "${ENV_NAME}" != "stg" ]]; then
-#             echo "ENV_NAME is not 'stg' (value: ${ENV_NAME}) — aborting deploy"
-#             exit 1
-#           fi
-#           if [[ -z "$S3_BUCKET" ]]; then
-#             echo "S3_BUCKET is empty — aborting deploy"
-#             exit 1
-#           fi
-#           echo "Syncing ${{ env.FRONTEND_BUILD_DIR }} -> s3://$S3_BUCKET/"
-#           aws s3 sync "${{ env.FRONTEND_BUILD_DIR }}" "s3://$S3_BUCKET/" --delete --acl private
-
-#       - name: Invalidate CloudFront cache
-#         if: env.ENV_NAME == 'stg' && env.CLOUDFRONT_DISTRIBUTION_ID != ''
-#         run: |
-#           echo "Invalidating CloudFront distribution $CLOUDFRONT_DISTRIBUTION_ID..."
-#           aws cloudfront create-invalidation \
-#             --distribution-id "$CLOUDFRONT_DISTRIBUTION_ID" \
-#             --paths "/*"
-    
-
-#       - name: Final status
-#         run: |
-#           echo "Frontend deployed to s3://$S3_BUCKET on $ENV_NAME"
-
-
-
-
 name: Full CI/CD -> Frontend + Backend (Staging)
 
 on:
   push:
     branches:
-      - aws-infrastructure
+      - aws-infrastructuresss
     paths:
       - 'server/**'      # backend
       - '**/*.ts'         # frontend
@@ -279,7 +144,7 @@ jobs:
         env:
           TARGET_USER: ${{ secrets.STG_EC2_USER || 'ec2-user' }}
           TARGET_HOST: ${{ secrets.STG_EC2_PUBLIC_IP }}
-          PORT: 4000   # explicitly set if it's masked as ***
+          PORT: 4000
         run: |
           ssh -o StrictHostKeyChecking=no $TARGET_USER@$TARGET_HOST <<'EOF'
             cd /var/www/stg || { echo "Directory /var/www/stg does not exist"; exit 1; }
@@ -287,25 +152,20 @@ jobs:
             echo "Installing dependencies..."
             npm install --no-audit --no-fund --prefer-offline
 
-            echo "Killing any process on port $PORT..."
-            if command -v lsof >/dev/null 2>&1; then
-              PID=$(lsof -t -i:${PORT} || true)
-              if [ -n "$PID" ]; then
-                echo "Killing process $PID on port ${PORT}..."
-                kill -9 $PID || true
-              fi
+            echo "Restarting PM2 process 'stg-enp'..."
+            if pm2 restart stg-enp --update-env --time; then
+              echo "PM2 restart successful."
             else
-              echo "lsof not available, skipping port kill"
+              echo "Restart failed — starting 'stg-enp' fresh..."
+              pm2 start index.js --name stg-enp --update-env --time
             fi
 
-            echo "Reloading PM2 process safely..."
-            pm2 delete stg-enp 2>/dev/null || true
-            pm2 start index.js --name stg-enp --update-env --time
             pm2 save
 
-            echo "Current PM2 status:"
+            echo "Current PM2 status for stg-enp:"
             pm2 status stg-enp
           EOF
+
 
       - name: Backend Deployed Successfully
         run: |
