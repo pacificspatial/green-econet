@@ -32,12 +32,12 @@ export const initializeMap = (options: MapInitOptions): maplibregl.Map => {
   const isMapboxStyle =
     isString && (basemap as string).startsWith("mapbox://styles/");
 
-  const isHttpStyle =
+  const isHttpStyleJson =
     isString &&
-    ((basemap as string).startsWith("http://") ||
-      (basemap as string).startsWith("https://"));
+    ((basemap as string).endsWith(".json") ||
+      (basemap as string).includes("style.json"));
 
-  if (isHttpStyle && !isMapboxStyle) {
+  if (isHttpStyleJson) {
     // Direct style JSON URL (your own MapLibre style, etc.)
     mapConfig.style = basemap as string;
   } else {
