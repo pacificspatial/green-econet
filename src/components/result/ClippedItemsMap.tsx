@@ -16,31 +16,7 @@ import Loader from "../common/Loader";
 import type { AlertState } from "@/types/AlertState";
 import { fitMapToFeatures } from "@/utils/map/fitMapToFeature";
 import type { AlertColor } from "@mui/material";
-interface PolygonFeatureProperties {
-  id: string;
-  name?: string;
-  [key: string]: any;
-}
-
-interface PolygonFeature {
-  type: 'Feature';
-  geometry: Geometry;
-  properties: PolygonFeatureProperties;
-}
-
-interface PolygonGeoJSON {
-  type: 'FeatureCollection';
-  features: PolygonFeature[];
-}
-
-interface AddLayerOptions {
-  type: string;
-  paint: Record<string, any>;
-}
-interface ClippedItemsMapProp {
-  center: [number, number];
-  zoom: number;
-}
+import type { ClippedItemsMapProp, PolygonFeatureProperties, PolygonGeoJSON, AddLayerOptions } from "@/types/Map"
 
 export const ClippedItemsMap: React.FC<ClippedItemsMapProp> = ({ center, zoom }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -372,7 +348,7 @@ export const ClippedItemsMap: React.FC<ClippedItemsMapProp> = ({ center, zoom })
         mapRef.current = null;
       }
     };
-  }, [center, zoom, basemap]);
+  }, [basemap]);
 
   /**
    * Load project data when projectId changes

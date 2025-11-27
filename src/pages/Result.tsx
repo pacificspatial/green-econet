@@ -32,6 +32,31 @@ const PanelGrid = styled(Grid)({
   transition: "flex 0.35s ease",
 });
 
+const CollapseButtonWrapper = styled(Box)(() => ({
+  position: "absolute",
+  top: "50%",
+  transform: "translateY(-50%)",
+  zIndex: 50,
+  transition: "right 0.35s ease",
+}));
+
+const CollapseButton = styled(IconButton)(({ theme }) => ({
+  backgroundColor: theme.palette.background.paper,
+  border: "1px solid",
+  borderColor: theme.palette.divider,
+  borderRadius: "4px 0 0 4px",
+  padding: "20px 1px",
+  boxShadow: "-2px 0 8px rgba(0, 0, 0, 0.1)",
+  transition: "all 0.2s ease",
+  "&:hover": {
+    backgroundColor: theme.palette.background.paper,
+    boxShadow: "-3px 0 12px rgba(0, 0, 0, 0.15)",
+  },
+  "&:active": {
+    transform: "scale(0.95)",
+  },
+}));
+
 export const Result = () => {
   const center: [number, number] = [138.2529, 36.2048];
   const zoom = 5.5;
@@ -122,31 +147,24 @@ export const Result = () => {
         </PanelGrid>
 
         {/* COLLAPSE BUTTON */}
-        <Box
+        <CollapseButtonWrapper
           sx={{
-            position: "absolute",
             right: panelOpen ? "25%" : "0px",
-            top: "50%",
-            transform: "translateY(-50%)",
-            zIndex: 50,
-            transition: "right 0.35s ease",
           }}
         >
-          <IconButton
+          <CollapseButton
             onClick={() => setPanelOpen((prev) => !prev)}
             sx={{
-              backgroundColor: theme.palette.background.paper,
-              border: "1px solid #ccc",
-              borderRadius: 0,
-              borderRight: panelOpen ? "none" : "1px solid #ccc",
-              borderLeft: panelOpen ? "1px solid #ccc" : "none",
-              "&:hover": { backgroundColor: "#f5f5f5" },
-              padding: "10px 0px",
+              borderRight: panelOpen ? "none" : `1px solid ${theme.palette.divider}`,
             }}
           >
-            {panelOpen ? <ChevronRightIcon /> : <ChevronLeftIcon />}
-          </IconButton>
-        </Box>
+            {panelOpen ? (
+              <ChevronRightIcon sx={{ fontSize: 24 }} />
+            ) : (
+              <ChevronLeftIcon sx={{ fontSize: 24 }} />
+            )}
+          </CollapseButton>
+        </CollapseButtonWrapper>
       </Container>
     </Box>
   );
