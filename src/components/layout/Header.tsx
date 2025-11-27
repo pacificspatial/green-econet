@@ -162,7 +162,7 @@ const Header = () => {
               cursor: "pointer",
             }}
           >
-            Eco-Net
+            {t('app.title')}
           </Typography>
         </Box>
         <RightContainer>
