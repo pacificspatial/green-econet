@@ -114,7 +114,6 @@ const AoiStatistics = ({ showResultMetrics = false }: AoiStatisticsProps) => {
             const perimeter = polygon.perimeter;
 
             const rawName = polygon.geom?.properties?.name || "";
-            console.log(polygon);
 
             const [label, number] = rawName.split(" ");
             const translatedLabel = t(`app.${label?.toLowerCase()}`);
