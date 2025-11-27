@@ -61,7 +61,7 @@ const AoiStatistics = () => {
         textAlign="center"
         gutterBottom
       >
-        {t("app.shapeStatistics")}
+        {t("app.statsTitle")}
       </StyledTypography>
 
       {/* Scrollable shape list */}

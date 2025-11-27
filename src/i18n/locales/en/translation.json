@@ -59,7 +59,7 @@
     "invalidPolygonMessage": "The drawn polygon is invalid (self-intersecting). Please redraw a valid polygon.",
     "area": "Area",
     "perimeter": "Perimeter",
-    "shapeStatistics": "Stats",
+    "statsTitle": "New Land Greening Record",
     "total": "Total",
     "aoiPolygonsLimitMessage": "Only {{minCount}} - {{maxCount}} shapes are allowed",
     "shape": "Shape",
