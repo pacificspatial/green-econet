@@ -60,8 +60,8 @@ const Map: React.FC<MapProps> = ({
   highResolution = false,
   collapsed = false,
   sx = {},
-  zoom = 12,
-  center = [139.652424, 35.652423],
+  zoom = 10,
+  center = [139.7545870646046, 35.68260566814629],
 }) => {
   const [loading, setLoading] = useState(false);
   const [loadingText, setLoadingText] = useState("");
@@ -210,8 +210,8 @@ const Map: React.FC<MapProps> = ({
     mapRef.current.once("style.load", () => {
       if (mapRef.current) {
         mapRef.current.flyTo({
-          center: [139.652424, 35.652423],
-          zoom: 12,
+          center,
+          zoom,
         });
         setMapReady(true);
       }
@@ -241,7 +241,7 @@ const Map: React.FC<MapProps> = ({
   };
 
   useEffect(() => {
-    if (projectId && mapRef.current && mapReady) {
+    if (mapRef.current && mapReady) {
       addLayers();
     }
   }, [projectId, basemap, mapReady]);
@@ -402,7 +402,7 @@ const Map: React.FC<MapProps> = ({
             ...sx,
           }}
         />
-        {projectId && mapReady && <Legend map={mapRef.current} />}
+        {mapReady && <Legend map={mapRef.current} />}
       </Box>
     </>
   );

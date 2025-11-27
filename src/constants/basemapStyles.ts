@@ -19,4 +19,9 @@ export const basemapStyles = [
     value: "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg",
     translationKey: "latestAerialPhoto", // Key for translation
   },
+  {
+    label: "plateau ",
+    value: "https://api.plateauview.mlit.go.jp/tiles/plateau-ortho-2023/{z}/{x}/{y}.png",
+    translationKey: "plateau", // Key for translation
+  },
 ];
