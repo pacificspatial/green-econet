@@ -155,4 +155,36 @@ CREATE INDEX IF NOT EXISTS idx_buffer125_merged_green_geom
 CREATE INDEX IF NOT EXISTS idx_buffer125_merged_green_project_id
     ON processing.buffer125_merged_green (project_id);
 
+
+-- clipped_green_joined: clipped_green joined with clipped_buffer125_green
+CREATE TABLE IF NOT EXISTS processing.clipped_green_joined (
+    id SERIAL PRIMARY KEY,
+    project_id UUID NOT NULL
+        REFERENCES public.projects(id) ON DELETE CASCADE,
+    uid UUID NOT NULL,               -- from buffer125_merged_green
+    geom GEOMETRY(MULTIPOLYGON, 4326) NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_clipped_green_joined_geom
+    ON processing.clipped_green_joined USING GIST (geom);
+
+CREATE INDEX IF NOT EXISTS idx_clipped_green_joined_project_id
+    ON processing.clipped_green_joined (project_id);
+
+
+-- merged_green_joined: merged_green joined with buffer125_merged_green
+CREATE TABLE IF NOT EXISTS processing.merged_green_joined (
+    id SERIAL PRIMARY KEY,
+    project_id UUID NOT NULL
+        REFERENCES public.projects(id) ON DELETE CASCADE,
+    uid UUID NOT NULL,               -- from buffer125_merged_green
+    geom GEOMETRY(MULTIPOLYGON, 4326) NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_merged_green_joined_geom
+    ON processing.merged_green_joined USING GIST (geom);
+
+CREATE INDEX IF NOT EXISTS idx_merged_green_joined_project_id
+    ON processing.merged_green_joined (project_id);
+
 ----------------------------------------
