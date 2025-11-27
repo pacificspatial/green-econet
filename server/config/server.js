@@ -3,8 +3,9 @@ import bodyParser from "body-parser";
 import cors from "cors";
 
 import projectApiRoutes from "../routes/projectRoutes.js";
+import layerApiRoutes from "../routes/layerRoutes.js";
+import s3Routes from "../routes/s3Routes.js";
 import resultApiRoutes from "../routes/resultRoutes.js";
-
 import dotenv from "dotenv";
 dotenv.config();
 
@@ -33,6 +34,8 @@ app.get("/ping", (req, res) => {
 app.use(authorizer);
 
 app.use("/api/v1/projects", projectApiRoutes);
+app.use("/api/v1/map/layers", layerApiRoutes);
+app.use("/api/v1/s3", s3Routes);
 app.use("/api/v1/results", resultApiRoutes);
 
 app.use(errorHandler);
