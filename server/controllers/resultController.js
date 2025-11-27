@@ -29,7 +29,37 @@ const getClippedGreenResult = async (req, res, next) => {
   }
 };
 
+const getMergedBuffer125GreenResult = async (req, res, next) => {
+  const { projectId } = req.params;
+
+  try {
+    const result = await resultServices.getMergedBuffer125GreenResult(
+      projectId
+    );
+    success(res, "Merged Buffer125 Green Result fetched successfully", result);
+  } catch (err) {
+    console.log("Error in getMergedBuffer125GreenResult:", err);
+    next(err);
+  }
+};
+
+const getMergedGreenResult = async (req, res, next) => {
+  const { projectId } = req.params;
+
+  try {
+    const result = await resultServices.getMergedGreenResult(
+      projectId
+    );
+    success(res, "Merged Green Result fetched successfully", result);
+  } catch (err) {
+    console.log("Error in getMergedGreenResult:", err);
+    next(err);
+  }
+};
+
 export default {
   getClippedBuffer125GreenResult,
-  getClippedGreenResult
+  getClippedGreenResult,
+  getMergedBuffer125GreenResult,
+  getMergedGreenResult
 };
