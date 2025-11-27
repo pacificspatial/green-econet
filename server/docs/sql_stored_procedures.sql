@@ -119,75 +119,74 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION processing.buffer125_merged(p_project_id UUID)
 RETURNS void AS $$
 DECLARE
-    dissolved geometry;
+    dissolved_geom geometry;
 BEGIN
+    -- 1. Clear previous buffer results
     DELETE FROM processing.buffer125_merged_green
     WHERE project_id = p_project_id;
 
-    -- Union all merged geometries
-    SELECT ST_Union(geom) INTO dissolved
+    -- 2. Buffer (125m) and dissolve using ST_UnaryUnion
+    SELECT
+        ST_Transform(
+            ST_UnaryUnion(
+                ST_Buffer(
+                    ST_Transform(geom, 3857),  -- convert to meters
+                    125                       -- 125m buffer
+                )
+            ),
+            4326                              -- return to WGS84
+        )
+    INTO dissolved_geom
     FROM processing.merged_green
     WHERE project_id = p_project_id;
 
-    -- Buffer 125m & convert back to 4326
+    -- If no geometry was found, exit
+    IF dissolved_geom IS NULL THEN
+        RETURN;
+    END IF;
+
+    -- 3. Dump dissolved multipolygon and insert each part separately
     INSERT INTO processing.buffer125_merged_green (project_id, uid, geom, properties)
-    VALUES (
+    SELECT
         p_project_id,
-        gen_random_uuid()::text,
-        ST_Transform(
-          ST_Buffer(ST_Transform(dissolved, 3857), 125),
-        4326),
+        uuid_generate_v4(),
+        (geom_dump).geom,
         '{}'::jsonb
-    );
+    FROM (
+        SELECT (ST_Dump(dissolved_geom)) AS geom_dump
+    ) AS dumped;
+
 END;
 $$ LANGUAGE plpgsql;
 
 ------------------------------------------------------------------------------------------------
 
-CREATE OR REPLACE FUNCTION processing.assign_groups(p_project_id UUID)
+CREATE OR REPLACE FUNCTION processing.assign_uids(p_project_id UUID)
 RETURNS void AS $$
 BEGIN
-    DELETE FROM processing.green_group_assignment
-    WHERE project_id = p_project_id;
-
-    INSERT INTO processing.green_group_assignment
-        (project_id, target_table, target_id, uid, intersects, area_ratio, geom)
-    SELECT
-        p_project_id,
-        'clipped_green',
-        cg.id,
-        buf.uid,
-        TRUE,
-        ST_Area(ST_Intersection(cg.geom, buf.geom)) / ST_Area(cg.geom),
-        cg.geom
-    FROM processing.clipped_green cg
-    CROSS JOIN processing.buffer125_merged_green buf
+    ---------------------------------------------------------
+    -- 1) Assign UID to clipped_green from clipped_buffer125_green
+    ---------------------------------------------------------
+    UPDATE processing.clipped_green cg
+    SET uid = buf.uid
+    FROM processing.clipped_buffer125_green buf
     WHERE cg.project_id = p_project_id
       AND buf.project_id = p_project_id
+      AND cg.uid IS NULL
       AND ST_Intersects(cg.geom, buf.geom);
+
+    ---------------------------------------------------------
+    -- 2) Assign UID to merged_green from buffer125_merged_green
+    ---------------------------------------------------------
+    UPDATE processing.merged_green mg
+    SET uid = buf.uid
+    FROM processing.buffer125_merged_green buf
+    WHERE mg.project_id = p_project_id
+      AND buf.project_id = p_project_id
+      AND mg.uid IS NULL
+      AND ST_Intersects(mg.geom, buf.geom);
+
 END;
 $$ LANGUAGE plpgsql;
-
 
 ------------------------------------------------------------------------------------------------
-
-CREATE OR REPLACE FUNCTION processing.calculate_indices(p_project_id UUID)
-RETURNS void AS $$
-BEGIN
-    DELETE FROM processing.indices
-    WHERE project_id = p_project_id;
-
-    INSERT INTO processing.indices (project_id, uid, index_name, index_value)
-    SELECT
-        p_project_id,
-        uid,
-        'sample_index',
-        COUNT(*)
-    FROM processing.green_group_assignment
-    WHERE project_id = p_project_id
-    GROUP BY uid;
-END;
-$$ LANGUAGE plpgsql;
-
---------------------------------------------------------------------------------------------
-

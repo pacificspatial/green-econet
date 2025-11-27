@@ -23,10 +23,9 @@ const runPipeline = async ({ projectId, io }) => {
   const steps = [
     { name: "AOI Service", fn: aoiService },
     { name: "Clip Service", fn: clipService },
-    // { name: "Merge Service", fn: mergeService },
-    // { name: "Buffer Service", fn: bufferService },
-    // { name: "Group Service", fn: groupService },
-    // { name: "Indices Service", fn: indicesService },
+    { name: "Merge Service", fn: mergeService },
+    { name: "Buffer Service", fn: bufferService },
+    { name: "Group Service", fn: groupService },
     { name: "Export Service", fn: exportsServices },
   ];
   let status = "success";
@@ -152,18 +151,9 @@ const bufferService = async (projectId) => {
 
 const groupService = async (projectId) => {
   try {
-    await db.query("SELECT processing.assign_groups($1)", [projectId]);
+    await db.query("SELECT processing.assign_uids($1)", [projectId]);
   } catch (err) {
     throw formatDbError(err, "Group Service");
-  }
-};
-
-const indicesService = async (projectId) => {
-  try {
-    // Future logic here
-    return true;
-  } catch (err) {
-    throw formatDbError(err, "Indices Service");
   }
 };
 

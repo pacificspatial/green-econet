@@ -2,15 +2,14 @@ import { DataTypes } from "sequelize";
 import { sequelize } from "../../config/dbConfig.js";
 
 
-export const ClippedGreen = sequelize.define(
-  "clipped_green",
+export const MergedBuffer125Green = sequelize.define(
+  "buffer125_merged_green",
   {
     id: {
       type: DataTypes.INTEGER,
       autoIncrement: true,
       primaryKey: true,
     },
-
     project_id: {
       type: DataTypes.UUID,
       allowNull: false,
@@ -23,29 +22,20 @@ export const ClippedGreen = sequelize.define(
       },
       onDelete: "CASCADE",
     },
-
-    src_id: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-    },
-
     uid: {
       type: DataTypes.UUID,
       allowNull: true,
     },
-
     geom: {
       type: DataTypes.GEOMETRY("MULTIPOLYGON", 4326),
       allowNull: false,
     },
-
     properties: {
       type: DataTypes.JSONB,
       allowNull: true,
     }
-  },
-  {
-    tableName: "clipped_green",
+  }, {
+    tableName: "buffer125_merged_green",
     schema: "processing",
     timestamps: false,
   }

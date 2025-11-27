@@ -1,7 +1,21 @@
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import {
+  S3Client,
+  GetObjectCommand,
+  PutObjectCommand,
+} from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
-const s3 = new S3Client({
-  region: process.env.AWS_REGION,
+const tileBucketName = process.env.TILES_BUCKET_NAME;
+const downloadBucketName = process.env.DOWNLOAD_BUCKET_NAME;
+const region = process.env.AWS_REGION || "ap-northeast-1";
+
+const bucketMap = {
+  tile: tileBucketName,
+  download: downloadBucketName,
+};
+
+const s3Client = new S3Client({
+  region,
   credentials: {
     accessKeyId: process.env.AWS_ACCESS_KEY_ID,
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
@@ -14,10 +28,8 @@ export async function uploadToExportBucket(
   mimeType,
   fileType = "pdf"
 ) {
-  const bucketName = process.env.DOWNLOAD_BUCKET_NAME;
-
   const cmd = new PutObjectCommand({
-    Bucket: bucketName,
+    Bucket: downloadBucketName,
     Key: `${fileType}/${fileName}`,
     Body: fileBuffer,
     ContentType: mimeType,
@@ -29,3 +41,28 @@ export async function uploadToExportBucket(
     key: `${fileType}/${fileName}`,
   };
 }
+
+const getPresignedUrlForFile = async (
+  fileName,
+  expiresIn = 3600,
+  bucketName = "tile"
+) => {
+  try {
+    const getObjectCommand = new GetObjectCommand({
+      Bucket: bucketMap[bucketName],
+      Key: fileName,
+    });
+    const url = await getSignedUrl(s3Client, getObjectCommand, { expiresIn });
+    return url;
+  } catch (error) {
+    console.error(
+      `Error generating presigned URL for file "${fileName}":`,
+      error
+    );
+    throw error;
+  }
+};
+
+export default {
+  getPresignedUrlForFile,
+};

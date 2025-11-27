@@ -33,7 +33,19 @@ export const Projects = sequelize.define(
     processed: {
       type: DataTypes.BOOLEAN,
       defaultValue: false
-    }
+    },
+    indexa: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    indexb: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    indexba: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
   }, {
     tableName: "projects",
     timestamps: true,
