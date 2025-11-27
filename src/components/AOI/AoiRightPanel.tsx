@@ -92,7 +92,7 @@ const AoiRightPanel = () => {
   const [pipelineStatus, setPipelineStatus] =
     useState<PipelineStatus>("idle");
   const [stages, setStages] = useState<LocalStage[]>([]);
-  const [summary, setSummary] = useState<PipelineSummary | null>(null);
+  // const [summary, setSummary] = useState<PipelineSummary | null>(null);
   const [currentPipelineId, setCurrentPipelineId] =
     useState<string | null>(null);
 
@@ -100,7 +100,7 @@ const AoiRightPanel = () => {
   const isSuccess = pipelineStatus === "success";
   const isFailed = pipelineStatus === "failed" || pipelineStatus === "partial_failure";
 
-  console.log(summary)
+  // console.log(summary)
 
   const totalSteps = useMemo(() => {
     if (stages.length > 0) {
@@ -118,16 +118,13 @@ const AoiRightPanel = () => {
   // 🔌 Socket listeners for AOI events for this project
   useEffect(() => {
     if (!socket || !projectId) return;
-
-    console.log("[AOI RIGHT] using socket:", socket.id, "for project:", projectId);
-
     const handleStarted = (payload: any) => {
-      console.log("[AOI RIGHT] aoi:pipeline_started:", payload);
+      // console.log("[AOI RIGHT] aoi:pipeline_started:", payload);
       if (payload.projectId !== projectId) return;
 
       setCurrentPipelineId(payload.pipelineId);
       setPipelineStatus("running");
-      setSummary(null);
+      // setSummary(null);
 
       const steps = payload.totalSteps ?? 6;
       const initialStages: LocalStage[] = Array.from(
@@ -144,7 +141,7 @@ const AoiRightPanel = () => {
     };
 
     const handleStage = (payload: any) => {
-      console.log("[AOI RIGHT] aoi:pipeline_stage:", payload);
+      // console.log("[AOI RIGHT] aoi:pipeline_stage:", payload);
       if (payload.projectId !== projectId) return;
       if (currentPipelineId && payload.pipelineId !== currentPipelineId) return;
 
@@ -182,18 +179,18 @@ const AoiRightPanel = () => {
     };
 
     const handleCompleted = (payload: any) => {
-      console.log("[AOI RIGHT] aoi:pipeline_completed:", payload);
+      // console.log("[AOI RIGHT] aoi:pipeline_completed:", payload);
       if (payload.projectId !== projectId) return;
       if (currentPipelineId && payload.pipelineId !== currentPipelineId) return;
 
       setPipelineStatus(payload.status as PipelineStatus);
-      if (payload.summary) {
-        setSummary({
-          totalSteps: payload.summary.totalSteps,
-          succeeded: payload.summary.succeeded,
-          failed: payload.summary.failed,
-        });
-      }
+      // if (payload.summary) {
+      //   setSummary({
+      //     totalSteps: payload.summary.totalSteps,
+      //     succeeded: payload.summary.succeeded,
+      //     failed: payload.summary.failed,
+      //   });
+      // }
     };
 
     socket.on("aoi:pipeline_started", handleStarted);
@@ -221,18 +218,18 @@ const AoiRightPanel = () => {
     }
 
     if (pipelineStatus === "running") {
-      console.log("[AOI RIGHT] Ignoring click: pipeline already running");
+      // console.log("[AOI RIGHT] Ignoring click: pipeline already running");
       return;
     }
 
     try {
       setLoading(true);
-      console.log("[AOI RIGHT] Calling setProjectAoiMock with:", projectId);
+      // console.log("[AOI RIGHT] Calling setProjectAoiMock with:", projectId);
 
       // reset local pipeline state; actual stages arrive via socket
       setPipelineStatus("running");
       setStages([]);
-      setSummary(null);
+      // setSummary(null);
       setCurrentPipelineId(null);
 
       const response = await setProjectAoiMock(projectId);

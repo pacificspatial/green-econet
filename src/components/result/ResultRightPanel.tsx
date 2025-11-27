@@ -49,7 +49,7 @@ const ResultRightPanel = () => {
   };
 
   const handleDownloadSelect = (type: "pdf" | "xlsx") => {
-    console.log(`Downloading as ${type}`);
+    // console.log(`Downloading as ${type}`);
     // Add your download logic here based on the type
     handleClose();
   };
