@@ -86,7 +86,10 @@
     "indexValue": "インデックス値",
     "indexba": "インデックスB - A",
     "indexa": "インデックスA",
-    "indexb": "インデックスB"
-
+    "indexb": "インデックスB",
+    "setAoiSuccess": "AOI の処理が正常に完了しました！結果ページへ移動しています…",
+    "setAoiFailed": "AOI の処理に失敗しました。もう一度お試しください。",
+    "runningSetAoi": "AOI を処理しています… 数分かかる場合があります。",
+    "processed": "処理済み"
   }
 }

@@ -86,6 +86,10 @@
     "indexValue": "Index Value",
     "indexba": "Index B - A",
     "indexa": "Index A",
-    "indexb": "Index B"
+    "indexb": "Index B",
+    "setAoiSuccess": "AOI processing completed successfully! Redirecting to results...",
+    "setAoiFailed": "AOI processing failed. Please try again.",
+    "runningSetAoi": "Processing AOI... This may take a few minutes",
+    "processed": "Processed"
   }
 }
