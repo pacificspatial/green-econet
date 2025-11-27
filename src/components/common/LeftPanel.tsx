@@ -127,6 +127,23 @@ const StyledList = styled(List)(({ theme }) => ({
   },
 }));
 
+const StatusPill = ({ label, color }: { label: string; color: string }) => (
+  <Box
+    sx={{
+      px: 1,
+      py: 0.2,
+      fontSize: "0.7rem",
+      borderRadius: "12px",
+      backgroundColor: color,
+      color: "#fff",
+      ml: 1,
+      whiteSpace: "nowrap",
+    }}
+  >
+    {label}
+  </Box>
+);
+
 const LeftPanel: React.FC<LeftPanelProps> = ({
   collapsed,
   setCollapsed,
@@ -409,6 +426,7 @@ const LeftPanel: React.FC<LeftPanelProps> = ({
             const pipelineInfo = aoiPipelineByProject[project.id];
             const aoiStatus = pipelineInfo?.status;
             const showCompletionIcon = recentlyCompleted[project.id];
+            const isProcessed = project.processed === true && aoiStatus !== "running";
 
             // derive counts from stages if available
             const totalSteps =
@@ -443,42 +461,29 @@ const LeftPanel: React.FC<LeftPanelProps> = ({
                           {project.name}
                         </span>
 
-                        {/* AOI pipeline status for this project */}
+                        {/* AOI pipeline status */}
                         {aoiStatus === "running" && (
-                          <Box
-                            sx={{
-                              display: "flex",
-                              alignItems: "center",
-                              ml: 1,
-                            }}
-                          >
+                          <Box sx={{ display: "flex", alignItems: "center", ml: 1 }}>
                             <CircularProgress size={16} />
-                            <Typography
-                              variant="caption"
-                              sx={{ ml: 0.5, minWidth: 32 }}
-                            >
+                            <Typography variant="caption" sx={{ ml: 0.5, minWidth: 32 }}>
                               {completedSteps}/{totalSteps}
                             </Typography>
                           </Box>
                         )}
 
-                        {showCompletionIcon && aoiStatus === "success" && (
-                          <CheckCircleIcon
-                            fontSize="small"
-                            color="success"
-                            sx={{ ml: 1 }}
-                          />
+                        {/* Processed Pill */}
+                        {isProcessed && (
+                          <StatusPill label={t("app.processed")} color="#4a9b4cff" />
                         )}
 
-                        {showCompletionIcon &&
-                          (aoiStatus === "failed" ||
-                            aoiStatus === "partial_failure") && (
-                            <ErrorIcon
-                              fontSize="small"
-                              color="error"
-                              sx={{ ml: 1 }}
-                            />
-                          )}
+                        {showCompletionIcon && aoiStatus === "success" && (
+                          <CheckCircleIcon fontSize="small" color="success" sx={{ ml: 1 }} />
+                        )}
+
+                        {(showCompletionIcon &&
+                          (aoiStatus === "failed" || aoiStatus === "partial_failure")) && (
+                          <ErrorIcon fontSize="small" color="error" sx={{ ml: 1 }} />
+                        )}
                       </Box>
                     }
                     sx={{
