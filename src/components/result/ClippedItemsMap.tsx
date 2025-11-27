@@ -10,16 +10,33 @@ import type { ClippedBuffer125Green } from "@/types/ClippedData";
 import { addLayer, removeLayer } from "@/utils/map/addLayer";
 import { CLIPPED_BUFFER125_LAYER_CONFIG, CLIPPED_GREEN_LAYER_CONFIG, PROJECT_LAYER_CONFIG, PROJECT_POLYGONS_LAYER_CONFIG } from "@/constants/layerConfig";
 import { useTranslation } from "react-i18next";
-import { useAppDispatch, useAppSelector } from "@/hooks/reduxHooks";
+import { useAppSelector } from "@/hooks/reduxHooks";
 import AlertBox from "../utils/AlertBox";
 import Loader from "../common/Loader";
 import type { AlertState } from "@/types/AlertState";
 import { fitMapToFeatures } from "@/utils/map/fitMapToFeature";
-import { getPolygonsByProject } from "@/api/project";
-import type { ProjectPolygon } from "@/types/ProjectData";
-import { setAoiPolygons } from "@/redux/slices/aoiSlice";
 import type { AlertColor } from "@mui/material";
+interface PolygonFeatureProperties {
+  id: string;
+  name?: string;
+  [key: string]: any;
+}
 
+interface PolygonFeature {
+  type: 'Feature';
+  geometry: Geometry;
+  properties: PolygonFeatureProperties;
+}
+
+interface PolygonGeoJSON {
+  type: 'FeatureCollection';
+  features: PolygonFeature[];
+}
+
+interface AddLayerOptions {
+  type: string;
+  paint: Record<string, any>;
+}
 interface ClippedItemsMapProp {
   center: [number, number];
   zoom: number;
@@ -31,8 +48,8 @@ export const ClippedItemsMap: React.FC<ClippedItemsMapProp> = ({ center, zoom })
   const { basemap } = useBasemap();
   const { projectId } = useParams();
   const { t } = useTranslation();
-  const { selectedProject } = useAppSelector((state) => state.project)
-  const dispatch = useAppDispatch();
+  const { selectedProject } = useAppSelector((state) => state.project);
+  const { polygons: storedPolygons } = useAppSelector((state) => state.aoi);
   
   const [ loading, setLoading ] = useState<boolean>(false);
   const [loadingText, setLoadingText ] = useState<string>("");
@@ -50,90 +67,80 @@ export const ClippedItemsMap: React.FC<ClippedItemsMapProp> = ({ center, zoom })
   );
 
   /**
-   * Load and add project polygons as layers
+   * Load and add project polygons as layers from Redux store
    */
   const addProjectPolygonsLayer = useCallback(async () => {
     const map = mapRef.current;
     if (!map || !map.isStyleLoaded()) return;
 
     try {
-      // Fetch project polygons data
-      const response = await getPolygonsByProject(projectId as string);
-      if (response.success && response.data.polygons) {
-        const polygonData = response.data.polygons.map((polygon: ProjectPolygon, index: number) => {
-          return {
-            id: polygon.id,
-            geom: {
-              type: "Feature",
-              id: polygon.id,
-              geometry: polygon.geom,
-              properties: {
-                name: `Shape ${index + 1}`,
-                _id: polygon.id,
-              }
-            } as Feature,
-            area: polygon.area_m2,
-            perimeter: polygon.perimeter_m,
-          };
+      // Get polygons from Redux store
+      const polygonData = storedPolygons;
+
+      if (polygonData && polygonData.length > 0) {
+        // Add layer using the generic addLayer function
+        addLayer(
+          map as maplibregl.Map,
+          `layer-${PROJECT_POLYGONS_LAYER_CONFIG.id}`,
+          {
+            type: 'geojson',
+            data: {
+              type: 'FeatureCollection',
+              features: polygonData.map((d: {
+                id: string;
+                geom: Feature | Geometry;
+              }) => {
+                // Handle both Feature and Geometry types
+                const geometry: Geometry = 'geometry' in d.geom ? d.geom.geometry as Geometry : d.geom as Geometry;
+                const properties: PolygonFeatureProperties = 'properties' in d.geom ? d.geom.properties as PolygonFeatureProperties : { id: d.id };
+                
+                return {
+                  type: 'Feature',
+                  geometry: geometry,
+                  properties: properties
+                };
+              })
+            } as PolygonGeoJSON
+          },
+          {
+            type: PROJECT_POLYGONS_LAYER_CONFIG.type,
+            paint: PROJECT_POLYGONS_LAYER_CONFIG.paint
+          } as AddLayerOptions
+        );
+
+        // Wait for layer to be added
+        await new Promise<void>((resolve) => {
+          if (map.loaded() && map.getLayer(`layer-${PROJECT_POLYGONS_LAYER_CONFIG.id}`)) {
+            resolve();
+          } else {
+            map.once('idle', () => resolve());
+          }
         });
 
-        if (polygonData.length > 0) {
-          // Add layer using the generic addLayer function
-          addLayer(
-            map,
-            `layer-${PROJECT_POLYGONS_LAYER_CONFIG.id}`,
-            {
-              type: 'geojson',
-              data: {
-                type: 'FeatureCollection',
-                features: polygonData.map((d: { geom: { geometry: any; properties: any; }; id: any; }) => {
-                  // Handle both Feature and Geometry types
-                  const geometry = 'geometry' in d.geom ? d.geom.geometry : d.geom;
-                  const properties = 'properties' in d.geom ? d.geom.properties : { id: d.id };
-                  
-                  return {
-                    type: 'Feature',
-                    geometry: geometry,
-                    properties: properties
-                  };
-                })
-              }
-            },
-            {
-              type: PROJECT_POLYGONS_LAYER_CONFIG.type,
-              paint: PROJECT_POLYGONS_LAYER_CONFIG.paint
-            }
-          );
-          // Wait for layer to be added
-          await new Promise<void>((resolve) => {
-            if (map.loaded() && map.getLayer(`layer-${PROJECT_POLYGONS_LAYER_CONFIG.id}`)) {
-              resolve();
-            } else {
-              map.once('idle', () => resolve());
-            }
-          });
-
-          // Store features for Redux and fitting bounds
-          interface PolygonLayerItem {
-            geom: Geometry;
-            properties: {
-              id: string;
-              name: string;
-            };
-            area?: number;
-            perimeter?: number;
-          }
-
-          const features: Feature<Geometry>[] = polygonData.map((data: PolygonLayerItem) => ({
-            type: "Feature" as const,
-            geometry: data.geom,
-            properties: data.properties,
-          }));
-
-          dispatch(setAoiPolygons(polygonData));
-          
-          return features;
+        // Store features for fitting bounds
+        interface PolygonLayerItem {
+          geom: Feature | Geometry;
+          properties?: {
+            id: string;
+            name: string;
+          };
+          area?: number;
+          perimeter?: number;
         }
+
+        const features: Feature<Geometry>[] = polygonData.map((data: PolygonLayerItem) => {
+          // Handle both Feature and Geometry types
+          const geometry = 'geometry' in data.geom ? data.geom.geometry : data.geom;
+          const properties = 'properties' in data.geom ? data.geom.properties : data.properties;
+          
+          return {
+            type: "Feature" as const,
+            geometry: geometry as Geometry,
+            properties: properties || {},
+          };
+        });
+        
+        return features;
       }
       return null;
     } catch (error) {
@@ -141,8 +148,8 @@ export const ClippedItemsMap: React.FC<ClippedItemsMapProp> = ({ center, zoom })
       handleSetAlert(t("app.errorFetchingPolygons"), "error");
       return null;
     }
-  }, [projectId, dispatch, t, handleSetAlert]);
-
+  }, [storedPolygons, t, handleSetAlert]);
+  
   /**
    * Load and add clipped buffer 125 green layer to map
    */

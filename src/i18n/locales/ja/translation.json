@@ -83,6 +83,10 @@
     "loadingResult": "結果の読み込み",
     "download": "ダウンロード",
     "pdf": "PDF",
-    "xlsx": "XLSX"
+    "xlsx": "XLSX",
+    "indexba": "インデックスB - A",
+    "indexa": "インデックスA",
+    "indexb": "インデックスB"
+
   }
 }
