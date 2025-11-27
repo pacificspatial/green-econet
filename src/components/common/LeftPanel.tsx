@@ -313,8 +313,15 @@ const LeftPanel: React.FC<LeftPanelProps> = ({
     setCollapsed(!collapsed);
   }, [collapsed, setCollapsed]);
 
-  const handleListItemClick = (itemId: string) => {
-    navigate(`/project/${itemId}`);
+  //Navigate based on processed of selected project
+  const handleListItemClick = (projectId: string) => {
+    const isProcessed = selectedProject?.processed || false;
+
+    if (isProcessed) {
+      navigate(`/project/${projectId}/result`);
+    } else {
+      navigate(`/project/${projectId}`);
+    }
   };
 
   return (
@@ -419,7 +426,7 @@ const LeftPanel: React.FC<LeftPanelProps> = ({
                 key={project.id}
                 component="li"
                 sx={{ marginBottom: "5px" }}
-                onClick={() => handleListItemClick(project.id)}
+                onClick={() => handleListItemClick(project.id as string)}
               >
                 <Tooltip title={project.name} arrow>
                   <ListItemText
