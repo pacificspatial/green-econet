@@ -24,7 +24,9 @@ const runPipeline = async ({ projectId, io }) => {
     { name: "Clip Service", fn: clipService },
     { name: "Merge Service", fn: mergeService },
     { name: "Buffer Service", fn: bufferService },
-    { name: "Group Service", fn: groupService },
+    { name: "Join Clip Service", fn: joinClipService },
+    { name: "Join Merge Service", fn: joinMergeService },
+    { name: "Compute Indices Service", fn: computeIndicesService },
   ];
   let status = "success";
   const totalSteps = steps.length;
@@ -90,7 +92,7 @@ const runPipeline = async ({ projectId, io }) => {
             : "partial_failure";
 
         console.log(
-          `[MOCK AOI] Pipeline completed for project ${projectId}. Status=${overallStatus}, success=${succeeded}, failed=${failed}`
+          `Pipeline completed for project ${projectId}. Status=${overallStatus}, success=${succeeded}, failed=${failed}`
         );
 
         emit("aoi:pipeline_completed", {
@@ -147,11 +149,27 @@ const bufferService = async (projectId) => {
   }
 };
 
-const groupService = async (projectId) => {
+const joinClipService = async (projectId) => {
   try {
-    await db.query("SELECT processing.assign_uids($1)", [projectId]);
+    await db.query("SELECT processing.join_clip_green($1)", [projectId]);
   } catch (err) {
-    throw formatDbError(err, "Group Service");
+    throw formatDbError(err, "Join Clip Service");
+  }
+};
+
+const joinMergeService = async (projectId) => {
+  try {
+    await db.query("SELECT processing.join_merged_green($1)", [projectId]);
+  } catch (err) {
+    throw formatDbError(err, "Join Merge Service");
+  }
+};
+
+const computeIndicesService = async (projectId) => {
+  try {
+    await db.query("SELECT processing.compute_indexes($1)", [projectId]);
+  } catch (err) {
+    throw formatDbError(err, "Compute Indices Service");
   }
 };
 
