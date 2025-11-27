@@ -2,7 +2,7 @@ import { DataTypes } from "sequelize";
 import { sequelize } from "../../config/dbConfig.js";
 
 export const MergedGreen = sequelize.define(
-  "buffer125_merged_green",
+  "merged_green",
   {
     id: {
       type: DataTypes.INTEGER,
@@ -42,7 +42,7 @@ export const MergedGreen = sequelize.define(
       allowNull: true
     },
   }, {
-    tableName: "buffer125_merged_green",
+    tableName: "merged_green",
     schema: "processing",
     timestamps: false,
   }
