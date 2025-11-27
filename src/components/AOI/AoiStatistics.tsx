@@ -271,13 +271,13 @@ const AoiStatistics = ({ showResultMetrics = false }: AoiStatisticsProps) => {
 
               <StatItem>
                 <Typography
-                  sx={{ fontSize: "14px", color: theme.palette.text.primary }}
+                  sx={{ fontSize: "16px", color: theme.palette.text.primary }}
                 >
                   {t("app.indexb")}
                 </Typography>
                 <Typography
                   sx={{
-                    fontSize: "14px",
+                    fontSize: "16px",
                     fontWeight: 500,
                     color: theme.palette.text.primary,
                   }}

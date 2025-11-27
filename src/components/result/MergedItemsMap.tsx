@@ -16,33 +16,7 @@ import Loader from "../common/Loader";
 import type { AlertState } from "@/types/AlertState";
 import { fitMapToFeatures } from "@/utils/map/fitMapToFeature";
 import type { AlertColor } from "@mui/material";
-
-interface MergedItemsMapProp {
-  center: [number, number];
-  zoom: number;
-}
-
-interface PolygonFeatureProperties {
-  id: string;
-  name?: string;
-  [key: string]: any;
-}
-
-interface PolygonFeature {
-  type: 'Feature';
-  geometry: Geometry;
-  properties: PolygonFeatureProperties;
-}
-
-interface PolygonGeoJSON {
-  type: 'FeatureCollection';
-  features: PolygonFeature[];
-}
-
-interface AddLayerOptions {
-  type: string;
-  paint: Record<string, any>;
-}
+import type { MergedItemsMapProp, PolygonFeatureProperties, PolygonGeoJSON, AddLayerOptions } from "@/types/Map"
 
 export const MergedItemsMap: React.FC<MergedItemsMapProp> = ({ center, zoom }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -324,7 +298,7 @@ export const MergedItemsMap: React.FC<MergedItemsMapProp> = ({ center, zoom }) =
         mapRef.current = null;
       }
     };
-  }, [center, zoom, basemap]);
+  }, [basemap]);
 
   /**
    * Load project data when projectId changes
