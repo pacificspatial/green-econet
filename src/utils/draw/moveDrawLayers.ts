@@ -1,4 +1,4 @@
-export const moveDrawLayersToTop = (map: mapboxgl.Map) => {
+export const moveDrawLayersToTop = (map: maplibregl.Map) => {
   const layers = map.getStyle()?.layers;
 
   if (!layers) return;

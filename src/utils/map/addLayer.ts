@@ -1,6 +1,6 @@
 import maplibregl from "maplibre-gl";
 import { PMTiles, Protocol } from "pmtiles";
-import { getS3PreSignedUrl } from "@/api/s3PreSignedUrl";
+import { getS3PreSignedUrl } from "@/api/s3";
 import { layerVisibilityConfig } from "@/config/layers/initialLayerVisibility";
 import type { LayerConfig } from "@/types/Layers";
 
@@ -16,7 +16,7 @@ function ensurePmTilesProtocol() {
     pmtilesProtocol = new Protocol();
     try {
       // register "pmtiles://" scheme with MapLibre
-      (maplibregl as any).addProtocol(
+      maplibregl.addProtocol(
         "pmtiles",
         pmtilesProtocol.tile.bind(pmtilesProtocol)
       );

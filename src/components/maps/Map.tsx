@@ -7,7 +7,7 @@ import React, {
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 
-import MaplibreDraw from "maplibre-gl-draw";
+// import MaplibreDraw from "maplibre-gl-draw";
 import "maplibre-gl-draw/dist/mapbox-gl-draw.css";
 
 import { Box } from "@mui/material";

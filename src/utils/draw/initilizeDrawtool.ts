@@ -1,8 +1,9 @@
 // src/utils/draw/initilizeDrawtool.ts
+import type { Theme } from "@mui/system";
+import type { IControl } from "maplibre-gl";
 import type maplibregl from "maplibre-gl";
 import MaplibreDraw from "maplibre-gl-draw";
 import "maplibre-gl-draw/dist/mapbox-gl-draw.css";
-import type { Theme } from "@mui/material/styles";
 
 export type DrawInstance = MaplibreDraw;
 
@@ -12,7 +13,7 @@ export function initializeDrawTool(
   handleDrawCreate: (e: any) => void,
   handleDrawUpdate: (e: any) => void,
   handleDrawDelete: (e: any) => void,
-  _theme?: Theme
+  _theme: Theme
 ): DrawInstance {
   // Configure draw – you can tweak modes/controls here if needed
   const draw = new MaplibreDraw({
@@ -27,7 +28,7 @@ export function initializeDrawTool(
   });
 
   // Add control to the map
-  map.addControl(draw, "top-left");
+  map.addControl(draw as unknown as IControl, "top-left");
 
   // Wire events
   map.on("draw.create", handleDrawCreate);

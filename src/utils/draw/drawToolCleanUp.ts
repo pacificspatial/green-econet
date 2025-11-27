@@ -2,6 +2,7 @@
 import type React from "react";
 import type maplibregl from "maplibre-gl";
 import type MaplibreDraw from "maplibre-gl-draw";
+import type { IControl } from "maplibre-gl";
 
 interface CleanupParams {
   mapRef: React.RefObject<maplibregl.Map | null>;
@@ -20,6 +21,7 @@ export function cleanupDrawTool({
 }: CleanupParams): void {
   const map = mapRef.current;
   if (!map || !drawInstance) return;
+console.log(map);
 
   // Remove listeners
   map.off("draw.create", handleDrawCreate);
@@ -27,5 +29,5 @@ export function cleanupDrawTool({
   map.off("draw.delete", handleDrawDelete);
 
   // Remove control
-  map.removeControl(drawInstance);
+  map.removeControl(drawInstance as unknown as IControl);
 }
