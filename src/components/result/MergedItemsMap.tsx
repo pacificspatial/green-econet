@@ -1,21 +1,274 @@
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { initializeMap } from "@/utils/map/mapUtils";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { useBasemap } from "@/hooks/useBasemap";
+import { useParams } from "react-router-dom";
+import { getMergedBuffer125GreenResult, getMergedGreenResult } from "@/api/result";
+import type { Feature, Geometry } from 'geojson'
+import type { ClippedBuffer125Green } from "@/types/ClippedData";
+import { addLayer, removeLayer } from "@/utils/map/addLayer";
+import { MERGED_BUFFER125_LAYER_CONFIG, MERGED_GREEN_LAYER_CONFIG, PROJECT_LAYER_CONFIG, PROJECT_POLYGONS_LAYER_CONFIG } from "@/constants/layerConfig";
+import { useTranslation } from "react-i18next";
+import { useAppDispatch, useAppSelector } from "@/hooks/reduxHooks";
+import AlertBox from "../utils/AlertBox";
+import Loader from "../common/Loader";
+import type { AlertState } from "@/types/AlertState";
+import { fitMapToFeatures } from "@/utils/map/fitMapToFeature";
+import { getPolygonsByProject } from "@/api/project";
+import type { ProjectPolygon } from "@/types/ProjectData";
+import { setAoiPolygons } from "@/redux/slices/aoiSlice";
+import type { AlertColor } from "@mui/material";
 
 interface MergedItemsMapProp {
   center: [number, number];
   zoom: number;
 }
 
-export const MergedItemsMap: React.FC<MergedItemsMapProp> = ({ 
-  center, 
-  zoom,
-}) => {
+export const MergedItemsMap: React.FC<MergedItemsMapProp> = ({ center, zoom }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const { basemap } = useBasemap();
+  const { projectId } = useParams();
+  const { t } = useTranslation();
+  const { selectedProject } = useAppSelector((state) => state.project)
+  const dispatch = useAppDispatch();
   
+  const [ loading, setLoading ] = useState<boolean>(false);
+  const [loadingText, setLoadingText ] = useState<string>("");
+  const [alert, setAlert] = useState<AlertState>({
+    open: false,
+    message: "",
+    severity: "info",
+  });
+
+  const handleSetAlert = useCallback(
+    (message: string, severity: AlertColor) => {
+      setAlert({ open: true, message, severity });
+    },
+    []
+  );
+
+  // Get polygons from Redux store
+  const { polygons: storedPolygons } = useAppSelector((state) => state.aoi);
+
+  /**
+   * Load and add project polygons as layers
+   */
+  const addProjectPolygonsLayer = useCallback(async () => {
+    const map = mapRef.current;
+    if (!map || !map.isStyleLoaded()) return;
+
+    try {
+      let polygonData;
+
+      // Check if polygons are already in Redux store
+      if (storedPolygons && storedPolygons.length > 0) {
+        // Use polygons from Redux store
+        polygonData = storedPolygons;
+      } else {
+        // Fetch project polygons data from API
+        const response = await getPolygonsByProject(projectId as string);
+        if (response.success && response.data.polygons) {
+          polygonData = response.data.polygons.map((polygon: ProjectPolygon, index: number) => {
+            return {
+              id: polygon.id,
+              geom: {
+                type: "Feature",
+                id: polygon.id,
+                geometry: polygon.geom,
+                properties: {
+                  name: `Shape ${index + 1}`,
+                  _id: polygon.id,
+                }
+              } as Feature,
+              area: polygon.area_m2,
+              perimeter: polygon.perimeter_m,
+            };
+          });
+
+          // Store in Redux for future use
+          if (polygonData.length > 0) {
+            dispatch(setAoiPolygons(polygonData));
+          }
+        }
+      }
+
+      if (polygonData && polygonData.length > 0) {
+        // Add layer using the generic addLayer function
+        await addLayer(
+          map,
+          PROJECT_POLYGONS_LAYER_CONFIG,
+          polygonData
+        );
+
+        // Wait for layer to be added
+        await new Promise<void>((resolve) => {
+          if (map.loaded() && map.getLayer(`layer-${PROJECT_POLYGONS_LAYER_CONFIG.id}`)) {
+            resolve();
+          } else {
+            map.once('idle', () => resolve());
+          }
+        });
+
+        // Store features for fitting bounds
+        interface PolygonLayerItem {
+          geom: Feature | Geometry;
+          properties?: {
+            id: string;
+            name: string;
+          };
+          area?: number;
+          perimeter?: number;
+        }
+
+        const features: Feature<Geometry>[] = polygonData.map((data: PolygonLayerItem) => {
+          // Handle both Feature and Geometry types
+          const geometry = 'geometry' in data.geom ? data.geom.geometry : data.geom;
+          const properties = 'properties' in data.geom ? data.geom.properties : data.properties;
+          
+          return {
+            type: "Feature" as const,
+            geometry: geometry as Geometry,
+            properties: properties || {},
+          };
+        });
+        
+        return features;
+      }
+      return null;
+    } catch (error) {
+      console.error("Error adding project polygons layer", error);
+      handleSetAlert(t("app.errorFetchingPolygons"), "error");
+      return null;
+    }
+  }, [projectId, storedPolygons, dispatch, t, handleSetAlert]);
+
+  /**
+   * Load and add merged buffer 125 green layer to map
+   */
+  const getMergedLayers = useCallback(async () => {
+    const map = mapRef.current;
+    if (!map || !map.isStyleLoaded() || !projectId) return null;
+
+    setLoading(true);
+    setLoadingText(t("app.loadingResult") || "Loading results...");
+
+    try {
+      // Fetch both layers in parallel
+      const [buffer125Response, greenResponse] = await Promise.all([
+        getMergedBuffer125GreenResult(projectId as string),
+        getMergedGreenResult(projectId as string)
+      ]);      
+      
+      let allFeatures: Feature<Geometry>[] = [];
+
+      // Process merged-buffer-125-green layer
+      if (buffer125Response.success && buffer125Response.data) {
+        const records = Array.isArray(buffer125Response.data) 
+          ? buffer125Response.data 
+          : [buffer125Response.data];
+        
+        const layerData = (records as ClippedBuffer125Green[])
+          .filter((record) => record.geom)
+          .map((record) => ({
+            geom: record.geom!,
+            properties: {
+              id: record.id,
+              project_id: record.project_id,
+              src_id: record.src_id,
+              uid: record.uid,
+              ...record.properties,
+            },
+          }));
+
+        if (layerData.length > 0) {
+          // Store features for fitting map bounds
+          const features = layerData.map((data) => ({
+            type: "Feature" as const,
+            geometry: data.geom,
+            properties: data.properties,
+          }));
+          allFeatures = [...allFeatures, ...features];
+
+          // Add layer using new generic function
+          await addLayer(
+            map,
+            MERGED_BUFFER125_LAYER_CONFIG,
+            layerData
+          );
+          
+          // Wait for layer to be added
+          await new Promise<void>((resolve) => {
+            if (map.loaded() && map.getLayer(`layer-${MERGED_BUFFER125_LAYER_CONFIG.id}`)) {
+              resolve();
+            } else {
+              map.once('idle', () => resolve());
+            }
+          });
+        }
+      }
+
+      // Process merged-green layer
+      if (greenResponse.success && greenResponse.data) {
+        const records = Array.isArray(greenResponse.data) 
+          ? greenResponse.data 
+          : [greenResponse.data];      
+        
+        const layerData = (records as ClippedBuffer125Green[])
+          .filter((record) => record.geom)
+          .map((record) => ({
+            geom: record.geom!,
+            properties: {
+              id: record.id,
+              project_id: record.project_id,
+              src_id: record.src_id,
+              uid: record.uid,
+              ...record.properties,
+            },
+          }));
+
+        if (layerData.length > 0) {
+          // Store features for fitting map bounds
+          const features = layerData.map((data) => ({
+            type: "Feature" as const,
+            geometry: data.geom,
+            properties: data.properties,
+          }));
+          allFeatures = [...allFeatures, ...features];
+
+          // Add layer using new generic function
+          await addLayer(
+            map,
+            MERGED_GREEN_LAYER_CONFIG,
+            layerData
+          );
+
+          // Wait for layer to be added
+          await new Promise<void>((resolve) => {
+            if (map.loaded() && map.getLayer(`layer-${MERGED_GREEN_LAYER_CONFIG.id}`)) {
+              resolve();
+            } else {
+              map.once('idle', () => resolve());
+            }
+          });
+        }
+      }
+      
+      return allFeatures.length > 0 ? allFeatures : null;
+    } catch (error) {
+      console.error("Error in fetching merged layers", error);
+      setAlert({
+        open: true,
+        message: t("app.errorLoadingLayers") || "Error loading layers",
+        severity: "error",
+      });
+      return null;
+    } finally {
+      setLoading(false);
+      setLoadingText("");
+    }
+  }, [projectId, selectedProject, t]);
+
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
 
@@ -37,14 +290,96 @@ export const MergedItemsMap: React.FC<MergedItemsMapProp> = ({
     };
   }, [center, zoom, basemap]);
 
+  /**
+   * Load project data when projectId changes
+   * - Load project polygons layer
+   * - Load merged buffer layer (for processed projects)
+   */
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!projectId) return;
+
+    // Load all layers if map exists
+    if (map) {
+      const loadAllLayers = async () => {
+        // Ensure map is fully loaded before adding layers
+        const ensureMapReady = () => new Promise<void>((resolve) => {
+          if (map.isStyleLoaded() && map.loaded()) {
+            resolve();
+          } else {
+            map.once("idle", () => resolve());
+          }
+        });
+
+        await ensureMapReady();
+        
+        const allFeatures = [];
+        
+        // Load project polygons layer
+        const polygonFeatures = await addProjectPolygonsLayer();
+        if (polygonFeatures) {
+          allFeatures.push(...polygonFeatures);
+        }
+        
+        // Load merged layers
+        const mergedFeatures = await getMergedLayers();
+        if (mergedFeatures) {
+          allFeatures.push(...mergedFeatures);
+        }
+        
+        // Fit map to all features after they're added
+        if (allFeatures.length > 0 && map.loaded()) {
+          fitMapToFeatures(map, allFeatures);
+        }
+      };
+
+      loadAllLayers();
+    }
+
+    // Cleanup: remove all layers
+    return () => {
+      try {
+        if (map && map.getStyle()) {
+          // Remove project polygons layer
+          if (map.getLayer(`layer-${PROJECT_POLYGONS_LAYER_CONFIG.id}`)) {
+            removeLayer(map, `layer-${PROJECT_POLYGONS_LAYER_CONFIG.id}`, `source-${PROJECT_POLYGONS_LAYER_CONFIG.id}`);
+          }
+          // Remove other layers...
+          if (map.getLayer(`layer-${MERGED_BUFFER125_LAYER_CONFIG.id}`)) {
+            removeLayer(map, `layer-${MERGED_BUFFER125_LAYER_CONFIG.id}`, `source-${MERGED_BUFFER125_LAYER_CONFIG.id}`);
+          }
+          if (map.getLayer(`layer-${MERGED_GREEN_LAYER_CONFIG.id}`)) {
+            removeLayer(map, `layer-${MERGED_GREEN_LAYER_CONFIG.id}`, `source-${MERGED_GREEN_LAYER_CONFIG.id}`);
+          }
+          if (map.getLayer(`layer-${PROJECT_LAYER_CONFIG.id}`)) {
+            removeLayer(map, `layer-${PROJECT_LAYER_CONFIG.id}`, `source-${PROJECT_LAYER_CONFIG.id}`);
+          }
+        }
+      } catch (error) {
+        console.debug("Could not remove layers on cleanup:", error);
+      }
+    };
+  }, [projectId, basemap, addProjectPolygonsLayer, getMergedLayers]);
+
   return (
-    <div
-      ref={mapContainerRef}
-      style={{
-        width: "100%",
-        height: "100%",
-        position: "relative",
-      }}
-    />
+    <>
+      {loading && <Loader text={t(loadingText)} />}
+      {alert.open && (
+        <AlertBox
+          open={alert.open}
+          onClose={() => setAlert({ ...alert, open: false })}
+          message={alert.message}
+          severity={alert.severity}
+        />
+      )}
+      <div
+        ref={mapContainerRef}
+        style={{
+          width: "100%",
+          height: "100%",
+          position: "relative",
+        }}
+      />
+    </>
   );
 };
