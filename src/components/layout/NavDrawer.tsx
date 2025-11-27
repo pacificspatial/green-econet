@@ -184,12 +184,6 @@ const NavDrawer: React.FC<NavDrawerProps> = ({
             <ListItemText primary={t("app.dashboard")} />
           </CustomListItem>
         )} */}
-        <CustomListItem onClick={() => handleMenuItemClick("About Us")}>
-          <ListItemIcon>
-            <InfoIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText primary={t("app.aboutUs")} />
-        </CustomListItem>
         <Divider sx={{ my: 1 }} />
         <ListItem>
           <ListItemIcon>
