@@ -1,3 +1,4 @@
+import { Op } from "sequelize";
 import { ClippedBuffer125Green } from "../db/models/clippedBuffer125Green.js";
 import { ClippedGreen } from "../db/models/clippedGreen.js";
 import { MergedBuffer125Green } from "../db/models/mergedBuffer125Green.js";
@@ -29,9 +30,12 @@ const getMergedBuffer125GreenResult = async (projectId) => {
 
 const getMergedGreenResult = async (projectId) => {  
   const rows = await MergedGreen.findAll({
-    where: { project_id: projectId },
+    where: { 
+      project_id: projectId,
+      src_type: { [Op.ne]: "user_polygon" }  
+    },
   });
-  
+
   return rows; 
 };
 

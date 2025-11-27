@@ -19,13 +19,13 @@ import {
   MIN_AOI_POLYGON_COUNT,
 } from "@/constants/numberConstants";
 import { useParams } from "react-router-dom";
-import { setProjectAoiMock } from "@/api/project";
+import { getProject, setProjectAoiMock } from "@/api/project";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import ErrorIcon from "@mui/icons-material/Error";
 import { useSocket } from "@/context/SocketContext";
 import { useNavigate } from "react-router-dom";
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import { updateProjectById } from "@/redux/slices/projectSlice";
+import { setSelectedProject, updateProjectById } from "@/redux/slices/projectSlice";
 
 const StyledBox = styled(Box)(({ theme }) => ({
   backgroundColor:
@@ -195,22 +195,30 @@ const AoiRightPanel = () => {
       });
     };
 
-    const handleCompleted = (payload: any) => {
+    const handleCompleted = async (payload: any) => {
       console.log("[AOI RIGHT] aoi:pipeline_completed:", payload);
       if (payload.projectId !== projectId) return;
       if (currentPipelineId && payload.pipelineId !== currentPipelineId) return;
 
       setPipelineStatus(payload.status as PipelineStatus);
 
-        if (payload.status === "success") {
-          // UPDATE REDUX store so ProtectedRoute works!
-          dispatch(
-            updateProjectById({
-              ...selectedProject!,
-              processed: true,
-            })
-          );
+      if (payload.status === "success") {
+        try {
+          // Fetch updated project data from API
+          const response = await getProject(projectId);
+          if (response.success && response.data) {            
+            const updatedProject = response.data;
+            
+            // Update project in Redux store
+            dispatch(updateProjectById(updatedProject));
+            
+            // Update selectedProject in Redux store
+            dispatch(setSelectedProject(updatedProject));
+          }
+        } catch (error) {
+          console.error("[AOI RIGHT] Error fetching updated project:", error);
         }
+      }
 
       if (payload.summary) {
         setSummary({
@@ -220,7 +228,6 @@ const AoiRightPanel = () => {
         });
       }
     };
-
     socket.on("aoi:pipeline_started", handleStarted);
     socket.on("aoi:pipeline_stage", handleStage);
     socket.on("aoi:pipeline_completed", handleCompleted);

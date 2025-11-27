@@ -190,7 +190,7 @@ const LeftPanel: React.FC<LeftPanelProps> = ({
   useEffect(() => {
     if (!socket) return;
 
-    console.log("[LEFT PANEL] using socket:", socket.id);
+    // console.log("[LEFT PANEL] using socket:", socket.id);
 
     const handleStarted = (payload: any) => {
       console.log("[LEFT PANEL] aoi:pipeline_started:", payload);
