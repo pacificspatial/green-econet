@@ -1,7 +1,7 @@
 import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
-const bucketName = process.env.BUCKET_NAME;
+const tileBucketName = process.env.TILES_BUCKET_NAME;
 const region = process.env.AWS_REGION || "ap-northeast-1";
 
 const s3Client = new S3Client({
@@ -11,11 +11,18 @@ const s3Client = new S3Client({
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
   },
 });
+const bucketMap = {
+  tile: tileBucketName,
+};
 
-const getPresignedUrlForFile = async (fileName, expiresIn = 3600) => {
+const getPresignedUrlForFile = async (
+  fileName,
+  expiresIn = 3600,
+  bucketName = "tile"
+) => {
   try {
     const getObjectCommand = new GetObjectCommand({
-      Bucket: bucketName,
+      Bucket: bucketMap[bucketName],
       Key: fileName,
     });
     const url = await getSignedUrl(s3Client, getObjectCommand, { expiresIn });
