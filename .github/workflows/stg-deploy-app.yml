@@ -3,7 +3,7 @@ name: Full CI/CD -> Frontend + Backend (Staging)
 on:
   push:
     branches:
-      - aws-infrastructure-2
+      - development
     paths:
       - 'server/**'      # backend
       - '**/*.ts'         # frontend
