@@ -166,8 +166,8 @@ const calculateOptimalZoom = (bbox, width, height, paddingPercent = 0.15) => {
  * Render map image with Mapbox Streets base map and GeoJSON overlay
  */
 export const renderMapImage = async (clippedBuffer125GeoJSON, clippedGreenGeoJSON, projectGeoJSON) => {
-  const width = 1200;
-  const height = 600; // Reduced from 900 to 600 to fit two images
+  const width = 800;
+  const height = 800; // Square image
   const tileSize = 512; // Mapbox uses 512x512 tiles
 
   const canvas = createCanvas(width, height);
@@ -204,8 +204,8 @@ export const renderMapImage = async (clippedBuffer125GeoJSON, clippedGreenGeoJSO
     return canvas.toBuffer('image/png');
   }
 
-  // Calculate optimal zoom level with 15% padding for better centering
-  const zoom = calculateOptimalZoom(bbox, width, height, 0.15);
+  // Calculate optimal zoom level with 5% padding for more zoom
+  const zoom = calculateOptimalZoom(bbox, width, height, 0.05);
   
   console.log(`Using zoom level: ${zoom}`);
 
@@ -308,4 +308,3 @@ export const renderMapImage = async (clippedBuffer125GeoJSON, clippedGreenGeoJSO
 
   return canvas.toBuffer('image/png');
 };
-
