@@ -142,9 +142,9 @@ export const createPdfFile = async (projectId) => {
       doc.y = PADDING_TOP;
 
       // ---- SAVE TO LOCAL FILE ----
-      const outputPath = `/Users/sayandak/Desktop/Tekgile/econet_plateau/server/project_${projectId}.pdf`;
-      const fileStream = fs.createWriteStream(outputPath);
-      doc.pipe(fileStream);
+      // const outputPath = `/Users/sayandak/Desktop/Tekgile/econet_plateau/server/project_${projectId}.pdf`;
+      // const fileStream = fs.createWriteStream(outputPath);
+      // doc.pipe(fileStream);
 
       // ---- BUFFER FOR API RESPONSE ----
       const chunks = [];
