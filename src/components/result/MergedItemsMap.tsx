@@ -387,9 +387,17 @@ export const MergedItemsMap: React.FC<MergedItemsMapProp> = ({ center, zoom }) =
           allFeatures.push(...mergedFeatures);
         }
         
-        // Fit map to all features after they're added
-        if (allFeatures.length > 0 && map.loaded()) {
-          fitMapToFeatures(map, allFeatures);
+        if (allFeatures.length > 0 && selectedProject?.geom && map.loaded()) {
+          const projectFeature: Feature<Geometry> = {
+            type: "Feature",
+            geometry: selectedProject.geom,
+            properties: {
+              id: selectedProject.id,
+              name: selectedProject.name,
+            },
+          };
+          
+          fitMapToFeatures(map, [projectFeature]);
         }
       };
 
