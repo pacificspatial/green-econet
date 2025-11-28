@@ -3,7 +3,7 @@ name: Full CI/CD -> Frontend + Backend (Staging)
 on:
   push:
     branches:
-      - development
+      - main
     paths:
       - 'server/**'      # backend
       - '**/*.ts'         # frontend
@@ -11,7 +11,7 @@ on:
       - '**/*.js'
       - '**/*.jsx'
       - 'vite.config.*'
-      - '.github/workflows/stg-deploy-app.yml'
+      - '.github/workflows/prd-deploy-app.yml'
   workflow_dispatch: {}
 
 permissions:
@@ -24,14 +24,13 @@ env:
   FRONTEND_BUILD_DIR: dist
   SERVER_DIR: server
   EC2_INSTANCE_ID: ${{ secrets.STG_EC2_INSTANCE_ID }}
-  S3_BUCKET: ${{ secrets.STG_S3_BUCKET }}
-  CLOUDFRONT_DISTRIBUTION_ID: ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID || '' }}
+  S3_BUCKET: ${{ secrets.PRD_S3_BUCKET }}
+  CLOUDFRONT_DISTRIBUTION_ID: ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID_PRD || '' }}
   # Frontend Vite env
   VITE_PORT: ${{ secrets.VITE_PORT }}
   VITE_MAPBOX_TOKEN: ${{ secrets.VITE_MAPBOX_TOKEN }}
-  VITE_BACKEND_URL: ${{ secrets.VITE_BACKEND_URL }}
-  VITE_EP_SOCKET_PORT: ${{ secrets.VITE_EP_SOCKET_PORT }}
-
+  VITE_BACKEND_URL: ${{ secrets.VITE_BACKEND_URL_PRD }}
+  VITE_EP_SOCKET_PORT: ${{ secrets.VITE_EP_SOCKET_PORT_PRD }}
 jobs:
   frontend:
     name: Frontend CI/CD -> S3
@@ -59,8 +58,8 @@ jobs:
         env:
           VITE_PORT: ${{ secrets.VITE_PORT }}
           VITE_MAPBOX_TOKEN: ${{ secrets.VITE_MAPBOX_TOKEN }}
-          VITE_BACKEND_URL: ${{ secrets.VITE_BACKEND_URL }}
-          VITE_EP_SOCKET_PORT: ${{ secrets.VITE_EP_SOCKET_PORT }}
+          VITE_BACKEND_URL: ${{ secrets.VITE_BACKEND_URL_PRD }}
+          VITE_EP_SOCKET_PORT: ${{ secrets.VITE_EP_SOCKET_PORT_PRD }}
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
@@ -75,14 +74,14 @@ jobs:
           aws s3 sync "${{ env.FRONTEND_BUILD_DIR }}" "s3://$S3_BUCKET/" --delete --acl private
 
       - name: Invalidate CloudFront cache
-        if: env.CLOUDFRONT_DISTRIBUTION_ID != ''
+        if: env.CLOUDFRONT_DISTRIBUTION_ID_ != ''
         run: |
           aws cloudfront create-invalidation \
             --distribution-id "$CLOUDFRONT_DISTRIBUTION_ID" \
             --paths "/*"
 
   backend:
-    name: Deploy Backend (server/ → /var/www/stg) via SSH
+    name: Deploy Backend (server/ → /var/www/prd) via SSH
     runs-on: ubuntu-latest
     needs: frontend
     steps:
@@ -103,7 +102,7 @@ jobs:
         env:
           TARGET_USER: ${{ secrets.STG_EC2_USER || 'ec2-user' }}
           TARGET_HOST: ${{ secrets.STG_EC2_PUBLIC_IP }}
-          TARGET_PATH: /var/www/stg
+          TARGET_PATH: /var/www/prd
         run: |
           ssh -o StrictHostKeyChecking=no $TARGET_USER@$TARGET_HOST \
             "sudo mkdir -p $TARGET_PATH && sudo chown $TARGET_USER:$TARGET_USER $TARGET_PATH"
@@ -112,18 +111,18 @@ jobs:
         env:
           TARGET_USER: ${{ secrets.STG_EC2_USER || 'ec2-user' }}
           TARGET_HOST: ${{ secrets.STG_EC2_PUBLIC_IP }}
-          TARGET_PATH: /var/www/stg
+          TARGET_PATH: /var/www/prd
         run: |
           TS=$(date +%Y%m%d%H%M%S)
           ssh -o StrictHostKeyChecking=no $TARGET_USER@$TARGET_HOST \
-            "sudo tar -czf /tmp/stg-backup-\${TS}.tar.gz -C $(dirname $TARGET_PATH) $(basename $TARGET_PATH) || true && sudo chown $TARGET_USER:$TARGET_USER /tmp/stg-backup-\${TS}.tar.gz"
-          echo "Backup created on remote: /tmp/stg-backup-*.tar.gz"
+            "sudo tar -czf /tmp/prd-backup-\${TS}.tar.gz -C $(dirname $TARGET_PATH) $(basename $TARGET_PATH) || true && sudo chown $TARGET_USER:$TARGET_USER /tmp/prd-backup-\${TS}.tar.gz"
+          echo "Backup created on remote: /tmp/prd-backup-*.tar.gz"
 
       - name: Rsync server/ → remote
         env:
           TARGET_USER: ${{ secrets.STG_EC2_USER || 'ec2-user' }}
           TARGET_HOST: ${{ secrets.STG_EC2_PUBLIC_IP }}
-          TARGET_PATH: /var/www/stg
+          TARGET_PATH: /var/www/prd
         run: |
           rsync -avz --delete \
             --chmod=Du=rwx,Dg=rx,Do=rx,Fu=rw,Fg=r,Fo=r \
@@ -137,23 +136,23 @@ jobs:
           PORT: 4000
         run: |
           ssh -o StrictHostKeyChecking=no $TARGET_USER@$TARGET_HOST <<'EOF'
-            cd /var/www/stg || { echo "Directory /var/www/stg does not exist"; exit 1; }
+            cd /var/www/prd || { echo "Directory /var/www/prd does not exist"; exit 1; }
 
             echo "Installing dependencies..."
             npm install --no-audit --no-fund --prefer-offline
 
-            echo "Restarting PM2 process 'stg-enp'..."
-            if pm2 restart stg-enp --update-env --time; then
+            echo "Restarting PM2 process 'prd-enp'..."
+            if pm2 restart prd-enp --update-env --time; then
               echo "PM2 restart successful."
             else
-              echo "Restart failed — starting 'stg-enp' fresh..."
-              pm2 start index.js --name stg-enp --update-env --time
+              echo "Restart failed — starting 'prd-enp' fresh..."
+              pm2 start index.js --name prd-enp --update-env --time
             fi
 
             pm2 save
 
-            echo "Current PM2 status for stg-enp:"
-            pm2 status stg-enp
+            echo "Current PM2 status for prd-enp:"
+            pm2 status prd-enp
           EOF
 
 
@@ -161,5 +160,5 @@ jobs:
         run: |
           echo "Backend deployed successfully!"
           echo "Source: server/ (contents)"
-          echo "Target: /var/www/stg on ${{ secrets.STG_EC2_PUBLIC_IP }}"
-          echo "If anything goes wrong, restore backup from /tmp/stg-backup-<timestamp>.tar.gz on the instance"
+          echo "Target: /var/www/prd on ${{ secrets.STG_EC2_PUBLIC_IP }}"
+          echo "If anything goes wrong, restore backup from /tmp/prd-backup-<timestamp>.tar.gz on the instance"
