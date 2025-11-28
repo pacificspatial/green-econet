@@ -42,9 +42,9 @@ export const MERGED_BUFFER125_LAYER_CONFIG = {
   id: 'merged-buffer125-green',
   type: 'fill' as const,
   paint: {
-    'fill-color': '#336D1A',
+    'fill-color': '#C3E4FD',
     'fill-opacity': 0.6,
-    'fill-outline-color': '#336D1A'
+    'fill-outline-color': '#C3E4FD'
   }
 };
 
@@ -52,8 +52,8 @@ export const MERGED_GREEN_LAYER_CONFIG = {
   id: 'merged-green',
   type: 'fill' as const,
   paint: {
-    'fill-color': '#C3E4FD',
+    'fill-color': '#336D1A',
     'fill-opacity': 0.6,
-    'fill-outline-color': '#C3E4FD'
+    'fill-outline-color': '#336D1A'
   }
 };
