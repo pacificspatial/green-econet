@@ -28,18 +28,23 @@ export async function uploadToExportBucket(
   mimeType,
   fileType = "pdf"
 ) {
-  const cmd = new PutObjectCommand({
-    Bucket: downloadBucketName,
-    Key: `${fileType}/${fileName}`,
-    Body: fileBuffer,
-    ContentType: mimeType,
-  });
+  try {
+    const cmd = new PutObjectCommand({
+      Bucket: downloadBucketName,
+      Key: `${fileType}/${fileName}`,
+      Body: fileBuffer,
+      ContentType: mimeType,
+    });
 
-  await s3.send(cmd);
+    await s3Client.send(cmd);
 
-  return {
-    key: `${fileType}/${fileName}`,
-  };
+    return {
+      key: `${fileType}/${fileName}`,
+    };
+  } catch (error) {
+    console.error("Error in s3 service", error);
+    throw error;
+  }
 }
 
 const getPresignedUrlForFile = async (

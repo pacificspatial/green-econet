@@ -25,11 +25,10 @@ const runPipeline = async ({ projectId, io }) => {
     { name: "Clip Service", fn: clipService },
     { name: "Merge Service", fn: mergeService },
     { name: "Buffer Service", fn: bufferService },
-    { name: "Group Service", fn: groupService },
-    { name: "Export Service", fn: exportsServices },
     { name: "Join Clip Service", fn: joinClipService },
     { name: "Join Merge Service", fn: joinMergeService },
     { name: "Compute Indices Service", fn: computeIndicesService },
+    { name: "Export Service", fn: exportsServices },
   ];
   let status = "success";
   const totalSteps = steps.length;
