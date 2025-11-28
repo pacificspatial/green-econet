@@ -1,0 +1,15 @@
+{
+  "name": "enp-rds",
+  "version": "1.0.0",
+  "description": "Resources for database in Econet Plateau",
+  "scripts": {
+    "stg:deploy": "serverless deploy --verbose --region ap-northeast-1 --stage stg --aws-profile enp",
+    "stg:destroy": " serverless remove --verbose --region ap-northeast-1 --stage stg  --aws-profile enp"
+  },
+  "author": "Eco Net Plateau",
+  "license": "LICENSED",
+  "devDependencies": {
+    "serverless": "^2.68.0",
+    "serverless-pseudo-parameters": "^2.6.1"
+  }
+}

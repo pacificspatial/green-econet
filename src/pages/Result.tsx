@@ -8,11 +8,12 @@ import { getPolygonsByProject } from "@/api/project";
 import type { ProjectPolygon } from "@/types/ProjectData";
 import type { Feature } from "geojson";
 import { useAppDispatch, useAppSelector } from "@/hooks/reduxHooks";
-import { setAoiPolygons } from "@/redux/slices/aoiSlice";
+import { clearAoiPolygons, setAoiPolygons } from "@/redux/slices/aoiSlice";
 import { IconButton } from "@mui/material";
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import { mapCenter, mapZoom } from "@/constants/mapConstants";
+import { setSelectedProject } from "@/redux/slices/projectSlice";
 
 const Container = styled(Box)({
   display: "flex",
@@ -102,6 +103,14 @@ export const Result = () => {
   useEffect(() => {
     fetchProjectPolygons();
   }, [fetchProjectPolygons]);
+
+  // Clear polygons on unmount
+  useEffect(() => {
+    return () => {
+      dispatch(setSelectedProject(null));
+      dispatch(clearAoiPolygons());
+    };
+  }, [dispatch]);
 
   return (
     <Box
