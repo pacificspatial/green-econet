@@ -4,7 +4,6 @@ import axios from "axios";
 
 const MAPBOX_ACCESS_TOKEN = process.env.MAPBOX_ACCESS_TOKEN;
 
-
 export const rowsToGeoJSON = (rows, layerType) => ({
   type: "FeatureCollection",
   features: rows.map((r) => ({
@@ -62,21 +61,34 @@ const downloadTile = async (x, y, zoom) => {
  */
 const LAYER_STYLES = {
   'clipped-buffer-125-green': {
-    fillColor: 'rgba(76, 175, 80, 0.6)', // #4CAF50 with 0.6 opacity
+    fillColor: 'rgba(76, 175, 80, 0.6)',
     strokeColor: '#2E7D32',
     lineWidth: 2
   },
   'clipped-green': {
-    fillColor: 'rgba(21, 101, 192, 0.6)', // #1565C0 with 0.6 opacity
+    fillColor: 'rgba(21, 101, 192, 0.6)',
     strokeColor: '#1565C0',
     lineWidth: 2
   },
   'project-boundary': {
-    fillColor: null, // No fill for project boundary
+    fillColor: null,
     strokeColor: '#000000',
     lineWidth: 3
+  },
+
+  // NEW: merged layer styles for Canvas rendering
+  'merged-buffer125-green': {
+    fillColor: 'rgba(195, 228, 253, 0.6)',
+    strokeColor: '#C3E4FD',
+    lineWidth: 2
+  },
+  'merged-green': {
+    fillColor: 'rgba(51, 109, 26, 0.6)',
+    strokeColor: '#336D1A',
+    lineWidth: 2
   }
 };
+
 
 /**
  * Helper function to draw a polygon on canvas with specific style

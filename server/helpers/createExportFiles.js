@@ -88,16 +88,26 @@ export const createPdfFile = async (projectId) => {
       const project = await projectService.getProject(projectId);
       const clippedBuffer125 = await resultServices.getClippedBuffer125GreenResult(projectId);
       const clippedGreen = await resultServices.getClippedGreenResult(projectId);
+      const mergedBuffer125 = await resultServices.getMergedBuffer125GreenResult(projectId);
+      const mergedGreen = await resultServices.getMergedGreenResult(projectId);
       
       // Create separate GeoJSON for each layer type
       const clippedBuffer125GeoJSON = rowsToGeoJSON(clippedBuffer125, 'clipped-buffer-125-green');
       const clippedGreenGeoJSON = rowsToGeoJSON(clippedGreen, 'clipped-green');
       const projectGeoJSON = rowsToGeoJSON([project], 'project-boundary');
+      const mergedBuffer125Geojson = rowsToGeoJSON(mergedBuffer125, 'merged-buffer125-green')
+      const mergedGreenGeojson = rowsToGeoJSON(mergedGreen, 'merged-green');
 
       // Render map image with separate layers
       const snapshotImage = await renderMapImage(
         clippedBuffer125GeoJSON,
         clippedGreenGeoJSON,
+        projectGeoJSON
+      );
+
+      const snapshotImage2 = await renderMapImage(
+        mergedBuffer125Geojson,
+        mergedGreenGeojson,
         projectGeoJSON
       );
 
@@ -132,9 +142,9 @@ export const createPdfFile = async (projectId) => {
       doc.y = PADDING_TOP;
 
       // ---- SAVE TO LOCAL FILE ----
-      // const outputPath = `/Users/sayandak/Desktop/Tekgile/econet_plateau/server/project_${projectId}.pdf`;
-      // const fileStream = fs.createWriteStream(outputPath);
-      // doc.pipe(fileStream);
+      const outputPath = `/Users/sayandak/Desktop/Tekgile/econet_plateau/server/project_${projectId}.pdf`;
+      const fileStream = fs.createWriteStream(outputPath);
+      doc.pipe(fileStream);
 
       // ---- BUFFER FOR API RESPONSE ----
       const chunks = [];
@@ -204,7 +214,11 @@ export const createPdfFile = async (projectId) => {
       doc.moveTo(40, doc.y + 5).lineTo(550, doc.y + 5).stroke();
       doc.moveDown(2);
 
-      doc.rect(40, doc.y, 500, 120).stroke();
+      doc.image(snapshotImage2, {
+        fit: [500, 200],
+        align: "center",
+      });
+      doc.moveDown(2);
 
       // Finish writing
       doc.end();
