@@ -5,10 +5,15 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import { useBasemap } from "@/hooks/useBasemap";
 import { useParams } from "react-router-dom";
 import { getMergedBuffer125GreenResult, getMergedGreenResult } from "@/api/result";
-import type { Feature, Geometry } from 'geojson'
+import type { Feature, Geometry } from "geojson";
 import type { ClippedBuffer125Green } from "@/types/ClippedData";
 import { addLayer, removeLayer } from "@/utils/map/addLayer";
-import { MERGED_BUFFER125_LAYER_CONFIG, MERGED_GREEN_LAYER_CONFIG, PROJECT_LAYER_CONFIG, PROJECT_POLYGONS_LAYER_CONFIG } from "@/constants/layerConfig";
+import {
+  MERGED_BUFFER125_LAYER_CONFIG,
+  MERGED_GREEN_LAYER_CONFIG,
+  PROJECT_LAYER_CONFIG,
+  PROJECT_POLYGONS_LAYER_CONFIG,
+} from "@/constants/layerConfig";
 import { useTranslation } from "react-i18next";
 import { useAppSelector } from "@/hooks/reduxHooks";
 import AlertBox from "../utils/AlertBox";
@@ -16,7 +21,18 @@ import Loader from "../common/Loader";
 import type { AlertState } from "@/types/AlertState";
 import { fitMapToFeatures } from "@/utils/map/fitMapToFeature";
 import type { AlertColor } from "@mui/material";
-import type { MergedItemsMapProp, PolygonFeatureProperties, PolygonGeoJSON, AddLayerOptions } from "@/types/Map"
+import type {
+  MergedItemsMapProp,
+  PolygonFeatureProperties,
+  PolygonGeoJSON,
+  AddLayerOptions,
+} from "@/types/Map";
+
+// 🆕 map sync helpers
+import {
+  registerRightMap,
+  syncFromRight,
+} from "@/utils/map/mapSync";
 
 export const MergedItemsMap: React.FC<MergedItemsMapProp> = ({ center, zoom }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -26,9 +42,9 @@ export const MergedItemsMap: React.FC<MergedItemsMapProp> = ({ center, zoom }) =
   const { t } = useTranslation();
   const { selectedProject } = useAppSelector((state) => state.project);
   const { polygons: storedPolygons } = useAppSelector((state) => state.aoi);
-  
-  const [ loading, setLoading ] = useState<boolean>(false);
-  const [loadingText, setLoadingText ] = useState<string>("");
+
+  const [loading, setLoading] = useState<boolean>(false);
+  const [loadingText, setLoadingText] = useState<string>("");
   const [alert, setAlert] = useState<AlertState>({
     open: false,
     message: "",
@@ -59,37 +75,46 @@ export const MergedItemsMap: React.FC<MergedItemsMapProp> = ({ center, zoom }) =
           map as maplibregl.Map,
           `layer-${PROJECT_POLYGONS_LAYER_CONFIG.id}`,
           {
-            type: 'geojson',
+            type: "geojson",
             data: {
-              type: 'FeatureCollection',
+              type: "FeatureCollection",
               features: polygonData.map((d: {
                 id: string;
                 geom: Feature | Geometry;
               }) => {
                 // Handle both Feature and Geometry types
-                const geometry: Geometry = 'geometry' in d.geom ? d.geom.geometry as Geometry : d.geom as Geometry;
-                const properties: PolygonFeatureProperties = 'properties' in d.geom ? d.geom.properties as PolygonFeatureProperties : { id: d.id };
-                
+                const geometry: Geometry =
+                  "geometry" in d.geom
+                    ? (d.geom.geometry as Geometry)
+                    : (d.geom as Geometry);
+                const properties: PolygonFeatureProperties =
+                  "properties" in d.geom
+                    ? (d.geom.properties as PolygonFeatureProperties)
+                    : { id: d.id };
+
                 return {
-                  type: 'Feature',
+                  type: "Feature",
                   geometry: geometry,
-                  properties: properties
+                  properties: properties,
                 };
-              })
-            } as PolygonGeoJSON
+              }),
+            } as PolygonGeoJSON,
           },
           {
             type: PROJECT_POLYGONS_LAYER_CONFIG.type,
-            paint: PROJECT_POLYGONS_LAYER_CONFIG.paint
+            paint: PROJECT_POLYGONS_LAYER_CONFIG.paint,
           } as AddLayerOptions
         );
 
         // Wait for layer to be added
         await new Promise<void>((resolve) => {
-          if (map.loaded() && map.getLayer(`layer-${PROJECT_POLYGONS_LAYER_CONFIG.id}`)) {
+          if (
+            map.loaded() &&
+            map.getLayer(`layer-${PROJECT_POLYGONS_LAYER_CONFIG.id}`)
+          ) {
             resolve();
           } else {
-            map.once('idle', () => resolve());
+            map.once("idle", () => resolve());
           }
         });
 
@@ -104,18 +129,26 @@ export const MergedItemsMap: React.FC<MergedItemsMapProp> = ({ center, zoom }) =
           perimeter?: number;
         }
 
-        const features: Feature<Geometry>[] = polygonData.map((data: PolygonLayerItem) => {
-          // Handle both Feature and Geometry types
-          const geometry = 'geometry' in data.geom ? data.geom.geometry : data.geom;
-          const properties = 'properties' in data.geom ? data.geom.properties : data.properties;
-          
-          return {
-            type: "Feature" as const,
-            geometry: geometry as Geometry,
-            properties: properties || {},
-          };
-        });
-        
+        const features: Feature<Geometry>[] = polygonData.map(
+          (data: PolygonLayerItem) => {
+            // Handle both Feature and Geometry types
+            const geometry =
+              "geometry" in data.geom
+                ? data.geom.geometry
+                : data.geom;
+            const properties =
+              "properties" in data.geom
+                ? (data.geom as any).properties
+                : data.properties;
+
+            return {
+              type: "Feature" as const,
+              geometry: geometry as Geometry,
+              properties: properties || {},
+            };
+          }
+        );
+
         return features;
       }
       return null;
@@ -125,7 +158,7 @@ export const MergedItemsMap: React.FC<MergedItemsMapProp> = ({ center, zoom }) =
       return null;
     }
   }, [storedPolygons, t, handleSetAlert]);
-  
+
   /**
    * Load and add merged buffer 125 green layer to map
    */
@@ -140,17 +173,17 @@ export const MergedItemsMap: React.FC<MergedItemsMapProp> = ({ center, zoom }) =
       // Fetch both layers in parallel
       const [buffer125Response, greenResponse] = await Promise.all([
         getMergedBuffer125GreenResult(projectId as string),
-        getMergedGreenResult(projectId as string)
-      ]);      
-      
+        getMergedGreenResult(projectId as string),
+      ]);
+
       let allFeatures: Feature<Geometry>[] = [];
 
       // Process merged-buffer-125-green layer
       if (buffer125Response.success && buffer125Response.data) {
-        const records = Array.isArray(buffer125Response.data) 
-          ? buffer125Response.data 
+        const records = Array.isArray(buffer125Response.data)
+          ? buffer125Response.data
           : [buffer125Response.data];
-        
+
         const layerData = (records as ClippedBuffer125Green[])
           .filter((record) => record.geom)
           .map((record) => ({
@@ -178,28 +211,31 @@ export const MergedItemsMap: React.FC<MergedItemsMapProp> = ({ center, zoom }) =
             map,
             `layer-${MERGED_BUFFER125_LAYER_CONFIG.id}`,
             {
-              type: 'geojson',
+              type: "geojson",
               data: {
-                type: 'FeatureCollection',
-                features: layerData.map(d => ({
-                  type: 'Feature',
+                type: "FeatureCollection",
+                features: layerData.map((d) => ({
+                  type: "Feature",
                   geometry: d.geom,
-                  properties: d.properties
-                }))
-              }
+                  properties: d.properties,
+                })),
+              },
             },
             {
               type: MERGED_BUFFER125_LAYER_CONFIG.type,
-              paint: MERGED_BUFFER125_LAYER_CONFIG.paint
+              paint: MERGED_BUFFER125_LAYER_CONFIG.paint,
             }
           );
-          
+
           // Wait for layer to be added
           await new Promise<void>((resolve) => {
-            if (map.loaded() && map.getLayer(`layer-${MERGED_BUFFER125_LAYER_CONFIG.id}`)) {
+            if (
+              map.loaded() &&
+              map.getLayer(`layer-${MERGED_BUFFER125_LAYER_CONFIG.id}`)
+            ) {
               resolve();
             } else {
-              map.once('idle', () => resolve());
+              map.once("idle", () => resolve());
             }
           });
         }
@@ -207,10 +243,10 @@ export const MergedItemsMap: React.FC<MergedItemsMapProp> = ({ center, zoom }) =
 
       // Process merged-green layer
       if (greenResponse.success && greenResponse.data) {
-        const records = Array.isArray(greenResponse.data) 
-          ? greenResponse.data 
-          : [greenResponse.data];      
-        
+        const records = Array.isArray(greenResponse.data)
+          ? greenResponse.data
+          : [greenResponse.data];
+
         const layerData = (records as ClippedBuffer125Green[])
           .filter((record) => record.geom)
           .map((record) => ({
@@ -238,82 +274,90 @@ export const MergedItemsMap: React.FC<MergedItemsMapProp> = ({ center, zoom }) =
             map,
             `layer-${MERGED_GREEN_LAYER_CONFIG.id}`,
             {
-              type: 'geojson',
+              type: "geojson",
               data: {
-                type: 'FeatureCollection',
-                features: layerData.map(d => ({
-                  type: 'Feature',
+                type: "FeatureCollection",
+                features: layerData.map((d) => ({
+                  type: "Feature",
                   geometry: d.geom,
-                  properties: d.properties
-                }))
-              }
+                  properties: d.properties,
+                })),
+              },
             },
             {
               type: MERGED_GREEN_LAYER_CONFIG.type,
-              paint: MERGED_GREEN_LAYER_CONFIG.paint
+              paint: MERGED_GREEN_LAYER_CONFIG.paint,
             }
           );
 
           // Wait for layer to be added
           await new Promise<void>((resolve) => {
-            if (map.loaded() && map.getLayer(`layer-${MERGED_GREEN_LAYER_CONFIG.id}`)) {
+            if (
+              map.loaded() &&
+              map.getLayer(`layer-${MERGED_GREEN_LAYER_CONFIG.id}`)
+            ) {
               resolve();
             } else {
-              map.once('idle', () => resolve());
+              map.once("idle", () => resolve());
             }
           });
         }
       }
 
-      // ADD PROJECT BOUNDARY LAYER      
+      // ADD PROJECT BOUNDARY LAYER
       if (selectedProject?.geom) {
-        const boundaryLayerData = [{
-          geom: selectedProject.geom,
-          properties: {
-            id: selectedProject.id,
-            name: selectedProject.name,
+        const boundaryLayerData = [
+          {
+            geom: selectedProject.geom,
+            properties: {
+              id: selectedProject.id,
+              name: selectedProject.name,
+            },
           },
-        }];
+        ];
 
         // Wait for map to be idle before adding boundary layer
         await new Promise<void>((resolve) => {
           if (map.loaded()) {
             resolve();
           } else {
-            map.once('idle', () => resolve());
+            map.once("idle", () => resolve());
           }
         });
-        
+
         // Add layer using new generic function
         addLayer(
           map,
           `layer-${PROJECT_LAYER_CONFIG.id}`,
           {
-            type: 'geojson',
+            type: "geojson",
             data: {
-              type: 'FeatureCollection',
-              features: boundaryLayerData.map(d => ({
-                type: 'Feature',
+              type: "FeatureCollection",
+              features: boundaryLayerData.map((d) => ({
+                type: "Feature",
                 geometry: d.geom,
-                properties: d.properties
-              }))
-            }
+                properties: d.properties,
+              })),
+            },
           },
           {
             type: PROJECT_LAYER_CONFIG.type,
-            paint: PROJECT_LAYER_CONFIG.paint
+            paint: PROJECT_LAYER_CONFIG.paint,
           }
         );
         // Wait for boundary layer to be added
         await new Promise<void>((resolve) => {
-          if (map.loaded() && map.getLayer(`layer-${PROJECT_LAYER_CONFIG.id}`)) {
+          if (
+            map.loaded() &&
+            map.getLayer(`layer-${PROJECT_LAYER_CONFIG.id}`)
+          ) {
             resolve();
           } else {
-            map.once('idle', () => resolve());
+            map.once("idle", () => resolve());
           }
         });
       }
-      
+
       return allFeatures.length > 0 ? allFeatures : null;
     } catch (error) {
       console.error("Error in fetching merged layers", error);
@@ -327,13 +371,13 @@ export const MergedItemsMap: React.FC<MergedItemsMapProp> = ({ center, zoom }) =
       setLoading(false);
       setLoadingText("");
     }
-  }, [projectId, t]);
+  }, [projectId, selectedProject, t]);
 
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
 
     // Initialize map using the helper function
-    mapRef.current = initializeMap({
+    const map = initializeMap({
       container: mapContainerRef.current,
       center: center,
       zoom: zoom,
@@ -341,14 +385,24 @@ export const MergedItemsMap: React.FC<MergedItemsMapProp> = ({ center, zoom }) =
       highResolution: true,
     });
 
+    mapRef.current = map;
+
+    // 🆕 register this as the RIGHT map and attach sync listener
+    registerRightMap(map);
+    map.on("move", () => {
+      syncFromRight();
+    });
+
     // Cleanup on unmount
     return () => {
       if (mapRef.current) {
+        // 🆕 unregister on cleanup
+        registerRightMap(null);
         mapRef.current.remove();
         mapRef.current = null;
       }
     };
-  }, [basemap]);
+  }, [basemap, center, zoom]);
 
   /**
    * Load project data when projectId changes
@@ -363,31 +417,36 @@ export const MergedItemsMap: React.FC<MergedItemsMapProp> = ({ center, zoom }) =
     if (map) {
       const loadAllLayers = async () => {
         // Ensure map is fully loaded before adding layers
-        const ensureMapReady = () => new Promise<void>((resolve) => {
-          if (map.isStyleLoaded() && map.loaded()) {
-            resolve();
-          } else {
-            map.once("idle", () => resolve());
-          }
-        });
+        const ensureMapReady = () =>
+          new Promise<void>((resolve) => {
+            if (map.isStyleLoaded() && map.loaded()) {
+              resolve();
+            } else {
+              map.once("idle", () => resolve());
+            }
+          });
 
         await ensureMapReady();
-        
-        const allFeatures = [];
-        
+
+        const allFeatures: Feature<Geometry>[] = [];
+
         // Load project polygons layer
         const polygonFeatures = await addProjectPolygonsLayer();
         if (polygonFeatures) {
           allFeatures.push(...polygonFeatures);
         }
-        
+
         // Load merged layers
         const mergedFeatures = await getMergedLayers();
         if (mergedFeatures) {
           allFeatures.push(...mergedFeatures);
         }
-        
-        if (allFeatures.length > 0 && selectedProject?.geom && map.loaded()) {
+
+        if (
+          allFeatures.length > 0 &&
+          selectedProject?.geom &&
+          map.loaded()
+        ) {
           const projectFeature: Feature<Geometry> = {
             type: "Feature",
             geometry: selectedProject.geom,
@@ -396,7 +455,7 @@ export const MergedItemsMap: React.FC<MergedItemsMapProp> = ({ center, zoom }) =
               name: selectedProject.name,
             },
           };
-          
+
           fitMapToFeatures(map, [projectFeature]);
         }
       };
@@ -427,7 +486,7 @@ export const MergedItemsMap: React.FC<MergedItemsMapProp> = ({ center, zoom }) =
         console.debug("Could not remove layers on cleanup:", error);
       }
     };
-  }, [projectId, basemap, addProjectPolygonsLayer, getMergedLayers]);
+  }, [projectId, basemap, addProjectPolygonsLayer, getMergedLayers, selectedProject]);
 
   return (
     <>
