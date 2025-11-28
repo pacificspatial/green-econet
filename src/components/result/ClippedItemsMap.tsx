@@ -401,7 +401,7 @@ export const ClippedItemsMap: React.FC<ClippedItemsMapProp> = ({ center, zoom })
         mapRef.current = null;
       }
     };
-  }, [basemap, center, zoom]);
+  }, [basemap]);
 
   /**
    * Load project data when projectId changes
