@@ -22,8 +22,8 @@ const ProjectsList: React.FC = () => {
   });
   const theme = useTheme();
   const { t } = useTranslation();
-  const center: [number, number] = [139.6917, 35.6895];
-  const zoom = 12;
+  const center: [number, number] = [139.7545870646046, 35.68260566814629];
+  const zoom = 11;
 
   const dispatch = useAppDispatch();
 

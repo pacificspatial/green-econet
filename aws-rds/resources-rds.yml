@@ -1,0 +1,44 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  Description": "AWS CloudFormation postgres Amazon RDS DB instance"
+Resources:
+  PostgresSharedDeployment:
+    Type: AWS::RDS::DBInstance
+    DependsOn:
+     - SecretPostgresMasterUserPassword
+    Properties:
+      AllocatedStorage: ${self:custom.environment.postgres.ALLOCATED_STORAGE}
+      BackupRetentionPeriod: ${self:custom.environment.postgres.BACKUP_RETENTION_PERIOD}
+      DBInstanceIdentifier: ${self:provider.stage}-postgres
+      DBName: postgresdb
+      DBInstanceClass: ${self:custom.environment.postgres.INSTANCE_CLASS}
+      DBSubnetGroupName: !Ref PostgresSubnetGroup
+      Engine: postgres
+      EngineVersion: 17.7
+      MasterUsername: '{{resolve:secretsmanager:${self:provider.stage}/rds/postgres:SecretString:username}}'
+      MasterUserPassword: '{{resolve:secretsmanager:${self:provider.stage}/rds/postgres:SecretString:password}}'
+      Port: 5432
+      PubliclyAccessible: true
+      StorageType: gp2
+      Tags:
+        - Key: Namespace
+          Value: ${self:custom.namespace}
+        - Key: Stage
+          Value: ${self:provider.stage}
+
+  PostgresSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: DB subnet group for rds postgres
+      DBSubnetGroupName: ${self:provider.stage}-pg-subnet-group
+      SubnetIds:
+         "Fn::Split":
+           - ","
+           - ${self:custom.environment.SUBNET_IDS}
+      Tags:
+        - Key: Name
+          Value: PostgresSubnetGroup
+        - Key: Namespace
+          Value: ${self:custom.namespace}
+        - Key: Stage
+          Value: ${self:provider.stage}

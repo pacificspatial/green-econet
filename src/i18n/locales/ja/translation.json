@@ -1,6 +1,6 @@
 {
   "app": {
-    "title": "エコネット",
+    "title": "生態系ネットワーク指標値",
     "projectList": "プロジェクト一覧",
     "basemap": "ベースマップ",
     "home": "Home",
@@ -39,7 +39,7 @@
     "processing": "処理中...",
     "save": "保存",
     "serverErrorMessage": "不具合が発生しました！少し待ってからお試しください。",
-    "setAOI": "AOIを設定する",
+    "setAOI": "設定する",
     "loading": "読込中...",
     "statsAreNotAvailable": "KPIが計算できません",
     "legendTitle": "凡例",
@@ -48,6 +48,7 @@
     "streets": "道路地図",
     "paleMap": "淡色地図",
     "latestAerialPhoto": "最新空中写真",
+    "plateau": "PLATEAU 航空写真",
     "EXISTING_PROJECT": "この名前のプロジェクトは既に存在しています.",
     "success": "成功",
     "error": "エラー",
@@ -58,10 +59,10 @@
     "invalidPolygonMessage": "描画されたポリゴンは無効です（自己交差しています）。有効なポリゴンを再描画してください。",
     "area": "面積",
     "perimeter": "周囲長",
-    "shapeStatistics": "統計",
+    "statsTitle": "新規 地登緑 録",
     "total": "合計",
     "aoiPolygonsLimitMessage": "{{minCount}} - {{maxCount}} 個のシェイプのみ使用できます",
-    "shape": "シェイプ",
+    "shape": "地エリア緑",
     "green": "グリーンレイヤー",
     "bufferGreen": "バッファグリーンレイヤー",
     "loadingProjectPolygons": "プロジェクトのポリゴンを読み込み中...",
@@ -77,8 +78,19 @@
     "polygonDeletedSuccessfully": "ポリゴンが正常に削除されました！",
     "aoiSetSuccessMessage": "AOI が正常に設定されました！",
     "errorSettingAOI": "AOI の設定中にエラーが発生しました",
+    "errorLoadingLayers": "レイヤの読み込み中にエラーが発生しました...",
     "settingAoiMessage": "AOI の設定には少し時間がかかります...",
     "loadingResult": "結果の読み込み",
-    "download": "ダウンロード"
+    "download": "ダウンロード",
+    "pdf": "PDF",
+    "xlsx": "XLSX",
+    "indexValue": "インデックス値",
+    "indexba": "インデックスB - A",
+    "indexa": "インデックスA",
+    "indexb": "インデックスB",
+    "setAoiSuccess": "AOI の処理が正常に完了しました！結果ページへ移動しています…",
+    "setAoiFailed": "AOI の処理に失敗しました。もう一度お試しください。",
+    "runningSetAoi": "AOI を処理しています… 数分かかる場合があります。",
+    "processed": "処理済み"
   }
 }

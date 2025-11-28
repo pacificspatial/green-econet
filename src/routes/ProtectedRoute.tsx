@@ -1,12 +1,12 @@
 // ProtectedRoute.tsx
-import React from "react";
+import React, { useEffect } from "react";
 import { Navigate, useParams } from "react-router-dom";
-import { useAppSelector } from "@/hooks/reduxHooks";
+import { useAppSelector, useAppDispatch } from "@/hooks/reduxHooks";
+import { setSelectedProject } from "@/redux/slices/projectSlice";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  // true for Result page, false for Project page
-  requireProcessed: boolean; 
+  requireProcessed: boolean; // true = result page, false = project page
 }
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
@@ -15,25 +15,30 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 }) => {
   const { projectId } = useParams<{ projectId: string }>();
   const { projects } = useAppSelector((state) => state.project);
+  const dispatch = useAppDispatch();
 
-  // Find the project from the URL parameter
+  // Find project based on URL
   const project = projects.find((p) => p.id === projectId);
 
-  // If project doesn't exist, redirect to home
-  if (!project) {
-    return <Navigate to="/" replace />;
-  }
+  // If project not found → redirect
+  if (!project) return <Navigate to="/" replace />;
 
-  // If route requires processed project but it's not processed, redirect to project page
+  // Set selectedProject in Redux when route loads or projectId changes
+  useEffect(() => {
+    if (project) {
+      dispatch(setSelectedProject(project));
+    }
+  }, [projectId, project, dispatch]);
+
+  // require processed but not processed → redirect to project page
   if (requireProcessed && !project.processed) {
     return <Navigate to={`/project/${projectId}`} replace />;
   }
 
-  // If route requires unprocessed project but it's processed, redirect to result page
+  // require NOT processed but project is processed → redirect to result page
   if (!requireProcessed && project.processed) {
     return <Navigate to={`/project/${projectId}/result`} replace />;
   }
 
-  // All checks passed, render the children
   return <>{children}</>;
 };
