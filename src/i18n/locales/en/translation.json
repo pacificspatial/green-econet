@@ -48,6 +48,7 @@
     "streets": "streets-v12",
     "paleMap": "Pale Map",
     "latestAerialPhoto": "Latest Aerial Photo",
+    "plateau": "Plateau Aerial Photo",
     "EXISTING_PROJECT": "Project with this name already exist.",
     "success": "Success",
     "error": "Error",
@@ -58,7 +59,7 @@
     "invalidPolygonMessage": "The drawn polygon is invalid (self-intersecting). Please redraw a valid polygon.",
     "area": "Area",
     "perimeter": "Perimeter",
-    "shapeStatistics": "Stats",
+    "statsTitle": "New Land Greening Record",
     "total": "Total",
     "aoiPolygonsLimitMessage": "Only {{minCount}} - {{maxCount}} shapes are allowed",
     "shape": "Shape",
@@ -77,8 +78,19 @@
     "polygonDeletedSuccessfully": "Polygon deleted successfully!",
     "aoiSetSuccessMessage": "AOI set successfully!",
     "errorSettingAOI": "Error setting AOI",
+    "errorLoadingLayers": "Error loading layers...",
     "settingAoiMessage": "Setting AOI will take a few moments...",
     "loadingResult": "Loading result...",
-    "download": "Download"
+    "download": "Download",
+    "pdf": "PDF",
+    "xlsx": "XLSX",
+    "indexValue": "Index Value",
+    "indexba": "Index B - A",
+    "indexa": "Index A",
+    "indexb": "Index B",
+    "setAoiSuccess": "AOI processing completed successfully! Redirecting to results...",
+    "setAoiFailed": "AOI processing failed. Please try again.",
+    "runningSetAoi": "Processing AOI... This may take a few minutes",
+    "processed": "Processed"
   }
 }

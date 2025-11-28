@@ -14,9 +14,6 @@ import {
 } from "@mui/material";
 import type { Theme } from "@mui/material"
 import HomeIcon from "@mui/icons-material/Home";
-// import DashboardIcon from "@mui/icons-material/Dashboard";
-import InfoIcon from "@mui/icons-material/Info";
-// import ExitToAppIcon from "@mui/icons-material/ExitToApp";
 import LanguageIcon from "@mui/icons-material/Language";
 import Brightness4Icon from "@mui/icons-material/Brightness4";
 import Brightness7Icon from "@mui/icons-material/Brightness7";
@@ -184,12 +181,6 @@ const NavDrawer: React.FC<NavDrawerProps> = ({
             <ListItemText primary={t("app.dashboard")} />
           </CustomListItem>
         )} */}
-        <CustomListItem onClick={() => handleMenuItemClick("About Us")}>
-          <ListItemIcon>
-            <InfoIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText primary={t("app.aboutUs")} />
-        </CustomListItem>
         <Divider sx={{ my: 1 }} />
         <ListItem>
           <ListItemIcon>

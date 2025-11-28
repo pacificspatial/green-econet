@@ -1,0 +1,36 @@
+Resources:
+  PostgresRDSProxy:
+    Type: AWS::RDS::DBProxy
+    Properties:
+      DBProxyName: ${self:provider.stage}-${self:service}-Proxy
+      EngineFamily: POSTGRESQL
+      IdleClientTimeout: '60'
+      RoleArn:
+        Fn::GetAtt: [RDSProxyIamRole, Arn]
+      # VpcSecurityGroupIds:
+      #   - Fn::ImportValue: ${self:provider.stage}-TileserviceLambdaSecurityGroup
+      VpcSubnetIds:
+         "Fn::Split":
+           - ","
+           - ${self:custom.environment.SUBNET_IDS}
+      Auth:
+        - Description: Proxy for enp
+          SecretArn:
+            Ref: SecretPostgresMasterUserPassword
+          AuthScheme: SECRETS
+          IAMAuth: DISABLED
+  ProxyTargetGroup:
+    Type: AWS::RDS::DBProxyTargetGroup
+    DependsOn:
+      - PostgresSharedDeployment
+      - PostgresRDSProxy 
+    Properties:
+      DBProxyName:
+        Ref: PostgresRDSProxy
+      DBInstanceIdentifiers:
+        - !Ref PostgresSharedDeployment
+      TargetGroupName: default
+      ConnectionPoolConfigurationInfo:
+        MaxConnectionsPercent: 75
+        MaxIdleConnectionsPercent: 75
+        ConnectionBorrowTimeout: 180

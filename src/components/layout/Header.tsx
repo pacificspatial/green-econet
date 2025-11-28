@@ -108,12 +108,6 @@ const Header = () => {
       case "Home":
         navigate("/");
         break;
-      case "Dashboard":
-        navigate("/dashboard");
-        break;
-      case "About Us":
-        navigate("/about");
-        break;
       case "Sign Out":
         // logout(signOut);
         break;
@@ -162,7 +156,7 @@ const Header = () => {
               cursor: "pointer",
             }}
           >
-            Eco-Net
+            {t('app.title')}
           </Typography>
         </Box>
         <RightContainer>

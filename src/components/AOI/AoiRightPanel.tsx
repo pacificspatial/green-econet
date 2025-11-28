@@ -13,20 +13,19 @@ import {
 } from "@mui/material";
 import AlertBox from "../utils/AlertBox";
 import type { AlertState } from "@/types/AlertState";
-import { useAppSelector } from "@/hooks/reduxHooks";
+import { useAppDispatch, useAppSelector } from "@/hooks/reduxHooks";
 import {
   MAX_AOI_POLYGON_COUNT,
   MIN_AOI_POLYGON_COUNT,
 } from "@/constants/numberConstants";
 import { useParams } from "react-router-dom";
-import { setProjectAoiMock } from "@/api/project";
+import { getProject, setProjectAoiMock } from "@/api/project";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import ErrorIcon from "@mui/icons-material/Error";
 import { useSocket } from "@/context/SocketContext";
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
-import ArrowDropUpIcon from '@mui/icons-material/ArrowDropUp';
 import { useNavigate } from "react-router-dom";
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import { setSelectedProject, updateProjectById } from "@/redux/slices/projectSlice";
 
 const StyledBox = styled(Box)(({ theme }) => ({
   backgroundColor:
@@ -44,16 +43,18 @@ const StyledGridBottom = styled("div")(({ theme }) => ({
   flex: 1,
   width: "100%",
   minHeight: "0px",
-  paddingBottom: theme.spacing(6), // breathing room above button row
+  paddingBottom: theme.spacing(6),
 }));
 
 const StyledConfirmBox = styled(Box)(() => ({
   display: "flex",
+  flexDirection: "column",
   justifyContent: "center",
   alignItems: "center",
   width: "100%",
   position: "relative",
   paddingBottom: 20,
+  gap: 16,
 }));
 
 type PipelineStatus = "idle" | "running" | "success" | "failed" | "partial_failure";
@@ -84,7 +85,6 @@ const AoiRightPanel = () => {
   const { t } = useTranslation();
   const { projectId } = useParams<{ projectId: string }>();
   const { selectedProject } = useAppSelector((state) => state.project);
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const navigate = useNavigate();
 
   // Inline loading for the POST call
@@ -98,12 +98,12 @@ const AoiRightPanel = () => {
   const [summary, setSummary] = useState<PipelineSummary | null>(null);
   const [currentPipelineId, setCurrentPipelineId] =
     useState<string | null>(null);
+  const dispatch = useAppDispatch();
 
   const isRunning = pipelineStatus === "running";
   const isSuccess = pipelineStatus === "success";
   const isFailed = pipelineStatus === "failed" || pipelineStatus === "partial_failure";
-
-  console.log(summary)
+  console.log(summary);
 
   const totalSteps = useMemo(() => {
     if (stages.length > 0) {
@@ -117,6 +117,17 @@ const AoiRightPanel = () => {
     if (stages.length === 0) return 0;
     return stages.filter((s) => s.status !== "pending").length;
   }, [stages]);
+
+  // Redirect to results page on success
+  useEffect(() => {
+    if (isSuccess && projectId) {
+      const timer = setTimeout(() => {
+        navigate(`/project/${projectId}/result`);
+      }, 1200); // 1.2 sec delay
+
+      return () => clearTimeout(timer);
+    }
+  }, [isSuccess, projectId, navigate]);
 
   // 🔌 Socket listeners for AOI events for this project
   useEffect(() => {
@@ -184,12 +195,31 @@ const AoiRightPanel = () => {
       });
     };
 
-    const handleCompleted = (payload: any) => {
+    const handleCompleted = async (payload: any) => {
       console.log("[AOI RIGHT] aoi:pipeline_completed:", payload);
       if (payload.projectId !== projectId) return;
       if (currentPipelineId && payload.pipelineId !== currentPipelineId) return;
 
       setPipelineStatus(payload.status as PipelineStatus);
+
+      if (payload.status === "success") {
+        try {
+          // Fetch updated project data from API
+          const response = await getProject(projectId);
+          if (response.success && response.data) {            
+            const updatedProject = response.data;
+            
+            // Update project in Redux store
+            dispatch(updateProjectById(updatedProject));
+            
+            // Update selectedProject in Redux store
+            dispatch(setSelectedProject(updatedProject));
+          }
+        } catch (error) {
+          console.error("[AOI RIGHT] Error fetching updated project:", error);
+        }
+      }
+
       if (payload.summary) {
         setSummary({
           totalSteps: payload.summary.totalSteps,
@@ -198,7 +228,6 @@ const AoiRightPanel = () => {
         });
       }
     };
-
     socket.on("aoi:pipeline_started", handleStarted);
     socket.on("aoi:pipeline_stage", handleStage);
     socket.on("aoi:pipeline_completed", handleCompleted);
@@ -261,10 +290,6 @@ const AoiRightPanel = () => {
     }
   };
 
-  const handleDownloadClick = (event: React.MouseEvent<HTMLElement>) => {
-    setAnchorEl(event.currentTarget);
-  };
-
   return (
     <StyledBox>
       {/* ✅ existing AlertBox from incoming branch */}
@@ -276,39 +301,19 @@ const AoiRightPanel = () => {
           severity={alert.severity}
         />
       )}
-      {/* Header with Back and Download buttons */}
-      <Box 
-        sx={{ 
-          height: 60, 
-          width: "100%", 
-          display: "flex", 
-          alignItems: "center", 
-          justifyContent: "flex-start",
-          px: 1,
-          gap: 1,
-          borderBottom: (theme) => `1px solid ${theme.palette.divider}`
-        }} 
-      >
-        <IconButton onClick={() => navigate(-1)} sx={{ p: 0.5 }}>
-          <ArrowBackIcon fontSize="medium" />
-        </IconButton>
 
-        <Button
-          variant="outlined"
-          sx={{ ml: "auto", mr: 1, textTransform: "none", px: 2, py: 0.5 }}
-          onClick={handleDownloadClick}
-          endIcon={
-            anchorEl ? (
-              <ArrowDropUpIcon fontSize="small" />
-            ) : (
-              <ArrowDropDownIcon fontSize="small" />
-            )
-          }
-          disabled={!selectedProject?.processed}
-        >
-          {t("app.download")}
-        </Button>
-      </Box>
+      <IconButton 
+        onClick={() => navigate(-1)}
+        sx={{
+          position: "absolute",
+          top: 16,
+          left: 16,
+          zIndex: 10,
+        }}
+      >
+        <ArrowBackIcon fontSize="medium" />
+      </IconButton>
+
 
       {/* Stats area */}
       <StyledGridBottom>
@@ -317,6 +322,49 @@ const AoiRightPanel = () => {
 
       {/* Set AOI button + overall pipeline status + stage counter */}
       <StyledConfirmBox>
+        {/* Status Messages */}
+        {isRunning && (
+          <Alert 
+            severity="info"
+            icon={<CircularProgress size={20} />}
+            sx={{ width: "90%", maxWidth: 500 }}
+          >
+            <Box display="flex" alignItems="center" justifyContent="space-between">
+              <Typography variant="body2">
+                {t("app.runningSetAoi")}
+              </Typography>
+              <Typography variant="body2" fontWeight="bold" sx={{ ml: 2 }}>
+                {completedSteps}/{totalSteps}
+              </Typography>
+            </Box>
+          </Alert>
+        )}
+
+        {isSuccess && (
+          <Alert 
+            severity="success"
+            icon={<CheckCircleIcon />}
+            sx={{ width: "90%", maxWidth: 500 }}
+          >
+            <Typography variant="body2">
+              {t("app.setAoiSuccess")}
+            </Typography>
+          </Alert>
+        )}
+
+        {isFailed && (
+          <Alert 
+            severity="error"
+            icon={<ErrorIcon />}
+            sx={{ width: "90%", maxWidth: 500 }}
+          >
+            <Typography variant="body2">
+              {t("app.setAoiFailed")}
+            </Typography>
+          </Alert>
+        )}
+
+        {/* Button Section */}
         <Tooltip
           title={
             aoiPolygons.length < MIN_AOI_POLYGON_COUNT ||
@@ -334,20 +382,13 @@ const AoiRightPanel = () => {
             )
           }
         >
-          <Box
-            display="flex"
-            flexDirection="column"
-            alignItems="center"
-            justifyContent="center"
-            sx={{ width: "100%" }}
-          >
-            {/* inline info while POST is in-flight (from incoming branch) */}
+          <Box display="flex" flexDirection="column" alignItems="center">
             {loading && (
               <Alert
                 severity="info"
                 sx={{
                   width: "100%",
-                  mb: 3.5,
+                  mb: 2,
                   textAlign: "center",
                 }}
               >
@@ -372,20 +413,6 @@ const AoiRightPanel = () => {
             </Button>
           </Box>
         </Tooltip>
-
-        {/* Spinner + 0/6 style counter + final icon */}
-        <Box sx={{ ml: 2, display: "flex", alignItems: "center" }}>
-          {isRunning && (
-            <>
-              <CircularProgress size={22} />
-              <Typography variant="body2" sx={{ ml: 1, minWidth: 48 }}>
-                {completedSteps}/{totalSteps}
-              </Typography>
-            </>
-          )}
-          {isSuccess && <CheckCircleIcon color="success" />}
-          {isFailed && <ErrorIcon color="error" />}
-        </Box>
       </StyledConfirmBox>
     </StyledBox>
   );
