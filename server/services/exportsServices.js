@@ -10,9 +10,9 @@ async function handleExcelExport(projectId) {
     const project = await projectService.getProject(projectId);
     const buffer = await createExcelFile({
       projectName: project.name,
-      valueBA: 0,
-      valueA: 0,
-      valueB: 0,
+      valueBA: project.indexba,
+      valueA: project.indexa,
+      valueB: project.indexb,
     });
 
     const fileName = `${projectId}_excel.xlsx`;
@@ -28,6 +28,7 @@ async function handleExcelExport(projectId) {
     return { key };
   } catch (error) {
     console.error("Error while creating excel", error);
+    throw error;
   }
 }
 
@@ -47,13 +48,19 @@ async function handlePDFExport(projectId) {
     return { key };
   } catch (error) {
     console.error("Error while creating pdf", error);
+    throw error;
   }
 }
 
 export async function exportsServices(projectId) {
-  const results = {};
-  results["xlsx"] = await handleExcelExport(projectId);
-  results["pdf"] = await handlePDFExport(projectId);
+  try {
+    const results = {};
+    results["xlsx"] = await handleExcelExport(projectId);
+    results["pdf"] = await handlePDFExport(projectId);
 
-  return results;
+    return results;
+  } catch (error) {
+    console.error("Error in exportsServices", error);
+    throw error;
+  }
 }
