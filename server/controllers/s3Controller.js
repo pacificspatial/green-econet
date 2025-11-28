@@ -1,5 +1,6 @@
 import s3Services from "../services/s3Services.js";
 import { success } from "../utils/response.js";
+import CustomError from "../utils/customError.js";
 
 const getPresignedUrlForFile = async (req, res, next) => {
   try {
