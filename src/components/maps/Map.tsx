@@ -388,7 +388,7 @@ const Map: React.FC<MapProps> = ({
             ...sx,
           }}
         />
-        {mapReady && <Legend map={mapRef.current} />}
+        {mapReady && <Legend map={mapRef.current} theme={theme} />}
       </Box>
     </>
   );
