@@ -66,7 +66,7 @@ export const Result = () => {
   const { polygons: storedPolygons } = useAppSelector((state) => state.aoi);
   const theme = useTheme();
 
-  const [panelOpen, setPanelOpen] = useState(true);
+  const [panelOpen, setPanelOpen] = useState(false);
 
   const fetchProjectPolygons = useCallback(async () => {
     if (!projectId) return;
