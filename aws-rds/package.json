@@ -4,7 +4,9 @@
   "description": "Resources for database in Econet Plateau",
   "scripts": {
     "stg:deploy": "serverless deploy --verbose --region ap-northeast-1 --stage stg --aws-profile enp",
-    "stg:destroy": " serverless remove --verbose --region ap-northeast-1 --stage stg  --aws-profile enp"
+    "stg:destroy": " serverless remove --verbose --region ap-northeast-1 --stage stg  --aws-profile enp",
+    "prd:deploy": "serverless deploy --verbose --region ap-northeast-1 --stage prd --aws-profile enp",
+    "prd:destroy": " serverless remove --verbose --region ap-northeast-1 --stage prd  --aws-profile enp"
   },
   "author": "Eco Net Plateau",
   "license": "LICENSED",
