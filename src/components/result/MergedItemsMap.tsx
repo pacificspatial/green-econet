@@ -24,6 +24,7 @@ export const MergedItemsMap: React.FC<MergedItemsMapProp> = ({ center, zoom }) =
   const { basemap } = useBasemap();
   const { projectId } = useParams();
   const { t } = useTranslation();
+  const { selectedProject } = useAppSelector((state) => state.project);
   const { polygons: storedPolygons } = useAppSelector((state) => state.aoi);
   
   const [ loading, setLoading ] = useState<boolean>(false);
@@ -263,6 +264,55 @@ export const MergedItemsMap: React.FC<MergedItemsMapProp> = ({ center, zoom }) =
           });
         }
       }
+
+      // ADD PROJECT BOUNDARY LAYER      
+      if (selectedProject?.geom) {
+        const boundaryLayerData = [{
+          geom: selectedProject.geom,
+          properties: {
+            id: selectedProject.id,
+            name: selectedProject.name,
+          },
+        }];
+
+        // Wait for map to be idle before adding boundary layer
+        await new Promise<void>((resolve) => {
+          if (map.loaded()) {
+            resolve();
+          } else {
+            map.once('idle', () => resolve());
+          }
+        });
+        
+        // Add layer using new generic function
+        addLayer(
+          map,
+          `layer-${PROJECT_LAYER_CONFIG.id}`,
+          {
+            type: 'geojson',
+            data: {
+              type: 'FeatureCollection',
+              features: boundaryLayerData.map(d => ({
+                type: 'Feature',
+                geometry: d.geom,
+                properties: d.properties
+              }))
+            }
+          },
+          {
+            type: PROJECT_LAYER_CONFIG.type,
+            paint: PROJECT_LAYER_CONFIG.paint
+          }
+        );
+        // Wait for boundary layer to be added
+        await new Promise<void>((resolve) => {
+          if (map.loaded() && map.getLayer(`layer-${PROJECT_LAYER_CONFIG.id}`)) {
+            resolve();
+          } else {
+            map.once('idle', () => resolve());
+          }
+        });
+      }
       
       return allFeatures.length > 0 ? allFeatures : null;
     } catch (error) {
@@ -337,9 +387,17 @@ export const MergedItemsMap: React.FC<MergedItemsMapProp> = ({ center, zoom }) =
           allFeatures.push(...mergedFeatures);
         }
         
-        // Fit map to all features after they're added
-        if (allFeatures.length > 0 && map.loaded()) {
-          fitMapToFeatures(map, allFeatures);
+        if (allFeatures.length > 0 && selectedProject?.geom && map.loaded()) {
+          const projectFeature: Feature<Geometry> = {
+            type: "Feature",
+            geometry: selectedProject.geom,
+            properties: {
+              id: selectedProject.id,
+              name: selectedProject.name,
+            },
+          };
+          
+          fitMapToFeatures(map, [projectFeature]);
         }
       };
 

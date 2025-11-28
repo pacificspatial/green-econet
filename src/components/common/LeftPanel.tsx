@@ -134,8 +134,8 @@ const StatusPill = ({ label, color }: { label: string; color: string }) => (
       py: 0.2,
       fontSize: "0.7rem",
       borderRadius: "12px",
-      backgroundColor: color,
-      color: "#fff",
+      border: `1px solid ${color}`,
+      color: color,
       ml: 1,
       whiteSpace: "nowrap",
     }}
@@ -473,7 +473,7 @@ const LeftPanel: React.FC<LeftPanelProps> = ({
 
                         {/* Processed Pill */}
                         {isProcessed && (
-                          <StatusPill label={t("app.processed")} color="#4a9b4cff" />
+                          <StatusPill label={t("app.processed")} color={theme.palette.primary.main} />
                         )}
 
                         {showCompletionIcon && aoiStatus === "success" && (

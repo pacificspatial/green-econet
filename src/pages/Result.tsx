@@ -43,7 +43,8 @@ const CollapseButtonWrapper = styled(Box)(() => ({
 }));
 
 const CollapseButton = styled(IconButton)(({ theme }) => ({
-  backgroundColor: theme.palette.background.paper,
+  backgroundColor: theme.palette.primary.main,
+  color: theme.palette.primary.contrastText,
   border: "1px solid",
   borderColor: theme.palette.divider,
   borderRadius: "4px 0 0 4px",
@@ -51,6 +52,7 @@ const CollapseButton = styled(IconButton)(({ theme }) => ({
   boxShadow: "-2px 0 8px rgba(0, 0, 0, 0.1)",
   transition: "all 0.2s ease",
   "&:hover": {
+    color: theme.palette.text.primary,
     backgroundColor: theme.palette.background.paper,
     boxShadow: "-3px 0 12px rgba(0, 0, 0, 0.15)",
   },
@@ -65,7 +67,7 @@ export const Result = () => {
   const { polygons: storedPolygons } = useAppSelector((state) => state.aoi);
   const theme = useTheme();
 
-  const [panelOpen, setPanelOpen] = useState(true);
+  const [panelOpen, setPanelOpen] = useState(false);
 
   const fetchProjectPolygons = useCallback(async () => {
     if (!projectId) return;
