@@ -167,7 +167,7 @@ export const createPdfFile = async (projectId) => {
       // -------------------------------
       doc.fontSize(12)
         .font("JP-Regular")
-        .text(`（プロジェクト名）: ${projectName}`, { indent: 10 });
+        .text(`(${projectName})`, { indent: 10 });
       doc.moveDown(1.5);
 
       // -------------------------------
