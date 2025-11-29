@@ -193,7 +193,7 @@ const LeftPanel: React.FC<LeftPanelProps> = ({
     // console.log("[LEFT PANEL] using socket:", socket.id);
 
     const handleStarted = (payload: any) => {
-      console.log("[LEFT PANEL] aoi:pipeline_started:", payload);
+      // console.log("[LEFT PANEL] aoi:pipeline_started:", payload);
       dispatch(
         pipelineStarted({
           projectId: payload.projectId,
@@ -211,7 +211,7 @@ const LeftPanel: React.FC<LeftPanelProps> = ({
     };
 
     const handleStage = (payload: any) => {
-      console.log("[LEFT PANEL] aoi:pipeline_stage:", payload);
+      // console.log("[LEFT PANEL] aoi:pipeline_stage:", payload);
       dispatch(
         pipelineStageUpdated({
           projectId: payload.projectId,
@@ -226,7 +226,7 @@ const LeftPanel: React.FC<LeftPanelProps> = ({
     };
 
     const handleCompleted = (payload: any) => {
-      console.log("[LEFT PANEL] aoi:pipeline_completed:", payload);
+      // console.log("[LEFT PANEL] aoi:pipeline_completed:", payload);
       dispatch(
         pipelineCompleted({
           projectId: payload.projectId,

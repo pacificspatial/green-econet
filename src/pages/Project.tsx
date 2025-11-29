@@ -1,5 +1,6 @@
 import RightPanel from "@/components/common/RightPanel";
 import Map from "@/components/maps/Map";
+import { mapCenter, mapZoom } from "@/constants/mapConstants";
 import { useAppDispatch } from "@/hooks/reduxHooks";
 import { clearAoiPolygons } from "@/redux/slices/aoiSlice";
 import { setSelectedProject } from "@/redux/slices/projectSlice";
@@ -28,8 +29,6 @@ const PanelGrid = styled(Grid)({
 
 const Project = () => {
   const dispatch = useAppDispatch();
-  const center: [number, number] = [139.7545870646046, 35.68260566814629];
-  const zoom = 10;
 
   useEffect(() => {
     return () => {
@@ -53,7 +52,7 @@ const Project = () => {
     >
       <Container>
         <MapGrid>
-          <Map center={center} zoom={zoom} />
+          <Map center={mapCenter} zoom={mapZoom} />
         </MapGrid>
         <PanelGrid sx={{ height: "calc(100vh - 64px)" }}>
           <RightPanel />

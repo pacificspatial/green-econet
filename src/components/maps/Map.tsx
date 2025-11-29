@@ -41,6 +41,7 @@ import { getPolygonsByProject } from "@/api/project";
 import { setAoiPolygons } from "@/redux/slices/aoiSlice";
 import type { ProjectPolygon } from "@/types/ProjectData";
 import type { Feature } from "geojson";
+import { mapCenter, mapZoom } from "@/constants/mapConstants";
 
 // ---------------------------------------------------------------------------
 // Props
@@ -60,8 +61,8 @@ const Map: React.FC<MapProps> = ({
   highResolution = false,
   collapsed = false,
   sx = {},
-  zoom = 10,
-  center = [139.7545870646046, 35.68260566814629],
+  zoom = mapZoom,
+  center = mapCenter,
 }) => {
   const [loading, setLoading] = useState(false);
   const [loadingText, setLoadingText] = useState("");
@@ -76,6 +77,7 @@ const Map: React.FC<MapProps> = ({
   const mapRef = useRef<maplibregl.Map | null>(null);
   // Use `any` so it’s compatible with Draw*HandlerParams (which still reference MapboxDraw types)
   const drawInstance = useRef<any>(null);
+  const mapIsAlive = useRef(true);
 
   const aoiPolygons = useAppSelector((state) => state.aoi.polygons);
   const { selectedProject } = useAppSelector((state) => state.project);
@@ -194,6 +196,20 @@ const Map: React.FC<MapProps> = ({
   }, [projectId, dispatch, t, handleSetAlert, selectedProject?.processed]);
 
   // -------------------------------------------------------------------------
+  // Add pmtiles layers (green + bufferGreen)
+  // -------------------------------------------------------------------------
+  const addLayers = () => {
+    const layers = [
+      { name: "Green Layers", config: layerConfigs.green },
+      { name: "BufferGreen Layers", config: layerConfigs.bufferGreen },
+    ];
+
+    layers.forEach(({ config }) => {
+      addStyledLayer(mapRef.current as any, config, config.fileName || "");
+    });
+  };
+
+  // -------------------------------------------------------------------------
   // Initialize map (once)
   // -------------------------------------------------------------------------
   useEffect(() => {
@@ -209,42 +225,26 @@ const Map: React.FC<MapProps> = ({
 
     mapRef.current.once("style.load", () => {
       if (mapRef.current) {
-        mapRef.current.flyTo({
-          center,
-          zoom,
+        mapIsAlive.current = true;
+        mapRef.current.once("idle", () => {
+          if (mapIsAlive.current) {
+            addLayers();
+            setMapReady(true);
+          }
         });
-        setMapReady(true);
       }
     });
 
     return () => {
       if (mapRef.current) {
+        if (drawInstance.current) drawInstance.current = null;
+        mapIsAlive.current = false;
         mapRef.current.remove();
         mapRef.current = null;
         setMapReady(false);
       }
     };
   }, [basemap, highResolution, collapsed, center, zoom]);
-
-  // -------------------------------------------------------------------------
-  // Add pmtiles layers (green + bufferGreen) once map is ready
-  // -------------------------------------------------------------------------
-  const addLayers = () => {
-    const layers = [
-      { name: "Green Layers", config: layerConfigs.green },
-      { name: "BufferGreen Layers", config: layerConfigs.bufferGreen },
-    ];
-
-    layers.forEach(({ config }) => {
-      addStyledLayer(mapRef.current as any, config, config.fileName || "");
-    });
-  };
-
-  useEffect(() => {
-    if (mapRef.current && mapReady) {
-      addLayers();
-    }
-  }, [projectId, basemap, mapReady]);
 
   // -------------------------------------------------------------------------
   // Draw tool: create ONE instance per project
@@ -282,20 +282,6 @@ const Map: React.FC<MapProps> = ({
       handleDrawDeleteSync,
       theme
     );
-
-    // Cleanup when effect deps change/unmount
-    return () => {
-      if (drawInstance.current) {
-        cleanupDrawTool({
-          mapRef,
-          drawInstance: drawInstance.current,
-          handleDrawCreate: handleDrawCreateSync,
-          handleDrawUpdate: handleDrawUpdateSync,
-          handleDrawDelete: handleDrawDeleteSync,
-        });
-        drawInstance.current = null;
-      }
-    };
   }, [
     projectId,
     selectedProject?.processed,
@@ -338,10 +324,10 @@ const Map: React.FC<MapProps> = ({
   // Load project data when projectId changes
   // -------------------------------------------------------------------------
   useEffect(() => {
-    if(projectId) {
+    if(projectId && mapReady) {
       fetchProjectPolygons()
     }
-  }, [projectId, basemap, fetchProjectPolygons]);
+  }, [projectId, fetchProjectPolygons, mapReady]);
 
   // -------------------------------------------------------------------------
   // Autofit map to AOIs / clipped features
@@ -402,7 +388,7 @@ const Map: React.FC<MapProps> = ({
             ...sx,
           }}
         />
-        {mapReady && <Legend map={mapRef.current} />}
+        {mapReady && <Legend map={mapRef.current} theme={theme} />}
       </Box>
     </>
   );

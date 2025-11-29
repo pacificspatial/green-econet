@@ -21,7 +21,6 @@ export function cleanupDrawTool({
 }: CleanupParams): void {
   const map = mapRef.current;
   if (!map || !drawInstance) return;
-console.log(map);
 
   // Remove listeners
   map.off("draw.create", handleDrawCreate);

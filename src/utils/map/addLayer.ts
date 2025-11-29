@@ -162,6 +162,4 @@ export function removeLayer(map: maplibregl.Map, layerId: string): void {
   if (map.getSource(layerId)) {
     map.removeSource(layerId);
   }
-
-  console.log(`Layer "${layerId}" removed`);
 }

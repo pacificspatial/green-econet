@@ -28,20 +28,20 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
 
   useEffect(() => {
     const socket = socketRef.current!;
-    console.log("[SOCKET] Connecting to:", import.meta.env.VITE_EP_SOCKET_PORT);
+    // console.log("[SOCKET] Connecting to:", import.meta.env.VITE_EP_SOCKET_PORT);
 
     const handleConnect = () => {
-      console.log("[SOCKET] connected:", socket.id);
+      // console.log("[SOCKET] connected:", socket.id);
     };
     const handleDisconnect = () => {
-      console.log("[SOCKET] disconnected");
+      // console.log("[SOCKET] disconnected");
     };
 
     socket.on("connect", handleConnect);
     socket.on("disconnect", handleDisconnect);
 
     return () => {
-      console.log("[SOCKET] cleanup listeners (provider still keeps socket)");
+      // console.log("[SOCKET] cleanup listeners (provider still keeps socket)");
       socket.off("connect", handleConnect);
       socket.off("disconnect", handleDisconnect);
       // we don't disconnect here so the SPA keeps one live connection

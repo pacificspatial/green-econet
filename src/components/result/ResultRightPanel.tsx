@@ -48,8 +48,7 @@ const ResultRightPanel = () => {
     setAnchorEl(null);
   };
 
-  const handleDownloadSelect = (type: "pdf" | "xlsx") => {
-    console.log(`Downloading as ${type}`);
+  const handleDownloadSelect = (_type: "pdf" | "xlsx") => {
     // Add your download logic here based on the type
     handleClose();
   };
