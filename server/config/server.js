@@ -6,8 +6,6 @@ import projectApiRoutes from "../routes/projectRoutes.js";
 import layerApiRoutes from "../routes/layerRoutes.js";
 import s3Routes from "../routes/s3Routes.js";
 import resultApiRoutes from "../routes/resultRoutes.js";
-import dotenv from "dotenv";
-dotenv.config();
 
 import errorHandler from "../middlewares/errorHandler.js";
 import { authorizer } from "../middlewares/auth.js";
