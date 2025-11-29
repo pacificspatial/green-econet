@@ -1,6 +1,10 @@
 import ExcelJS from "exceljs";
 import PDFDocument from "pdfkit";
-
+import resultServices from "../services/resultServices.js"
+import projectService from "../services/projectService.js";
+import fs from "fs";
+import path from "path";
+import { renderMapImage, rowsToGeoJSON } from "../utils/mapUtils.js";
 export const createExcelFile = async ({
   projectName,
   valueBA,
@@ -79,26 +83,146 @@ export const createExcelFile = async ({
 };
 
 export const createPdfFile = async (projectId) => {
-  return new Promise((resolve, reject) => {
+  return new Promise(async (resolve, reject) => {
     try {
-      const doc = new PDFDocument();
-      const chunks = [];
+      const project = await projectService.getProject(projectId);
+      const clippedBuffer125 = await resultServices.getClippedBuffer125GreenResult(projectId);
+      const clippedGreen = await resultServices.getClippedGreenResult(projectId);
+      const mergedBuffer125 = await resultServices.getMergedBuffer125GreenResult(projectId);
+      const mergedGreen = await resultServices.getMergedGreenResult(projectId);
+      
+      // Create separate GeoJSON for each layer type
+      const clippedBuffer125GeoJSON = rowsToGeoJSON(clippedBuffer125, 'clipped-buffer-125-green');
+      const clippedGreenGeoJSON = rowsToGeoJSON(clippedGreen, 'clipped-green');
+      const projectGeoJSON = rowsToGeoJSON([project], 'project-boundary');
+      const mergedBuffer125Geojson = rowsToGeoJSON(mergedBuffer125, 'merged-buffer125-green')
+      const mergedGreenGeojson = rowsToGeoJSON(mergedGreen, 'merged-green');
 
-      doc.on("data", (c) => chunks.push(c));
-      doc.on("end", () => {
-        const buffer = Buffer.concat(chunks);
-        resolve(buffer);
+      // Render map image with separate layers
+      const snapshotImage = await renderMapImage(
+        clippedBuffer125GeoJSON,
+        clippedGreenGeoJSON,
+        projectGeoJSON
+      );
+
+      const snapshotImage2 = await renderMapImage(
+        mergedBuffer125Geojson,
+        mergedGreenGeojson,
+        projectGeoJSON
+      );
+
+      const projectName = project.name;
+      const valueA = Number(project.indexa)?.toFixed(2) || 0;
+      const valueB = Number(project.indexb)?.toFixed(2) || 0;
+      const valueBA = Number(project.indexba)?.toFixed(2) || 0;
+
+      // Initialize PDF first
+      const doc = new PDFDocument({
+        size: "A4",
+        margins: { top: 30, bottom: 30, left: 30, right: 30 }
       });
+      
+      doc.registerFont(
+        "JP-Regular",
+        path.join(process.cwd(), "assets/fonts/NotoSansJP-Regular.ttf")
+      );      
+      // --- Draw page border inside margins ---
+      doc.rect(
+        doc.page.margins.left,
+        doc.page.margins.top,
+        doc.page.width - doc.page.margins.left - doc.page.margins.right,
+        doc.page.height - doc.page.margins.top - doc.page.margins.bottom
+      ).stroke();
 
-      doc.fontSize(18).text("Ecosystem Export Report", { bold: true });
-      doc.moveDown();
-      doc.fontSize(12).text(`Project: ${projectId}`);
-      doc.moveDown();
-      doc
+      const PADDING_LEFT = doc.page.margins.left + 10;
+      const PADDING_TOP = doc.page.margins.top + 10;
+
+      // Set starting cursor with padding
+      doc.x = PADDING_LEFT;
+      doc.y = PADDING_TOP;
+
+      // ---- SAVE TO LOCAL FILE ----
+      // const outputPath = `/Users/sayandak/Desktop/Tekgile/econet_plateau/server/project_${projectId}.pdf`;
+      // const fileStream = fs.createWriteStream(outputPath);
+      // doc.pipe(fileStream);
+
+      // ---- BUFFER FOR API RESPONSE ----
+      const chunks = [];
+      doc.on("data", (c) => chunks.push(c));
+      doc.on("end", () => resolve(Buffer.concat(chunks)));
+
+      // -------------------------------
+      // TITLE
+      // -------------------------------
+      doc.fontSize(16)
+        .font("JP-Regular")
+        .text("生態系ネットワーク状況の指標値算出", {
+          align: "left",
+          indent: 10
+        });
+      doc.moveDown(1.2);
+
+      // -------------------------------
+      // PROJECT NAME
+      // -------------------------------
+      doc.fontSize(12)
+        .font("JP-Regular")
+        .text(`(${projectName})`, { indent: 10 });
+      doc.moveDown(1.5);
+
+      // -------------------------------
+      // B-A VALUE
+      // -------------------------------
+      doc.font("JP-Regular")
+        .fontSize(13)
+        .text(`指標値の増加: ${valueBA}`, { indent: 10 });
+
+      doc.moveTo(40, doc.y + 5).lineTo(550, doc.y + 5).stroke();
+      doc.moveDown(1.5);
+
+      doc.font("JP-Regular")
+        .fontSize(11)
+        .text(
+          "指標値の増加＝Ｂ（緑地を追加した場合の指標値）― Ａ（緑地を追加する以前の指標値）",
+          { indent: 10 }
+        );
+      doc.moveDown(2);
+
+      // -------------------------------
+      // A VALUE
+      // -------------------------------
+      doc.font("JP-Regular")
         .fontSize(12)
-        .text("⚠ Placeholder PDF — full report format pending spec.");
+        .text(`【A】緑地を追加する以前の指標値： ${valueA}`, { indent: 10 });
 
+      doc.moveTo(40, doc.y + 5).lineTo(550, doc.y + 5).stroke();
+      doc.moveDown(2);
+
+      doc.image(snapshotImage, {
+        fit: [500, 200],
+        align: "center",
+      });
+      doc.moveDown(2);
+
+      // -------------------------------
+      // B VALUE
+      // -------------------------------
+      doc.font("JP-Regular")
+        .fontSize(12)
+        .text(`【B】緑地を追加した場合の指標値： ${valueB}`, { indent: 10 });
+
+      doc.moveTo(40, doc.y + 5).lineTo(550, doc.y + 5).stroke();
+      doc.moveDown(2);
+
+      doc.image(snapshotImage2, {
+        fit: [500, 200],
+        align: "center",
+      });
+      doc.moveDown(2);
+
+      // Finish writing
       doc.end();
+
     } catch (err) {
       reject(err);
     }
