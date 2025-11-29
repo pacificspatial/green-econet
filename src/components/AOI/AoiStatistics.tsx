@@ -82,6 +82,7 @@ const AoiStatistics = ({ showResultMetrics = false }: AoiStatisticsProps) => {
         height: "100%",
         margin: "0 auto",
         padding: "20px",
+        px:"5px",
         pb: "100px",
         position: "relative",
       }}
@@ -235,13 +236,13 @@ const AoiStatistics = ({ showResultMetrics = false }: AoiStatisticsProps) => {
 
               <StatItem>
                 <Typography
-                  sx={{ fontSize: "16px", color: theme.palette.text.primary }}
+                  sx={{ fontSize: "14px", color: theme.palette.text.primary }}
                 >
                   {t("app.indexa")}
                 </Typography>
                 <Typography
                   sx={{
-                    fontSize: "16px",
+                    fontSize: "14px",
                     fontWeight: 500,
                     color: theme.palette.text.primary,
                   }}
@@ -252,13 +253,13 @@ const AoiStatistics = ({ showResultMetrics = false }: AoiStatisticsProps) => {
 
               <StatItem>
                 <Typography
-                  sx={{ fontSize: "16px", color: theme.palette.text.primary }}
+                  sx={{ fontSize: "14px", color: theme.palette.text.primary }}
                 >
                   {t("app.indexb")}
                 </Typography>
                 <Typography
                   sx={{
-                    fontSize: "16px",
+                    fontSize: "14px",
                     fontWeight: 500,
                     color: theme.palette.text.primary,
                   }}
@@ -269,13 +270,13 @@ const AoiStatistics = ({ showResultMetrics = false }: AoiStatisticsProps) => {
 
               <StatItem>
                 <Typography
-                  sx={{ fontSize: "16px", color: theme.palette.text.primary }}
+                  sx={{ fontSize: "14px", color: theme.palette.text.primary }}
                 >
                   {t("app.indexba")}
                 </Typography>
                 <Typography
                   sx={{
-                    fontSize: "16px",
+                    fontSize: "14px",
                     fontWeight: 500,
                     color: theme.palette.text.primary,
                   }}
