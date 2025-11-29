@@ -52,9 +52,6 @@ const getPresignedUrlForFile = async (
   bucketName = "tile",
   expiresIn = 3600,
 ) => {
-
-  console.log("--------", fileName, bucketName, tileBucketName, downloadBucketName);
-
   try {
     const getObjectCommand = new GetObjectCommand({
       Bucket: bucketMap[bucketName],
