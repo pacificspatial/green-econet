@@ -51,7 +51,7 @@ export const addStyledLayer = async (
         tileUrl = res.data;
       }
     } else {
-      tileUrl = `${DOMAIN}/${fileName}`;
+      tileUrl = `${DOMAIN}/tiles/${fileName}`;
     }
 
     // Ensure pmtiles protocol is registered with MapLibre
