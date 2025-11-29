@@ -30,10 +30,7 @@ const getMergedBuffer125GreenResult = async (projectId) => {
 
 const getMergedGreenResult = async (projectId) => {  
   const rows = await MergedGreen.findAll({
-    where: { 
-      project_id: projectId,
-      src_type: { [Op.ne]: "user_polygon" }  
-    },
+    where: { project_id: projectId },
   });
 
   return rows; 
