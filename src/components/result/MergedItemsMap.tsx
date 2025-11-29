@@ -78,69 +78,7 @@ export const MergedItemsMap: React.FC<MergedItemsMapProp> = ({ center, zoom }) =
 
       let allFeatures: Feature<Geometry>[] = [];
 
-      // === LAYER 1 (BOTTOM): ADD GREEN LAYER ===
-      if (greenResponse.success && greenResponse.data) {
-        const records = Array.isArray(greenResponse.data)
-          ? greenResponse.data
-          : [greenResponse.data];
-
-        const layerData = (records as ClippedBuffer125Green[])
-          .filter((record) => record.geom)
-          .map((record) => ({
-            geom: record.geom!,
-            properties: {
-              id: record.id,
-              project_id: record.project_id,
-              src_id: record.src_id,
-              uid: record.uid,
-              ...record.properties,
-            },
-          }));
-
-        if (layerData.length > 0) {
-          const features = layerData.map((data) => ({
-            type: "Feature" as const,
-            geometry: data.geom,
-            properties: data.properties,
-          }));
-          allFeatures = [...allFeatures, ...features];
-
-          // Add green layer (no beforeId - becomes bottom layer)
-          addLayer(
-            map,
-            `layer-${MERGED_GREEN_LAYER_CONFIG.id}`,
-            {
-              type: "geojson",
-              data: {
-                type: "FeatureCollection",
-                features: layerData.map((d) => ({
-                  type: "Feature",
-                  geometry: d.geom,
-                  properties: d.properties,
-                })),
-              },
-            },
-            {
-              type: MERGED_GREEN_LAYER_CONFIG.type,
-              paint: MERGED_GREEN_LAYER_CONFIG.paint,
-            }
-          );
-
-          // Wait for layer to be added
-          await new Promise<void>((resolve) => {
-            if (
-              map.loaded() &&
-              map.getLayer(`layer-${MERGED_GREEN_LAYER_CONFIG.id}`)
-            ) {
-              resolve();
-            } else {
-              map.once("idle", () => resolve());
-            }
-          });
-        }
-      }
-
-      // === LAYER 2 (MIDDLE): ADD BUFFER125 LAYER ===
+            // === LAYER 1 (BOTTOM): ADD GREEN LAYER ===
       if (buffer125Response.success && buffer125Response.data) {
         const records = Array.isArray(buffer125Response.data)
           ? buffer125Response.data
@@ -193,6 +131,68 @@ export const MergedItemsMap: React.FC<MergedItemsMapProp> = ({ center, zoom }) =
             if (
               map.loaded() &&
               map.getLayer(`layer-${MERGED_BUFFER125_LAYER_CONFIG.id}`)
+            ) {
+              resolve();
+            } else {
+              map.once("idle", () => resolve());
+            }
+          });
+        }
+      }
+
+      // === LAYER 2 : ADD BUFFER125 GREEN LAYER ===
+      if (greenResponse.success && greenResponse.data) {
+        const records = Array.isArray(greenResponse.data)
+          ? greenResponse.data
+          : [greenResponse.data];
+
+        const layerData = (records as ClippedBuffer125Green[])
+          .filter((record) => record.geom)
+          .map((record) => ({
+            geom: record.geom!,
+            properties: {
+              id: record.id,
+              project_id: record.project_id,
+              src_id: record.src_id,
+              uid: record.uid,
+              ...record.properties,
+            },
+          }));
+
+        if (layerData.length > 0) {
+          const features = layerData.map((data) => ({
+            type: "Feature" as const,
+            geometry: data.geom,
+            properties: data.properties,
+          }));
+          allFeatures = [...allFeatures, ...features];
+
+          // Add green layer (no beforeId - becomes bottom layer)
+          addLayer(
+            map,
+            `layer-${MERGED_GREEN_LAYER_CONFIG.id}`,
+            {
+              type: "geojson",
+              data: {
+                type: "FeatureCollection",
+                features: layerData.map((d) => ({
+                  type: "Feature",
+                  geometry: d.geom,
+                  properties: d.properties,
+                })),
+              },
+            },
+            {
+              type: MERGED_GREEN_LAYER_CONFIG.type,
+              paint: MERGED_GREEN_LAYER_CONFIG.paint,
+            }
+          );
+
+          // Wait for layer to be added
+          await new Promise<void>((resolve) => {
+            if (
+              map.loaded() &&
+              map.getLayer(`layer-${MERGED_GREEN_LAYER_CONFIG.id}`)
             ) {
               resolve();
             } else {
