@@ -7,6 +7,8 @@ import type { LayerConfig } from "@/types/Layers";
 export interface Metadata {
   vector_layers: { id: string }[];
 }
+const ENV = String(import.meta.env.VITE_APP_ENV) || "development"
+const DOMAIN = String(import.meta.env.VITE_DOMAIN) || ""
 
 // Global pmtiles protocol instance (register once per app)
 let pmtilesProtocol: Protocol | null = null;
@@ -41,13 +43,15 @@ export const addStyledLayer = async (
     await removeStyledLayer(map, layerConfig.id);
 
     let tileUrl = "";
-    const res = await getS3PreSignedUrl({ fileName });
+    //if env is development then get the presigned url otherwise call directly
+    if (ENV === "development") {
+      const res = await getS3PreSignedUrl({ fileName, bucketName: "tile" });
 
-    if (res.success) {
-      tileUrl = res.data;
+      if (res.success) {
+        tileUrl = res.data;
+      }
     } else {
-      console.error("Failed to get presigned URL for PMTiles:", res);
-      return;
+      tileUrl = `${DOMAIN}/${fileName}`;
     }
 
     // Ensure pmtiles protocol is registered with MapLibre
