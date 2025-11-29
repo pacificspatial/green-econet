@@ -7,7 +7,8 @@ import type { LayerConfig } from "@/types/Layers";
 export interface Metadata {
   vector_layers: { id: string }[];
 }
-const ENV = String(import.meta.env.VITE_APP_ENV) || "development"
+// const ENV = String(import.meta.env.VITE_APP_ENV) || "development"
+const ENV = "development";
 const DOMAIN = String(import.meta.env.VITE_DOMAIN) || ""
 
 // Global pmtiles protocol instance (register once per app)
