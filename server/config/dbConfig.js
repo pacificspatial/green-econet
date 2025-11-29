@@ -1,8 +1,5 @@
 import { Pool } from "pg";
 import { Sequelize } from "sequelize";
-import dotenv from "dotenv";
-
-dotenv.config();
 
 // Validate required environment variables
 const requiredEnv = [
