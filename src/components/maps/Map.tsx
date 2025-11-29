@@ -64,6 +64,8 @@ const Map: React.FC<MapProps> = ({
   zoom = mapZoom,
   center = mapCenter,
 }) => {
+  console.log({zoom, center});
+  
   const [loading, setLoading] = useState(false);
   const [loadingText, setLoadingText] = useState("");
   const [mapReady, setMapReady] = useState(false);
@@ -225,6 +227,9 @@ const Map: React.FC<MapProps> = ({
 
     mapRef.current.once("style.load", () => {
       if (mapRef.current) {
+        mapRef.current.flyTo({
+          zoom,center
+        })
         mapIsAlive.current = true;
         mapRef.current.once("idle", () => {
           if (mapIsAlive.current) {
