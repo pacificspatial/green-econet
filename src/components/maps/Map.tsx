@@ -64,7 +64,7 @@ const Map: React.FC<MapProps> = ({
   zoom = mapZoom,
   center = mapCenter,
 }) => {
-  console.log({zoom, center});
+  // console.log({zoom, center});
   
   const [loading, setLoading] = useState(false);
   const [loadingText, setLoadingText] = useState("");
