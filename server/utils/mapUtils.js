@@ -13,7 +13,7 @@ export const rowsToGeoJSON = (rows, layerType) => ({
         ? JSON.parse(r.geom)
         : r.geom, 
     properties: {
-      layerType // Add layer type to properties
+      layerType
     },
   })),
 });
@@ -42,7 +42,6 @@ const tileToLatLng = (x, y, zoom) => {
  */
 const downloadTile = async (x, y, zoom) => {
   try {
-    // Mapbox Streets v12 tile URL
     const url = `https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/${zoom}/${x}/${y}?access_token=${MAPBOX_ACCESS_TOKEN}`;
     
     const response = await axios.get(url, {
@@ -57,43 +56,52 @@ const downloadTile = async (x, y, zoom) => {
 };
 
 /**
- * Layer configurations matching the TypeScript configs
+ * Layer configurations
  */
 const LAYER_STYLES = {
   'clipped-buffer-125-green': {
-    fillColor: 'rgba(76, 175, 80, 0.6)',
-    strokeColor: '#2E7D32',
-    lineWidth: 2
+    fillColor: '#C2E2FE',
+    strokeColor: '#C2E2FE',
+    lineWidth: 2,
+    fillOpacity: 0.6
   },
   'clipped-green': {
-    fillColor: 'rgba(21, 101, 192, 0.6)',
-    strokeColor: '#1565C0',
-    lineWidth: 2
+    fillColor: '#386B24',
+    strokeColor: '#386B24',
+    lineWidth: 2,
+    fillOpacity: 0.6
   },
   'project-boundary': {
     fillColor: null,
     strokeColor: '#000000',
     lineWidth: 3
   },
-
-  // NEW: merged layer styles for Canvas rendering
   'merged-buffer125-green': {
-    fillColor: 'rgba(195, 228, 253, 0.6)',
-    strokeColor: '#C3E4FD',
-    lineWidth: 2
+    fillColor: '#C2E2FE',
+    strokeColor: '#C2E2FE',
+    lineWidth: 2,
+    fillOpacity: 0.6
   },
   'merged-green': {
-    fillColor: 'rgba(51, 109, 26, 0.6)',
-    strokeColor: '#336D1A',
-    lineWidth: 2
+    fillColor: '#386B24',
+    strokeColor: '#386B24',
+    lineWidth: 2,
+    fillOpacity: 0.6
   }
 };
-
 
 /**
  * Helper function to draw a polygon on canvas with specific style
  */
 const drawPolygon = (ctx, coordinates, project, style) => {
+  // Save the current context state
+  ctx.save();
+  
+  // Apply opacity if specified
+  if (style.fillOpacity !== undefined) {
+    ctx.globalAlpha = style.fillOpacity;
+  }
+  
   coordinates.forEach((ring, ringIdx) => {
     ctx.beginPath();
     
@@ -108,26 +116,28 @@ const drawPolygon = (ctx, coordinates, project, style) => {
     
     ctx.closePath();
     
-    // Fill only the outer ring (first ring) and only if fillColor is specified
     if (ringIdx === 0 && style.fillColor) {
       ctx.fillStyle = style.fillColor;
       ctx.fill();
     }
     
-    // Stroke all rings (outer and holes)
+    // Reset opacity for stroke (strokes should be opaque)
+    ctx.globalAlpha = 1.0;
     ctx.strokeStyle = style.strokeColor;
     ctx.lineWidth = style.lineWidth;
     ctx.stroke();
   });
+  
+  // Restore the context state
+  ctx.restore();
 };
 
 /**
- * Calculate optimal zoom level for features
+ * Calculate optimal zoom level - more aggressive zooming
  */
-const calculateOptimalZoom = (bbox, width, height, paddingPercent = 0.15) => {
+const calculateOptimalZoom = (bbox, width, height, paddingPercent = 0.1) => {
   const [minLng, minLat, maxLng, maxLat] = bbox;
   
-  // Moderate padding to center and zoom appropriately
   const lngPadding = (maxLng - minLng) * paddingPercent;
   const latPadding = (maxLat - minLat) * paddingPercent;
   
@@ -139,7 +149,6 @@ const calculateOptimalZoom = (bbox, width, height, paddingPercent = 0.15) => {
   const lngDiff = paddedMaxLng - paddedMinLng;
   const latDiff = paddedMaxLat - paddedMinLat;
   
-  // Calculate zoom based on Web Mercator projection
   const WORLD_DIM = { height: 256, width: 256 };
   
   function latRad(lat) {
@@ -158,22 +167,20 @@ const calculateOptimalZoom = (bbox, width, height, paddingPercent = 0.15) => {
   const latZoom = zoom(height, WORLD_DIM.height, latFraction);
   const lngZoom = zoom(width, WORLD_DIM.width, lngFraction);
   
-  // Use calculated zoom, max 18
   return Math.min(latZoom, lngZoom, 18);
 };
 
 /**
- * Render map image with Mapbox Streets base map and GeoJSON overlay
+ * Render map image with improved centering and zoom
  */
 export const renderMapImage = async (clippedBuffer125GeoJSON, clippedGreenGeoJSON, projectGeoJSON) => {
-  const width = 800;
-  const height = 800; // Square image
-  const tileSize = 512; // Mapbox uses 512x512 tiles
+  const width = 1200;
+  const height = 1200;
+  const tileSize = 512;
 
   const canvas = createCanvas(width, height);
   const ctx = canvas.getContext('2d');
 
-  // Fill background with light color
   ctx.fillStyle = '#e0e0e0';
   ctx.fillRect(0, 0, width, height);
 
@@ -187,7 +194,6 @@ export const renderMapImage = async (clippedBuffer125GeoJSON, clippedGreenGeoJSO
     ]
   };
 
-  // Calculate bounding box
   let bbox;
   try {
     bbox = turf.bbox(combinedGeoJSON);
@@ -198,31 +204,46 @@ export const renderMapImage = async (clippedBuffer125GeoJSON, clippedGreenGeoJSO
 
   const [minLng, minLat, maxLng, maxLat] = bbox;
 
-  // Handle edge case where bbox might be a point
   if (minLng === maxLng || minLat === maxLat) {
     console.log("Bounding box is too small, cannot render map");
     return canvas.toBuffer('image/png');
   }
 
-  // Calculate optimal zoom level with 5% padding for more zoom
-  const zoom = calculateOptimalZoom(bbox, width, height, 0.05);
+  // Use generous padding so layers fit comfortably within the image (25% padding)
+  const zoom = calculateOptimalZoom(bbox, width, height, 0.25);
   
   console.log(`Using zoom level: ${zoom}`);
 
-  // Calculate center point from the bounding box
+  // Calculate precise center point
   const centerLng = (minLng + maxLng) / 2;
   const centerLat = (minLat + maxLat) / 2;
 
-  // Get tile coordinates for the center
-  const centerTile = latLngToTile(centerLat, centerLng, zoom);
+  // Convert center to pixel coordinates in Web Mercator at this zoom
+  const scale = Math.pow(2, zoom) * tileSize;
+  const worldX = (centerLng + 180) / 360 * scale;
+  const sinLat = Math.sin(centerLat * Math.PI / 180);
+  const worldY = (0.5 - Math.log((1 + sinLat) / (1 - sinLat)) / (4 * Math.PI)) * scale;
 
-  // Calculate how many tiles we need to cover the canvas
-  const tilesX = Math.ceil(width / tileSize) + 1;
-  const tilesY = Math.ceil(height / tileSize) + 1;
-  
-  // Center the tiles around the centerTile for proper centering
-  const startTileX = centerTile.x - Math.floor(tilesX / 2);
-  const startTileY = centerTile.y - Math.floor(tilesY / 2);
+  // Calculate tile range to cover canvas centered on this point
+  const halfWidth = width / 2;
+  const halfHeight = height / 2;
+
+  const minWorldX = worldX - halfWidth;
+  const maxWorldX = worldX + halfWidth;
+  const minWorldY = worldY - halfHeight;
+  const maxWorldY = worldY + halfHeight;
+
+  const startTileX = Math.floor(minWorldX / tileSize);
+  const endTileX = Math.ceil(maxWorldX / tileSize);
+  const startTileY = Math.floor(minWorldY / tileSize);
+  const endTileY = Math.ceil(maxWorldY / tileSize);
+
+  const tilesX = endTileX - startTileX;
+  const tilesY = endTileY - startTileY;
+
+  // Offset to center the tiles properly
+  const offsetX = -(minWorldX - startTileX * tileSize);
+  const offsetY = -(minWorldY - startTileY * tileSize);
 
   // Download and draw base map tiles
   console.log(`Downloading ${tilesX * tilesY} Mapbox tiles at zoom ${zoom}...`);
@@ -237,8 +258,8 @@ export const renderMapImage = async (clippedBuffer125GeoJSON, clippedGreenGeoJSO
       if (tileBuffer) {
         try {
           const img = await loadImage(tileBuffer);
-          const pixelX = tx * tileSize;
-          const pixelY = ty * tileSize;
+          const pixelX = tx * tileSize + offsetX;
+          const pixelY = ty * tileSize + offsetY;
           ctx.drawImage(img, pixelX, pixelY, tileSize, tileSize);
         } catch (e) {
           console.error(`Failed to load tile image: ${e.message}`);
@@ -247,23 +268,19 @@ export const renderMapImage = async (clippedBuffer125GeoJSON, clippedGreenGeoJSO
     }
   }
 
-  // Now create projection for overlay - use bbox center for better alignment
-  const topLeftTile = tileToLatLng(startTileX, startTileY, zoom);
-  const bottomRightTile = tileToLatLng(startTileX + tilesX, startTileY + tilesY, zoom);
-
-  const mapMinLng = topLeftTile.lng;
-  const mapMaxLat = topLeftTile.lat;
-  const mapMaxLng = bottomRightTile.lng;
-  const mapMinLat = bottomRightTile.lat;
-
-  // Projection function for GeoJSON overlay - ensures proper centering
+  // Create projection function using the same coordinate system
   const project = (lng, lat) => {
-    const x = ((lng - mapMinLng) / (mapMaxLng - mapMinLng)) * width;
-    const y = ((mapMaxLat - lat) / (mapMaxLat - mapMinLat)) * height;
+    const px = (lng + 180) / 360 * scale;
+    const sinLat = Math.sin(lat * Math.PI / 180);
+    const py = (0.5 - Math.log((1 + sinLat) / (1 - sinLat)) / (4 * Math.PI)) * scale;
+    
+    const x = (px - minWorldX);
+    const y = (py - minWorldY);
+    
     return [x, y];
   };
 
-  // Draw layers in order: clippedBuffer125, clippedGreen, then project boundary
+  // Draw layers in order
   const layersToRender = [
     { geojson: clippedBuffer125GeoJSON, style: LAYER_STYLES['clipped-buffer-125-green'] },
     { geojson: clippedGreenGeoJSON, style: LAYER_STYLES['clipped-green'] },
@@ -286,7 +303,6 @@ export const renderMapImage = async (clippedBuffer125GeoJSON, clippedGreenGeoJSO
             drawPolygon(ctx, polygon, project, style);
           });
         } else if (geom.type === 'LineString') {
-          // Handle LineString for project boundary if needed
           ctx.beginPath();
           geom.coordinates.forEach(([lng, lat], i) => {
             const [x, y] = project(lng, lat);
