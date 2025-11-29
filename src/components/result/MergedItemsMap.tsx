@@ -59,7 +59,222 @@ export const MergedItemsMap: React.FC<MergedItemsMapProp> = ({ center, zoom }) =
   );
 
   /**
+   * Load and add merged layers in correct order
+   * Order: Green (bottom) -> Buffer125 -> Project Boundary (top of data layers)
+   */
+  const getMergedLayers = useCallback(async () => {
+    const map = mapRef.current;
+    if (!map || !map.isStyleLoaded() || !projectId) return null;
+
+    setLoading(true);
+    setLoadingText(t("app.loadingResult") || "Loading results...");
+
+    try {
+      // Fetch both layers in parallel
+      const [buffer125Response, greenResponse] = await Promise.all([
+        getMergedBuffer125GreenResult(projectId as string),
+        getMergedGreenResult(projectId as string),
+      ]);
+
+      let allFeatures: Feature<Geometry>[] = [];
+
+      // === LAYER 1 (BOTTOM): ADD GREEN LAYER ===
+      if (greenResponse.success && greenResponse.data) {
+        const records = Array.isArray(greenResponse.data)
+          ? greenResponse.data
+          : [greenResponse.data];
+
+        const layerData = (records as ClippedBuffer125Green[])
+          .filter((record) => record.geom)
+          .map((record) => ({
+            geom: record.geom!,
+            properties: {
+              id: record.id,
+              project_id: record.project_id,
+              src_id: record.src_id,
+              uid: record.uid,
+              ...record.properties,
+            },
+          }));
+
+        if (layerData.length > 0) {
+          const features = layerData.map((data) => ({
+            type: "Feature" as const,
+            geometry: data.geom,
+            properties: data.properties,
+          }));
+          allFeatures = [...allFeatures, ...features];
+
+          // Add green layer (no beforeId - becomes bottom layer)
+          addLayer(
+            map,
+            `layer-${MERGED_GREEN_LAYER_CONFIG.id}`,
+            {
+              type: "geojson",
+              data: {
+                type: "FeatureCollection",
+                features: layerData.map((d) => ({
+                  type: "Feature",
+                  geometry: d.geom,
+                  properties: d.properties,
+                })),
+              },
+            },
+            {
+              type: MERGED_GREEN_LAYER_CONFIG.type,
+              paint: MERGED_GREEN_LAYER_CONFIG.paint,
+            }
+          );
+
+          // Wait for layer to be added
+          await new Promise<void>((resolve) => {
+            if (
+              map.loaded() &&
+              map.getLayer(`layer-${MERGED_GREEN_LAYER_CONFIG.id}`)
+            ) {
+              resolve();
+            } else {
+              map.once("idle", () => resolve());
+            }
+          });
+        }
+      }
+
+      // === LAYER 2 (MIDDLE): ADD BUFFER125 LAYER ===
+      if (buffer125Response.success && buffer125Response.data) {
+        const records = Array.isArray(buffer125Response.data)
+          ? buffer125Response.data
+          : [buffer125Response.data];
+
+        const layerData = (records as ClippedBuffer125Green[])
+          .filter((record) => record.geom)
+          .map((record) => ({
+            geom: record.geom!,
+            properties: {
+              id: record.id,
+              project_id: record.project_id,
+              src_id: record.src_id,
+              uid: record.uid,
+              ...record.properties,
+            },
+          }));
+
+        if (layerData.length > 0) {
+          const features = layerData.map((data) => ({
+            type: "Feature" as const,
+            geometry: data.geom,
+            properties: data.properties,
+          }));
+          allFeatures = [...allFeatures, ...features];
+
+          // Add buffer layer (will be above green)
+          addLayer(
+            map,
+            `layer-${MERGED_BUFFER125_LAYER_CONFIG.id}`,
+            {
+              type: "geojson",
+              data: {
+                type: "FeatureCollection",
+                features: layerData.map((d) => ({
+                  type: "Feature",
+                  geometry: d.geom,
+                  properties: d.properties,
+                })),
+              },
+            },
+            {
+              type: MERGED_BUFFER125_LAYER_CONFIG.type,
+              paint: MERGED_BUFFER125_LAYER_CONFIG.paint,
+            }
+          );
+
+          // Wait for layer to be added
+          await new Promise<void>((resolve) => {
+            if (
+              map.loaded() &&
+              map.getLayer(`layer-${MERGED_BUFFER125_LAYER_CONFIG.id}`)
+            ) {
+              resolve();
+            } else {
+              map.once("idle", () => resolve());
+            }
+          });
+        }
+      }
+
+      // === LAYER 3: ADD PROJECT BOUNDARY LAYER ===
+      if (selectedProject?.geom) {
+        const boundaryLayerData = [
+          {
+            geom: selectedProject.geom,
+            properties: {
+              id: selectedProject.id,
+              name: selectedProject.name,
+            },
+          },
+        ];
+
+        // Wait for map to be idle before adding boundary layer
+        await new Promise<void>((resolve) => {
+          if (map.loaded()) {
+            resolve();
+          } else {
+            map.once("idle", () => resolve());
+          }
+        });
+
+        // Add boundary layer (will be above buffer)
+        addLayer(
+          map,
+          `layer-${PROJECT_LAYER_CONFIG.id}`,
+          {
+            type: "geojson",
+            data: {
+              type: "FeatureCollection",
+              features: boundaryLayerData.map((d) => ({
+                type: "Feature",
+                geometry: d.geom,
+                properties: d.properties,
+              })),
+            },
+          },
+          {
+            type: PROJECT_LAYER_CONFIG.type,
+            paint: PROJECT_LAYER_CONFIG.paint,
+          }
+        );
+
+        // Wait for boundary layer to be added
+        await new Promise<void>((resolve) => {
+          if (
+            map.loaded() &&
+            map.getLayer(`layer-${PROJECT_LAYER_CONFIG.id}`)
+          ) {
+            resolve();
+          } else {
+            map.once("idle", () => resolve());
+          }
+        });
+      }
+
+      return allFeatures.length > 0 ? allFeatures : null;
+    } catch (error) {
+      console.error("Error in fetching merged layers", error);
+      setAlert({
+        open: true,
+        message: t("app.errorLoadingLayers") || "Error loading layers",
+        severity: "error",
+      });
+      return null;
+    } finally {
+      setLoading(false);
+      setLoadingText("");
+    }
+  }, [projectId, selectedProject, t]);
+
+  /**
    * Load and add project polygons as layers
+   * This should be added LAST to appear on top
    */
   const addProjectPolygonsLayer = useCallback(async () => {
     const map = mapRef.current;
@@ -159,220 +374,6 @@ export const MergedItemsMap: React.FC<MergedItemsMapProp> = ({ center, zoom }) =
     }
   }, [storedPolygons, t, handleSetAlert]);
 
-  /**
-   * Load and add merged buffer 125 green layer to map
-   */
-  const getMergedLayers = useCallback(async () => {
-    const map = mapRef.current;
-    if (!map || !map.isStyleLoaded() || !projectId) return null;
-
-    setLoading(true);
-    setLoadingText(t("app.loadingResult") || "Loading results...");
-
-    try {
-      // Fetch both layers in parallel
-      const [buffer125Response, greenResponse] = await Promise.all([
-        getMergedBuffer125GreenResult(projectId as string),
-        getMergedGreenResult(projectId as string),
-      ]);
-
-      let allFeatures: Feature<Geometry>[] = [];
-
-      // Process merged-buffer-125-green layer
-      if (buffer125Response.success && buffer125Response.data) {
-        const records = Array.isArray(buffer125Response.data)
-          ? buffer125Response.data
-          : [buffer125Response.data];
-
-        const layerData = (records as ClippedBuffer125Green[])
-          .filter((record) => record.geom)
-          .map((record) => ({
-            geom: record.geom!,
-            properties: {
-              id: record.id,
-              project_id: record.project_id,
-              src_id: record.src_id,
-              uid: record.uid,
-              ...record.properties,
-            },
-          }));
-
-        if (layerData.length > 0) {
-          // Store features for fitting map bounds
-          const features = layerData.map((data) => ({
-            type: "Feature" as const,
-            geometry: data.geom,
-            properties: data.properties,
-          }));
-          allFeatures = [...allFeatures, ...features];
-
-          // Add layer using new generic function
-          addLayer(
-            map,
-            `layer-${MERGED_BUFFER125_LAYER_CONFIG.id}`,
-            {
-              type: "geojson",
-              data: {
-                type: "FeatureCollection",
-                features: layerData.map((d) => ({
-                  type: "Feature",
-                  geometry: d.geom,
-                  properties: d.properties,
-                })),
-              },
-            },
-            {
-              type: MERGED_BUFFER125_LAYER_CONFIG.type,
-              paint: MERGED_BUFFER125_LAYER_CONFIG.paint,
-            }
-          );
-
-          // Wait for layer to be added
-          await new Promise<void>((resolve) => {
-            if (
-              map.loaded() &&
-              map.getLayer(`layer-${MERGED_BUFFER125_LAYER_CONFIG.id}`)
-            ) {
-              resolve();
-            } else {
-              map.once("idle", () => resolve());
-            }
-          });
-        }
-      }
-
-      // Process merged-green layer
-      if (greenResponse.success && greenResponse.data) {
-        const records = Array.isArray(greenResponse.data)
-          ? greenResponse.data
-          : [greenResponse.data];
-
-        const layerData = (records as ClippedBuffer125Green[])
-          .filter((record) => record.geom)
-          .map((record) => ({
-            geom: record.geom!,
-            properties: {
-              id: record.id,
-              project_id: record.project_id,
-              src_id: record.src_id,
-              uid: record.uid,
-              ...record.properties,
-            },
-          }));
-
-        if (layerData.length > 0) {
-          // Store features for fitting map bounds
-          const features = layerData.map((data) => ({
-            type: "Feature" as const,
-            geometry: data.geom,
-            properties: data.properties,
-          }));
-          allFeatures = [...allFeatures, ...features];
-
-          // Add layer using new generic function
-          addLayer(
-            map,
-            `layer-${MERGED_GREEN_LAYER_CONFIG.id}`,
-            {
-              type: "geojson",
-              data: {
-                type: "FeatureCollection",
-                features: layerData.map((d) => ({
-                  type: "Feature",
-                  geometry: d.geom,
-                  properties: d.properties,
-                })),
-              },
-            },
-            {
-              type: MERGED_GREEN_LAYER_CONFIG.type,
-              paint: MERGED_GREEN_LAYER_CONFIG.paint,
-            }
-          );
-
-          // Wait for layer to be added
-          await new Promise<void>((resolve) => {
-            if (
-              map.loaded() &&
-              map.getLayer(`layer-${MERGED_GREEN_LAYER_CONFIG.id}`)
-            ) {
-              resolve();
-            } else {
-              map.once("idle", () => resolve());
-            }
-          });
-        }
-      }
-
-      // ADD PROJECT BOUNDARY LAYER
-      if (selectedProject?.geom) {
-        const boundaryLayerData = [
-          {
-            geom: selectedProject.geom,
-            properties: {
-              id: selectedProject.id,
-              name: selectedProject.name,
-            },
-          },
-        ];
-
-        // Wait for map to be idle before adding boundary layer
-        await new Promise<void>((resolve) => {
-          if (map.loaded()) {
-            resolve();
-          } else {
-            map.once("idle", () => resolve());
-          }
-        });
-
-        // Add layer using new generic function
-        addLayer(
-          map,
-          `layer-${PROJECT_LAYER_CONFIG.id}`,
-          {
-            type: "geojson",
-            data: {
-              type: "FeatureCollection",
-              features: boundaryLayerData.map((d) => ({
-                type: "Feature",
-                geometry: d.geom,
-                properties: d.properties,
-              })),
-            },
-          },
-          {
-            type: PROJECT_LAYER_CONFIG.type,
-            paint: PROJECT_LAYER_CONFIG.paint,
-          }
-        );
-        // Wait for boundary layer to be added
-        await new Promise<void>((resolve) => {
-          if (
-            map.loaded() &&
-            map.getLayer(`layer-${PROJECT_LAYER_CONFIG.id}`)
-          ) {
-            resolve();
-          } else {
-            map.once("idle", () => resolve());
-          }
-        });
-      }
-
-      return allFeatures.length > 0 ? allFeatures : null;
-    } catch (error) {
-      console.error("Error in fetching merged layers", error);
-      setAlert({
-        open: true,
-        message: t("app.errorLoadingLayers") || "Error loading layers",
-        severity: "error",
-      });
-      return null;
-    } finally {
-      setLoading(false);
-      setLoadingText("");
-    }
-  }, [projectId, selectedProject, t]);
-
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
 
@@ -406,8 +407,7 @@ export const MergedItemsMap: React.FC<MergedItemsMapProp> = ({ center, zoom }) =
 
   /**
    * Load project data when projectId changes
-   * - Load project polygons layer
-   * - Load merged buffer layer (for processed projects)
+   * Order: Merged layers first (green, buffer, boundary), then polygons on top
    */
   useEffect(() => {
     const map = mapRef.current;
@@ -430,18 +430,19 @@ export const MergedItemsMap: React.FC<MergedItemsMapProp> = ({ center, zoom }) =
 
         const allFeatures: Feature<Geometry>[] = [];
 
-        // Load project polygons layer
-        const polygonFeatures = await addProjectPolygonsLayer();
-        if (polygonFeatures) {
-          allFeatures.push(...polygonFeatures);
-        }
-
-        // Load merged layers
+        // === STEP 1: Load merged layers (green, buffer, boundary) ===
         const mergedFeatures = await getMergedLayers();
         if (mergedFeatures) {
           allFeatures.push(...mergedFeatures);
         }
 
+        // === STEP 2: Load project polygons layer (will be on top) ===
+        const polygonFeatures = await addProjectPolygonsLayer();
+        if (polygonFeatures) {
+          allFeatures.push(...polygonFeatures);
+        }
+
+        // Fit map to project boundary
         if (
           allFeatures.length > 0 &&
           selectedProject?.geom &&
@@ -467,19 +468,18 @@ export const MergedItemsMap: React.FC<MergedItemsMapProp> = ({ center, zoom }) =
     return () => {
       try {
         if (map && map.getStyle()) {
-          // Remove project polygons layer
+          // Remove in reverse order
           if (map.getLayer(`layer-${PROJECT_POLYGONS_LAYER_CONFIG.id}`)) {
             removeLayer(map, `layer-${PROJECT_POLYGONS_LAYER_CONFIG.id}`);
           }
-          // Remove other layers...
+          if (map.getLayer(`layer-${PROJECT_LAYER_CONFIG.id}`)) {
+            removeLayer(map, `layer-${PROJECT_LAYER_CONFIG.id}`);
+          }
           if (map.getLayer(`layer-${MERGED_BUFFER125_LAYER_CONFIG.id}`)) {
             removeLayer(map, `layer-${MERGED_BUFFER125_LAYER_CONFIG.id}`);
           }
           if (map.getLayer(`layer-${MERGED_GREEN_LAYER_CONFIG.id}`)) {
             removeLayer(map, `layer-${MERGED_GREEN_LAYER_CONFIG.id}`);
-          }
-          if (map.getLayer(`layer-${PROJECT_LAYER_CONFIG.id}`)) {
-            removeLayer(map, `layer-${PROJECT_LAYER_CONFIG.id}`);
           }
         }
       } catch (error) {
