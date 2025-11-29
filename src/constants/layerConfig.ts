@@ -2,30 +2,41 @@ export const CLIPPED_BUFFER125_LAYER_CONFIG = {
   id: 'clipped-buffer-125-green',
   type: 'fill' as const,
   paint: {
-    'fill-color': '#4CAF50',
+    'fill-color': '#C2E2FE',
     'fill-opacity': 0.6,
-    'fill-outline-color': '#2E7D32'
+    'fill-outline-color': '#C2E2FE'
   }
 };
+
+export const MERGED_BUFFER125_LAYER_CONFIG = {
+  id: 'merged-buffer125-green',
+  type: 'fill' as const,
+  paint: {
+    'fill-color': '#C2E2FE',
+    'fill-opacity': 0.6,
+    'fill-outline-color': '#C2E2FE'
+  }
+};
+
 
 export const CLIPPED_GREEN_LAYER_CONFIG = {
   id: 'clipped-green',
   type: 'fill' as const,
   paint: {
-    'fill-color': '#1565C0',
+    'fill-color': '#386B24',
     'fill-opacity': 0.6,
-    'fill-outline-color': '#1565C0'
-  }
+    'fill-outline-color': '#386B24'
+  },
 };
 
-export const PROJECT_LAYER_CONFIG = {
-  id: "project-boundary",
-  type: "line" as const,
+export const MERGED_GREEN_LAYER_CONFIG = {
+  id: 'merged-green',
+  type: 'fill' as const,
   paint: {
-    "line-color": "#000",
-    "line-width": 3,
-    "line-opacity": 0.8,
-  },
+    'fill-color': '#386B24',
+    'fill-opacity': 0.6,
+    'fill-outline-color': '#386B24'
+  }
 };
 
 export const PROJECT_POLYGONS_LAYER_CONFIG = {
@@ -38,22 +49,12 @@ export const PROJECT_POLYGONS_LAYER_CONFIG = {
   },
 };
 
-export const MERGED_BUFFER125_LAYER_CONFIG = {
-  id: 'merged-buffer125-green',
-  type: 'fill' as const,
+export const PROJECT_LAYER_CONFIG = {
+  id: "project-boundary",
+  type: "line" as const,
   paint: {
-    'fill-color': '#C3E4FD',
-    'fill-opacity': 0.6,
-    'fill-outline-color': '#C3E4FD'
-  }
-};
-
-export const MERGED_GREEN_LAYER_CONFIG = {
-  id: 'merged-green',
-  type: 'fill' as const,
-  paint: {
-    'fill-color': '#336D1A',
-    'fill-opacity': 0.6,
-    'fill-outline-color': '#336D1A'
-  }
+    "line-color": "#000",
+    "line-width": 3,
+    "line-opacity": 0.8,
+  },
 };
