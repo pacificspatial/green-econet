@@ -2,6 +2,7 @@ import { configureStore, combineReducers } from "@reduxjs/toolkit";
 import aoiReducer from "./slices/aoiSlice";
 import projectReducer from "./slices/projectSlice";
 import aoiPipelineReducer from "./slices/aoiPipelineSlice";
+import authReducer from "./slices/authSlice";
 
 import storage from "redux-persist/lib/storage";
 import { persistReducer, persistStore } from "redux-persist";
@@ -16,6 +17,7 @@ const rootReducer = combineReducers({
   aoi: aoiReducer,
   project: persistReducer(projectPersistConfig, projectReducer),
   aoiPipeline: aoiPipelineReducer,
+  auth: authReducer
 });
 
 export const store = configureStore({

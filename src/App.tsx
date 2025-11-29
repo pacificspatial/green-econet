@@ -3,6 +3,8 @@ import routes from "@/routes/Routes";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
 import { useEffect, useState } from "react";
+import { useAppDispatch } from "./hooks/reduxHooks";
+import { setPassword } from "./redux/slices/authSlice";
 
 function App() {
   const { t } = useTranslation();
@@ -17,26 +19,32 @@ function App() {
 
 function AuthWrapper({ children }: { children: React.ReactNode }) {
   const [authorized, setAuthorized] = useState(false);
+  const dispatch = useAppDispatch();
 
   useEffect(() => {
-    // Already logged in before?
-    const saved = sessionStorage.getItem("auth_pass_ok");
-    if (saved === "true") {
+    const saved = sessionStorage.getItem("auth_pwd");
+
+    if (saved) {
+      dispatch(setPassword(saved));
       setAuthorized(true);
       return;
     }
 
-    // Ask password
-    const pwd = prompt("Enter password:");
-    if (pwd === "1234") {
-      sessionStorage.setItem("auth_pass_ok", "true");
-      setAuthorized(true);
-    } else {
-      alert("Wrong password. Reload to try again.");
-    }
+    askPassword();
   }, []);
 
-  if (!authorized) return null; 
+  const askPassword = () => {
+    const pwd = prompt("Enter password:");
+
+    if (!pwd) return;
+
+    sessionStorage.setItem("auth_pwd", pwd);
+    dispatch(setPassword(pwd));
+    setAuthorized(true);
+  };
+
+  if (!authorized) return null;
+
   return <>{children}</>;
 }
 
