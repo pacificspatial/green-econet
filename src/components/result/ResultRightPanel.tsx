@@ -30,8 +30,8 @@ const StyledGridBottom = styled("div")(({ theme }) => ({
   paddingBottom: theme.spacing(6),
 }));
 
-const ENV = String(import.meta.env.VITE_APP_ENV) || "development";
-const DOMAIN = String(import.meta.env.VITE_DOMAIN) || "";
+const ENV = import.meta.env.VITE_APP_ENV ? String(import.meta.env.VITE_APP_ENV) : "development";
+const DOMAIN = import.meta.env.VITE_DOMAIN ? String(import.meta.env.VITE_DOMAIN) : "";
 
 const ResultRightPanel = () => {
   const navigate = useNavigate();
