@@ -34,14 +34,13 @@ import {
   syncFromRight,
 } from "@/utils/map/mapSync";
 
-export const MergedItemsMap: React.FC<MergedItemsMapProp> = ({ center, zoom }) => {
+export const MergedItemsMap: React.FC<MergedItemsMapProp> = ({ center, zoom, storedPolygons }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const { basemap } = useBasemap();
   const { projectId } = useParams();
   const { t } = useTranslation();
   const { selectedProject } = useAppSelector((state) => state.project);
-  const { polygons: storedPolygons } = useAppSelector((state) => state.aoi);
 
   const [loading, setLoading] = useState<boolean>(false);
   const [loadingText, setLoadingText] = useState<string>("");
@@ -411,7 +410,7 @@ export const MergedItemsMap: React.FC<MergedItemsMapProp> = ({ center, zoom }) =
    */
   useEffect(() => {
     const map = mapRef.current;
-    if (!projectId) return;
+    if (!projectId || !storedPolygons || storedPolygons.length === 0) return;
 
     // Load all layers if map exists
     if (map) {
@@ -486,7 +485,7 @@ export const MergedItemsMap: React.FC<MergedItemsMapProp> = ({ center, zoom }) =
         console.debug("Could not remove layers on cleanup:", error);
       }
     };
-  }, [projectId, basemap, addProjectPolygonsLayer, getMergedLayers, selectedProject]);
+  }, [projectId, basemap, addProjectPolygonsLayer, getMergedLayers, selectedProject, storedPolygons]);
 
   return (
     <>

@@ -133,7 +133,7 @@ export const Result = () => {
             flex: panelOpen ? "0 0 37.5%" : "0 0 50%",
           }}
         >
-          <ClippedItemsMap center={mapCenter} zoom={mapZoom} />
+          <ClippedItemsMap center={mapCenter} zoom={mapZoom} storedPolygons={storedPolygons}/>
         </MapGrid>
 
         {/* Second Map */}
@@ -142,7 +142,7 @@ export const Result = () => {
             flex: panelOpen ? "0 0 37.5%" : "0 0 50%",
           }}
         >
-          <MergedItemsMap center={mapCenter} zoom={mapZoom} />
+          <MergedItemsMap center={mapCenter} zoom={mapZoom}  storedPolygons={storedPolygons}/>
         </MapGrid>
 
         {/* Right Panel */}
