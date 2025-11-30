@@ -17,7 +17,10 @@ const app = express();
 ------------------------------------------- */
 app.use(
   cors({
-    origin: "*",   // allow any frontend domain
+    origin: [
+      "https://stg.econet-plateau.net",
+      "http://localhost:3000"
+    ],
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
@@ -27,15 +30,15 @@ app.use(
 /* -----------------------------------------
    OPTIONS Preflight Handler (CRITICAL)
 ------------------------------------------- */
-app.use((req, res, next) => {
-  if (req.method === "OPTIONS") {
-    res.header("Access-Control-Allow-Origin", "*");
-    res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
-    res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-    return res.sendStatus(204);
-  }
-  next();
-});
+// app.use((req, res, next) => {
+//   if (req.method === "OPTIONS") {
+//     res.header("Access-Control-Allow-Origin", "*");
+//     res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+//     res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+//     return res.sendStatus(204);
+//   }
+//   next();
+// });
 
 // Middleware
 app.use(bodyParser.json());
