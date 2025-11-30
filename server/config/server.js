@@ -12,9 +12,35 @@ import { authorizer } from "../middlewares/auth.js";
 
 const app = express();
 
+/* -----------------------------------------
+   GLOBAL CORS (for ALL routes)
+------------------------------------------- */
+app.use(
+  cors({
+    origin: "*",   // allow any frontend domain
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true,
+  })
+);
+
+/* -----------------------------------------
+   OPTIONS Preflight Handler (CRITICAL)
+------------------------------------------- */
+app.use((req, res, next) => {
+  if (req.method === "OPTIONS") {
+    res.header("Access-Control-Allow-Origin", "*");
+    res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+    return res.sendStatus(204);
+  }
+  next();
+});
+
 // Middleware
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
+
 // app.use(
 //   cors({
 //     origin: process.env.FRONT_END_URL,
@@ -23,7 +49,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 //     credentials: true,
 //   })
 // );
-app.use(cors({ origin: "*" }));
+// app.use(cors({ origin: "*" }));
 
 app.get("/ping", (req, res) => {
   res.send("pong");
