@@ -15,17 +15,26 @@ const app = express();
 /* -----------------------------------------
    GLOBAL CORS (for ALL routes)
 ------------------------------------------- */
+const allowedOrigins = [
+  "https://stg.econet-plateau.net",
+  "http://localhost:3000",
+];
 app.use(
   cors({
-    origin: [
-      "https://stg.econet-plateau.net",
-      "http://localhost:3000"
-    ],
+    origin: function (origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error("Not allowed by CORS"));
+    },
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
   })
 );
+
+// VERY IMPORTANT — allow preflight
+app.options("*", cors());
 
 /* -----------------------------------------
    OPTIONS Preflight Handler (CRITICAL)
