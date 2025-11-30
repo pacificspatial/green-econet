@@ -34,7 +34,7 @@ app.use(
 );
 
 // VERY IMPORTANT — allow preflight
-app.options("*", cors());
+app.options(/.*/, cors());
 
 /* -----------------------------------------
    OPTIONS Preflight Handler (CRITICAL)
