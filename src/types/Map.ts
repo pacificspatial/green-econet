@@ -1,4 +1,4 @@
-import type { Geometry } from 'geojson'
+import type { Feature, Geometry } from 'geojson'
 
 export interface PolygonFeatureProperties {
   id: string;
@@ -22,12 +22,21 @@ export interface AddLayerOptions {
   paint: Record<string, any>;
 }
 
+interface AoiPolygon {
+  id: string;
+  geom: Feature;
+  area: number;
+  perimeter: number;
+}
+
 export interface ClippedItemsMapProp {
   center: [number, number];
   zoom: number;
+  storedPolygons: AoiPolygon[];
 }
 
 export interface MergedItemsMapProp {
   center: [number, number];
   zoom: number;
+  storedPolygons: AoiPolygon[];
 }

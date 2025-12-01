@@ -7,6 +7,9 @@ import type { LayerConfig } from "@/types/Layers";
 export interface Metadata {
   vector_layers: { id: string }[];
 }
+// const ENV = String(import.meta.env.VITE_APP_ENV) || "development"
+const ENV = "development";
+const DOMAIN = String(import.meta.env.VITE_DOMAIN) || ""
 
 // Global pmtiles protocol instance (register once per app)
 let pmtilesProtocol: Protocol | null = null;
@@ -27,6 +30,19 @@ function ensurePmTilesProtocol() {
   }
 }
 
+async function waitForStyle(map: maplibregl.Map) {
+  if (map.isStyleLoaded()) return;
+  await new Promise<void>((resolve) => {
+    const on = () => {
+      if (map.isStyleLoaded()) {
+        map.off("styledata", on);
+        resolve();
+      }
+    };
+    map.on("styledata", on);
+  });
+}
+
 /**
  * Add a styled vector layer backed by a PMTiles file from S3.
  */
@@ -38,16 +54,19 @@ export const addStyledLayer = async (
   if (!map) return;
 
   try {
+    await waitForStyle(map);
     await removeStyledLayer(map, layerConfig.id);
 
     let tileUrl = "";
-    const res = await getS3PreSignedUrl({ fileName });
+    //if env is development then get the presigned url otherwise call directly
+    if (ENV === "development") {
+      const res = await getS3PreSignedUrl({ fileName, bucketName: "tile" });
 
-    if (res.success) {
-      tileUrl = res.data;
+      if (res.success) {
+        tileUrl = res.data;
+      }
     } else {
-      console.error("Failed to get presigned URL for PMTiles:", res);
-      return;
+      tileUrl = `${DOMAIN}/tiles/${fileName}`;
     }
 
     // Ensure pmtiles protocol is registered with MapLibre
@@ -128,16 +147,13 @@ export const removeStyledLayer = async (
 /**
  * Generic GeoJSON layer helpers (used for clipped_* & project layers)
  */
-export function addLayer(
+export async function addLayer(
   map: maplibregl.Map,
   layerId: string,
   source: any,
   layer: any
-): void {
-  if (!map || !map.isStyleLoaded()) {
-    console.warn("Map style not loaded yet");
-    return;
-  }
+) {
+  await waitForStyle(map);
 
   if (map.getLayer(layerId)) {
     map.removeLayer(layerId);

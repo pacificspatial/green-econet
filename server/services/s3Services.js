@@ -49,8 +49,8 @@ export async function uploadToExportBucket(
 
 const getPresignedUrlForFile = async (
   fileName,
+  bucketName = "tile",
   expiresIn = 3600,
-  bucketName = "tile"
 ) => {
   try {
     const getObjectCommand = new GetObjectCommand({

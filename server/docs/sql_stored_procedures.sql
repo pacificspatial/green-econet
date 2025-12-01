@@ -130,7 +130,7 @@ BEGIN
         ST_Transform(
             ST_UnaryUnion(
                 ST_Buffer(
-                    ST_Transform(geom, 3857),  -- convert to meters
+                    ST_Transform(ST_Collect(geom), 3857),  -- convert to meters
                     125                       -- 125m buffer
                 )
             ),
