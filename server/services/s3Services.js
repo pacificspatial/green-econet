@@ -53,9 +53,10 @@ const getPresignedUrlForFile = async (
   expiresIn = 3600,
 ) => {
   try {
+    const Key = bucketName === "tile" ? `tiles/${fileName}` : fileName;
     const getObjectCommand = new GetObjectCommand({
       Bucket: bucketMap[bucketName],
-      Key: fileName,
+      Key,
     });
     const url = await getSignedUrl(s3Client, getObjectCommand, { expiresIn });
     return url;
