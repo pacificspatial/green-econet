@@ -34,7 +34,7 @@ function AuthWrapper({ children }: { children: React.ReactNode }) {
   }, []);
 
   const askPassword = () => {
-    const pwd = prompt("Enter password:");
+    const pwd = prompt("パスワードを入力してください");
 
     if (!pwd) return;
 

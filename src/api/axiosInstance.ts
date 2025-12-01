@@ -23,14 +23,14 @@ axiosInstance.interceptors.response.use(
   (response) => response,
   async (error) => {
     if (error.response?.status === 401) {
-      alert("Wrong password!");
+      alert("パスワードが間違っています！");
       
       // Clear Redux & session
       store.dispatch(setPassword(null));
       sessionStorage.removeItem("auth_pwd");
 
       // Ask again
-      const newPwd = prompt("Enter password again:");
+      const newPwd = prompt("もう一度パスワードを入力してください：");
 
       if (newPwd) {
         store.dispatch(setPassword(newPwd));
