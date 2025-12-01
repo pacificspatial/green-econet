@@ -15,11 +15,9 @@ export const authorizer = (req, res, next) => {
     const idx = credentials.indexOf(":");
     if (idx < 0) return deny();
 
-    const login = credentials.slice(0, idx);
     const password = credentials.slice(idx + 1);
 
     if (
-      login !== process.env.AUTH_USER ||
       password !== process.env.AUTH_PASS
     ) {
       return deny();
