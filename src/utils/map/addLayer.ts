@@ -3,13 +3,14 @@ import { PMTiles, Protocol } from "pmtiles";
 import { getS3PreSignedUrl } from "@/api/s3";
 import { layerVisibilityConfig } from "@/config/layers/initialLayerVisibility";
 import type { LayerConfig } from "@/types/Layers";
+import { appEnvs } from "@/constants/appEnvWhitelist";
 
 export interface Metadata {
   vector_layers: { id: string }[];
 }
-// const ENV = String(import.meta.env.VITE_APP_ENV) || "development"
-const ENV = "development";
-const DOMAIN = String(import.meta.env.VITE_DOMAIN) || ""
+const APP_ENV = import.meta.env.VITE_APP_ENV;
+const ENV = appEnvs.includes(APP_ENV) ? APP_ENV : "development";
+const DOMAIN = import.meta.env.VITE_DOMAIN || "";
 
 // Global pmtiles protocol instance (register once per app)
 let pmtilesProtocol: Protocol | null = null;
@@ -60,7 +61,7 @@ export const addStyledLayer = async (
     let tileUrl = "";
     //if env is development then get the presigned url otherwise call directly
     if (ENV === "development") {
-      const res = await getS3PreSignedUrl({ fileName, bucketName: "tile" });
+      const res = await getS3PreSignedUrl({ fileName: `tiles/${fileName}`, bucketName: "tile" });
 
       if (res.success) {
         tileUrl = res.data;

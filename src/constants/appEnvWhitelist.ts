@@ -1,0 +1,1 @@
+export const appEnvs = ["development", "production"]

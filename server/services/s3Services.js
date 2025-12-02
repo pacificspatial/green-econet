@@ -52,7 +52,7 @@ const getPresignedUrlForFile = async (
   bucketName = "tile",
   expiresIn = 3600,
 ) => {
-  try {
+  try {    
     const getObjectCommand = new GetObjectCommand({
       Bucket: bucketMap[bucketName],
       Key: fileName,
