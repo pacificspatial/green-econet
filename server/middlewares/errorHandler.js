@@ -1,4 +1,8 @@
 const errorMiddleware = (err, req, res, next) => {
+  const origin = req.headers.origin;
+  res.header("Access-Control-Allow-Origin",  origin || "");
+  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
   console.error("Error middleware:", err.message);
 
   // Use properties if they exist, otherwise fallback to defaults

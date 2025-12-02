@@ -1,17 +1,16 @@
 import { Box } from "@mui/system";
 import { styled } from "@mui/material/styles";
-import {
-  Button,
-  IconButton,
-} from "@mui/material";
+import { Button, IconButton } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import ArrowDropDownIcon from "@mui/icons-material/ArrowDropDown";
 import ArrowDropUpIcon from "@mui/icons-material/ArrowDropUp";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { useState } from "react";
 import AoiStatistics from "../AOI/AoiStatistics";
 import { useTranslation } from "react-i18next";
 import DownloadPopover from "./DownloadPopover";
+import { getS3PreSignedUrl } from "@/api/s3";
+import { appEnvs } from "@/constants/appEnvWhitelist";
 
 const StyledBox = styled(Box)(({ theme }) => ({
   backgroundColor:
@@ -32,9 +31,14 @@ const StyledGridBottom = styled("div")(({ theme }) => ({
   paddingBottom: theme.spacing(6),
 }));
 
+const APP_ENV = import.meta.env.VITE_APP_ENV;
+const ENV = appEnvs.includes(APP_ENV) ? APP_ENV : "development";
+const DOMAIN = import.meta.env.VITE_DOMAIN || "";
+
 const ResultRightPanel = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const { projectId } = useParams<{ projectId: string }>();
 
   // For dropdown
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
@@ -48,10 +52,25 @@ const ResultRightPanel = () => {
     setAnchorEl(null);
   };
 
-  const handleDownloadSelect = (type: "pdf" | "xlsx") => {
-    console.log(`Downloading as ${type}`);
-    // Add your download logic here based on the type
+  const handleDownloadSelect = async (type: "pdf" | "xlsx") => {
+    const file = type === "xlsx" ? "excel" : "pdf";
+    const fileName = `${type}/${projectId}_${file}.${type}`;
+    let url = "";
+    //If in development get presingned url otherwise call it directly
+    if (ENV === "development") {
+      const res = await getS3PreSignedUrl({ fileName, bucketName: "download" });
+      if (res.success) {
+        url = res.data;
+      }
+    } else {
+      url = `${DOMAIN}/${fileName}`;
+    }
+
     handleClose();
+
+    if (!url) return;
+    window.open(url, "_blank");
+    return;
   };
 
   return (
@@ -89,7 +108,7 @@ const ResultRightPanel = () => {
           {t("app.download")}
         </Button>
 
-        <DownloadPopover 
+        <DownloadPopover
           anchorEl={anchorEl}
           onClose={handleClose}
           onSelect={handleDownloadSelect}
@@ -98,7 +117,7 @@ const ResultRightPanel = () => {
 
       {/* Stats area */}
       <StyledGridBottom>
-        <AoiStatistics showResultMetrics={true}/>
+        <AoiStatistics showResultMetrics={true} />
       </StyledGridBottom>
     </StyledBox>
   );

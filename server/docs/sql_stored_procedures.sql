@@ -95,8 +95,8 @@ BEGIN
     SELECT
         p_project_id,
         'user_polygon',
-        id::text,
-        geom,
+        1::text AS id,
+        ST_Union(geom) AS geom,
         '{}'::jsonb
     FROM public.project_polygons
     WHERE project_id = p_project_id;
@@ -130,7 +130,7 @@ BEGIN
         ST_Transform(
             ST_UnaryUnion(
                 ST_Buffer(
-                    ST_Transform(geom, 3857),  -- convert to meters
+                    ST_Transform(ST_Collect(geom), 3857),  -- convert to meters
                     125                       -- 125m buffer
                 )
             ),
@@ -322,6 +322,172 @@ BEGIN
     SET
         indexA  = v_indexA,
         indexB  = v_indexB,
+        indexBA = v_indexBA
+    WHERE id = p_project_id;
+
+END;
+$$ LANGUAGE plpgsql;
+--------------------------------------------------------------------------------------------
+
+
+CREATE OR REPLACE FUNCTION processing.compute_indexes_new(p_project_id UUID) -- not used
+RETURNS void AS $$
+DECLARE
+    v_indexA NUMERIC;
+    v_indexB NUMERIC;
+    v_indexBA NUMERIC;
+BEGIN
+    ----------------------------------------------------------------------
+    -- INDEX A
+    ----------------------------------------------------------------------
+    WITH poly AS (
+        SELECT ST_Union(geom) AS geom
+        FROM public.project_polygons
+        WHERE project_id = p_project_id
+    ),
+    poly_centroid AS (
+        SELECT ST_Centroid(geom) AS geom
+        FROM poly
+    ),
+    buffer1000 AS (
+        SELECT ST_Buffer(geom::geography, 1000)::geometry AS geom
+        FROM poly_centroid
+    ),
+    clip_enp_green AS (
+        SELECT
+            g.id,
+            ST_Intersection(g.geom, b.geom) AS geom
+        FROM layers.enp_green g
+        JOIN buffer1000 b ON ST_Intersects(g.geom, b.geom)
+    ),
+    clip_enp_buffer125_green AS (
+        SELECT
+            uuid_generate_v4() AS uid,
+            g.id,
+            ST_Intersection(g.geom, b.geom) AS geom
+        FROM layers.enp_buffer125_green g
+        JOIN buffer1000 b ON ST_Intersects(g.geom, b.geom)
+    ),
+    joinedA AS (
+        SELECT
+            b.uid,
+            ST_Intersection(g.geom, b.geom) AS geom
+        FROM clip_enp_buffer125_green b
+        JOIN clip_enp_green g
+          ON ST_Intersects(g.geom, b.geom)
+    ),
+    areas_by_uidA AS (
+        SELECT
+            uid,
+            SUM(ST_Area(geom::geography)) AS area_m2
+        FROM joinedA
+        GROUP BY uid
+    ),
+    sum_clip_green AS (
+        SELECT
+            COALESCE(SUM(ST_Area(geom::geography)), 0) AS total_clip_green_area_m2
+        FROM clip_enp_green
+    ),
+    poly_areaA AS (
+        SELECT ST_Area(geom::geography) AS poly_area_m2
+        FROM poly
+    ),
+    aggA AS (
+        SELECT
+            COALESCE((SELECT SUM(POWER(area_m2, 2)) FROM areas_by_uidA), 0) AS sum_uid_area_sq,
+            (SELECT poly_area_m2 FROM poly_areaA) AS poly_area_m2,
+            (SELECT total_clip_green_area_m2 FROM sum_clip_green) AS total_clip_green_area_m2
+    )
+    SELECT
+        (
+            (sum_uid_area_sq + POWER(poly_area_m2, 2))
+            / NULLIF(POWER(total_clip_green_area_m2 + poly_area_m2, 2), 0)
+        ) * 100.0
+    INTO v_indexA
+    FROM aggA;
+
+    ----------------------------------------------------------------------
+    -- INDEX B
+    ----------------------------------------------------------------------
+    WITH poly AS (
+        SELECT ST_Union(geom) AS geom
+        FROM public.project_polygons
+        WHERE project_id = p_project_id
+    ),
+    poly_centroid AS (
+        SELECT ST_Centroid(geom) AS geom
+        FROM poly
+    ),
+    buffer1000 AS (
+        SELECT ST_Buffer(geom::geography, 1000)::geometry AS geom
+        FROM poly_centroid
+    ),
+    clip_enp_green AS (
+        SELECT
+            g.id,
+            ST_Intersection(g.geom, b.geom) AS geom
+        FROM layers.enp_green g
+        JOIN buffer1000 b ON ST_Intersects(g.geom, b.geom)
+        WHERE NOT ST_IsEmpty(ST_Intersection(g.geom, b.geom))
+    ),
+    merged_enp_green AS (
+        SELECT id, geom FROM clip_enp_green
+        UNION ALL
+        SELECT NULL::integer AS id, geom FROM poly
+    ),
+    buffer125_raw AS (
+        SELECT ST_Buffer(geom::geography, 125)::geometry AS geom
+        FROM merged_enp_green
+    ),
+    buffer125_union AS (
+        SELECT ST_UnaryUnion(ST_Collect(geom)) AS geom
+        FROM buffer125_raw
+    ),
+    buffer125_dump AS (
+        SELECT (ST_Dump(geom)).geom AS geom
+        FROM buffer125_union
+    ),
+    buffer125_with_uid AS (
+        SELECT uuid_generate_v4() AS uid, geom
+        FROM buffer125_dump
+    ),
+    joinedB AS (
+        SELECT
+            b.uid,
+            ST_Intersection(m.geom, b.geom) AS geom
+        FROM buffer125_with_uid b
+        JOIN merged_enp_green m
+          ON ST_Intersects(m.geom, b.geom)
+        WHERE NOT ST_IsEmpty(ST_Intersection(m.geom, b.geom))
+    ),
+    areas_by_uidB AS (
+        SELECT uid, SUM(ST_Area(geom::geography)) AS area_m2
+        FROM joinedB
+        GROUP BY uid
+    ),
+    aggB AS (
+        SELECT
+            COALESCE(SUM(POWER(area_m2, 2)), 0) AS sum_area_sq,
+            COALESCE(SUM(area_m2), 0)          AS sum_area
+        FROM areas_by_uidB
+    )
+    SELECT
+        (sum_area_sq / NULLIF(POWER(sum_area, 2), 0)) * 100.0
+    INTO v_indexB
+    FROM aggB;
+
+    ----------------------------------------------------------------------
+    -- INDEX BA
+    ----------------------------------------------------------------------
+    v_indexBA := v_indexB - v_indexA;
+
+    ----------------------------------------------------------------------
+    -- UPDATE project record
+    ----------------------------------------------------------------------
+    UPDATE public.projects
+    SET
+        indexA = v_indexA,
+        indexB = v_indexB,
         indexBA = v_indexBA
     WHERE id = p_project_id;
 

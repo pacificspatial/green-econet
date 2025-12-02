@@ -7,12 +7,14 @@ import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ExpandLess, ExpandMore } from "@mui/icons-material";
 import { layerColors } from "@/constants/layerConstants";
+import type { Theme } from "@mui/system";
 
 interface LegendProps {
   map: maplibregl.Map | null;
+  theme: Theme;
 }
 
-const Legend: React.FC<LegendProps> = ({ map }) => {
+const Legend: React.FC<LegendProps> = ({ map, theme }) => {
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(true);
 
@@ -77,7 +79,7 @@ const Legend: React.FC<LegendProps> = ({ map }) => {
         position: "absolute",
         bottom: 20,
         right: 10,
-        background: "white",
+        background: theme.palette.background.paper,
         padding: "10px",
         borderRadius: "8px",
         boxShadow: "0px 4px 6px rgba(0, 0, 0, 0.1)",

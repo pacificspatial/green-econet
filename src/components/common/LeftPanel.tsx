@@ -134,8 +134,8 @@ const StatusPill = ({ label, color }: { label: string; color: string }) => (
       py: 0.2,
       fontSize: "0.7rem",
       borderRadius: "12px",
-      backgroundColor: color,
-      color: "#fff",
+      border: `1px solid ${color}`,
+      color: color,
       ml: 1,
       whiteSpace: "nowrap",
     }}
@@ -193,7 +193,7 @@ const LeftPanel: React.FC<LeftPanelProps> = ({
     // console.log("[LEFT PANEL] using socket:", socket.id);
 
     const handleStarted = (payload: any) => {
-      console.log("[LEFT PANEL] aoi:pipeline_started:", payload);
+      // console.log("[LEFT PANEL] aoi:pipeline_started:", payload);
       dispatch(
         pipelineStarted({
           projectId: payload.projectId,
@@ -211,7 +211,7 @@ const LeftPanel: React.FC<LeftPanelProps> = ({
     };
 
     const handleStage = (payload: any) => {
-      console.log("[LEFT PANEL] aoi:pipeline_stage:", payload);
+      // console.log("[LEFT PANEL] aoi:pipeline_stage:", payload);
       dispatch(
         pipelineStageUpdated({
           projectId: payload.projectId,
@@ -226,7 +226,7 @@ const LeftPanel: React.FC<LeftPanelProps> = ({
     };
 
     const handleCompleted = (payload: any) => {
-      console.log("[LEFT PANEL] aoi:pipeline_completed:", payload);
+      // console.log("[LEFT PANEL] aoi:pipeline_completed:", payload);
       dispatch(
         pipelineCompleted({
           projectId: payload.projectId,
@@ -473,7 +473,7 @@ const LeftPanel: React.FC<LeftPanelProps> = ({
 
                         {/* Processed Pill */}
                         {isProcessed && (
-                          <StatusPill label={t("app.processed")} color="#4a9b4cff" />
+                          <StatusPill label={t("app.processed")} color={theme.palette.primary.main} />
                         )}
 
                         {showCompletionIcon && aoiStatus === "success" && (

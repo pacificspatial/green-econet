@@ -12,6 +12,7 @@ import { clearAoiPolygons, setAoiPolygons } from "@/redux/slices/aoiSlice";
 import { IconButton } from "@mui/material";
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import { mapCenter, mapZoom } from "@/constants/mapConstants";
 import { setSelectedProject } from "@/redux/slices/projectSlice";
 
 const Container = styled(Box)({
@@ -50,7 +51,8 @@ const CollapseButton = styled(IconButton)(({ theme }) => ({
   boxShadow: "-2px 0 8px rgba(0, 0, 0, 0.1)",
   transition: "all 0.2s ease",
   "&:hover": {
-    backgroundColor: theme.palette.background.paper,
+    color: theme.palette.text.primary,
+    backgroundColor: theme.palette.background.default,
     boxShadow: "-3px 0 12px rgba(0, 0, 0, 0.15)",
   },
   "&:active": {
@@ -59,8 +61,6 @@ const CollapseButton = styled(IconButton)(({ theme }) => ({
 }));
 
 export const Result = () => {
-  const center: [number, number] = [139.7545870646046, 35.68260566814629];
-  const zoom = 10;
   const { projectId } = useParams();
   const dispatch = useAppDispatch();
   const { polygons: storedPolygons } = useAppSelector((state) => state.aoi);
@@ -133,7 +133,7 @@ export const Result = () => {
             flex: panelOpen ? "0 0 37.5%" : "0 0 50%",
           }}
         >
-          <ClippedItemsMap center={center} zoom={zoom} />
+          <ClippedItemsMap center={mapCenter} zoom={mapZoom} storedPolygons={storedPolygons}/>
         </MapGrid>
 
         {/* Second Map */}
@@ -142,7 +142,7 @@ export const Result = () => {
             flex: panelOpen ? "0 0 37.5%" : "0 0 50%",
           }}
         >
-          <MergedItemsMap center={center} zoom={zoom} />
+          <MergedItemsMap center={mapCenter} zoom={mapZoom}  storedPolygons={storedPolygons}/>
         </MapGrid>
 
         {/* Right Panel */}

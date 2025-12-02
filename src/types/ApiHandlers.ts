@@ -11,4 +11,5 @@ export interface ProjectPolygonParam {
 }
 export interface S3PresignedUrlParam {
   fileName: string;
+  bucketName: "tile" | "download";
 }
