@@ -10,6 +10,7 @@ import AoiStatistics from "../AOI/AoiStatistics";
 import { useTranslation } from "react-i18next";
 import DownloadPopover from "./DownloadPopover";
 import { getS3PreSignedUrl } from "@/api/s3";
+import { appEnvs } from "@/constants/appEnvWhitelist";
 
 const StyledBox = styled(Box)(({ theme }) => ({
   backgroundColor:
@@ -30,8 +31,9 @@ const StyledGridBottom = styled("div")(({ theme }) => ({
   paddingBottom: theme.spacing(6),
 }));
 
-const ENV = import.meta.env.VITE_APP_ENV ? String(import.meta.env.VITE_APP_ENV) : "development";
-const DOMAIN = import.meta.env.VITE_DOMAIN ? String(import.meta.env.VITE_DOMAIN) : "";
+const APP_ENV = import.meta.env.VITE_APP_ENV;
+const ENV = appEnvs.includes(APP_ENV) ? APP_ENV : "development";
+const DOMAIN = import.meta.env.VITE_DOMAIN || "";
 
 const ResultRightPanel = () => {
   const navigate = useNavigate();

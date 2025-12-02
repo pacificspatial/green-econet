@@ -3,12 +3,14 @@ import { PMTiles, Protocol } from "pmtiles";
 import { getS3PreSignedUrl } from "@/api/s3";
 import { layerVisibilityConfig } from "@/config/layers/initialLayerVisibility";
 import type { LayerConfig } from "@/types/Layers";
+import { appEnvs } from "@/constants/appEnvWhitelist";
 
 export interface Metadata {
   vector_layers: { id: string }[];
 }
-const ENV = import.meta.env.VITE_APP_ENV || "development"
-const DOMAIN = import.meta.env.VITE_DOMAIN || ""
+const APP_ENV = import.meta.env.VITE_APP_ENV;
+const ENV = appEnvs.includes(APP_ENV) ? APP_ENV : "development";
+const DOMAIN = import.meta.env.VITE_DOMAIN || "";
 
 // Global pmtiles protocol instance (register once per app)
 let pmtilesProtocol: Protocol | null = null;
