@@ -1,4 +1,4 @@
-name: Full CI/CD -> Frontend + Backend (Staging)
+name: Full CI/CD -> Frontend + Backend (production)
 
 on:
   push:
