@@ -61,7 +61,7 @@ export const addStyledLayer = async (
     let tileUrl = "";
     //if env is development then get the presigned url otherwise call directly
     if (ENV === "development") {
-      const res = await getS3PreSignedUrl({ fileName, bucketName: "tile" });
+      const res = await getS3PreSignedUrl({ fileName: `tiles/${fileName}`, bucketName: "tile" });
 
       if (res.success) {
         tileUrl = res.data;
