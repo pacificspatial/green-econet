@@ -120,44 +120,73 @@ CREATE OR REPLACE FUNCTION processing.buffer125_merged(p_project_id UUID)
 RETURNS void AS $$
 DECLARE
     dissolved_geom geometry;
+    project_geom geometry;
 BEGIN
+    ----------------------------------------------------------------------
+    -- 0. Fetch the project AOI geometry (public.projects.geom)
+    ----------------------------------------------------------------------
+    SELECT geom 
+    INTO project_geom
+    FROM public.projects
+    WHERE id = p_project_id;
+
+    IF project_geom IS NULL THEN
+        RAISE EXCEPTION 'Project geom is NULL in public.projects for id=%', p_project_id;
+    END IF;
+
+    ----------------------------------------------------------------------
     -- 1. Clear previous buffer results
+    ----------------------------------------------------------------------
     DELETE FROM processing.buffer125_merged_green
     WHERE project_id = p_project_id;
 
-    -- 2. Buffer (125m) and dissolve using ST_UnaryUnion
+    ----------------------------------------------------------------------
+    -- 2. Build 125m dissolved buffer around merged_green
+    ----------------------------------------------------------------------
     SELECT
         ST_Transform(
             ST_UnaryUnion(
                 ST_Buffer(
-                    ST_Transform(ST_Collect(geom), 3857),  -- convert to meters
-                    125                       -- 125m buffer
+                    ST_Transform(ST_Collect(geom), 3857),   -- convert to meters
+                    125                                    -- 125m buffer
                 )
             ),
-            4326                              -- return to WGS84
+            4326                                            -- return to WGS84
         )
     INTO dissolved_geom
     FROM processing.merged_green
     WHERE project_id = p_project_id;
 
-    -- If no geometry was found, exit
     IF dissolved_geom IS NULL THEN
         RETURN;
     END IF;
 
-    -- 3. Dump dissolved multipolygon and insert each part separately
+    ----------------------------------------------------------------------
+    -- 3. Clip dissolved buffer by project AOI
+    ----------------------------------------------------------------------
+    dissolved_geom := ST_Intersection(dissolved_geom, project_geom);
+
+    IF dissolved_geom IS NULL OR ST_IsEmpty(dissolved_geom) THEN
+        RETURN;  -- No clipped buffer remains
+    END IF;
+
+    ----------------------------------------------------------------------
+    -- 4. Dump clipped multipolygon and insert
+    ----------------------------------------------------------------------
     INSERT INTO processing.buffer125_merged_green (project_id, uid, geom, properties)
     SELECT
         p_project_id,
         uuid_generate_v4(),
-        (geom_dump).geom,
+        clipped.geom,
         '{}'::jsonb
     FROM (
-        SELECT (ST_Dump(dissolved_geom)) AS geom_dump
-    ) AS dumped;
+        SELECT (ST_Dump(dissolved_geom)).geom AS geom
+    ) AS clipped
+    WHERE NOT ST_IsEmpty(clipped.geom);
 
 END;
 $$ LANGUAGE plpgsql;
+
 
 ------------------------------------------------------------------------------------------------
 
