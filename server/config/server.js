@@ -16,7 +16,7 @@ const app = express();
    GLOBAL CORS (for ALL routes)
 ------------------------------------------- */
 const allowedOrigins = [
-  "https://stg.econet-plateau.net",
+  "https://econet-plateau.net",
   "http://localhost:3000",
 ];
 app.use(
