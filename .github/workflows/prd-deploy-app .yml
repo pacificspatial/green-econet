@@ -83,85 +83,85 @@ jobs:
             --distribution-id "$CLOUDFRONT_DISTRIBUTION_ID" \
             --paths "/*"
 
-  backend:
-    name: Deploy Backend (server/ → /var/www/prd) via SSH
-    runs-on: ubuntu-latest
-    needs: frontend
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
+  # backend:
+  #   name: Deploy Backend (server/ → /var/www/prd) via SSH
+  #   runs-on: ubuntu-latest
+  #   needs: frontend
+  #   steps:
+  #     - name: Checkout Code
+  #       uses: actions/checkout@v4
 
-      - name: Install rsync
-        run: |
-          sudo apt-get update -y
-          sudo apt-get install -y rsync
+  #     - name: Install rsync
+  #       run: |
+  #         sudo apt-get update -y
+  #         sudo apt-get install -y rsync
 
-      - name: Start ssh-agent and add key
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.STG_EC2_SSH_KEY }}
+  #     - name: Start ssh-agent and add key
+  #       uses: webfactory/ssh-agent@v0.9.0
+  #       with:
+  #         ssh-private-key: ${{ secrets.STG_EC2_SSH_KEY }}
 
-      - name: Ensure remote directory exists & set ownership
-        env:
-          TARGET_USER: ${{ secrets.STG_EC2_USER || 'ec2-user' }}
-          TARGET_HOST: ${{ secrets.STG_EC2_PUBLIC_IP }}
-          TARGET_PATH: /var/www/prd
-        run: |
-          ssh -o StrictHostKeyChecking=no $TARGET_USER@$TARGET_HOST \
-            "sudo mkdir -p $TARGET_PATH && sudo chown $TARGET_USER:$TARGET_USER $TARGET_PATH"
+  #     - name: Ensure remote directory exists & set ownership
+  #       env:
+  #         TARGET_USER: ${{ secrets.STG_EC2_USER || 'ec2-user' }}
+  #         TARGET_HOST: ${{ secrets.STG_EC2_PUBLIC_IP }}
+  #         TARGET_PATH: /var/www/prd
+  #       run: |
+  #         ssh -o StrictHostKeyChecking=no $TARGET_USER@$TARGET_HOST \
+  #           "sudo mkdir -p $TARGET_PATH && sudo chown $TARGET_USER:$TARGET_USER $TARGET_PATH"
 
-      - name: Backup existing remote app
-        env:
-          TARGET_USER: ${{ secrets.STG_EC2_USER || 'ec2-user' }}
-          TARGET_HOST: ${{ secrets.STG_EC2_PUBLIC_IP }}
-          TARGET_PATH: /var/www/prd
-        run: |
-          TS=$(date +%Y%m%d%H%M%S)
-          ssh -o StrictHostKeyChecking=no $TARGET_USER@$TARGET_HOST \
-            "sudo tar -czf /tmp/prd-backup-\${TS}.tar.gz -C $(dirname $TARGET_PATH) $(basename $TARGET_PATH) || true && sudo chown $TARGET_USER:$TARGET_USER /tmp/prd-backup-\${TS}.tar.gz"
-          echo "Backup created on remote: /tmp/prd-backup-*.tar.gz"
+  #     - name: Backup existing remote app
+  #       env:
+  #         TARGET_USER: ${{ secrets.STG_EC2_USER || 'ec2-user' }}
+  #         TARGET_HOST: ${{ secrets.STG_EC2_PUBLIC_IP }}
+  #         TARGET_PATH: /var/www/prd
+  #       run: |
+  #         TS=$(date +%Y%m%d%H%M%S)
+  #         ssh -o StrictHostKeyChecking=no $TARGET_USER@$TARGET_HOST \
+  #           "sudo tar -czf /tmp/prd-backup-\${TS}.tar.gz -C $(dirname $TARGET_PATH) $(basename $TARGET_PATH) || true && sudo chown $TARGET_USER:$TARGET_USER /tmp/prd-backup-\${TS}.tar.gz"
+  #         echo "Backup created on remote: /tmp/prd-backup-*.tar.gz"
 
-      - name: Rsync server/ → remote
-        env:
-          TARGET_USER: ${{ secrets.STG_EC2_USER || 'ec2-user' }}
-          TARGET_HOST: ${{ secrets.STG_EC2_PUBLIC_IP }}
-          TARGET_PATH: /var/www/prd
-        run: |
-          rsync -avz --delete \
-            --chmod=Du=rwx,Dg=rx,Do=rx,Fu=rw,Fg=r,Fo=r \
-            --exclude node_modules --exclude .git --exclude .env --exclude uploads --exclude tmp \
-            server/ $TARGET_USER@$TARGET_HOST:$TARGET_PATH/
+  #     - name: Rsync server/ → remote
+  #       env:
+  #         TARGET_USER: ${{ secrets.STG_EC2_USER || 'ec2-user' }}
+  #         TARGET_HOST: ${{ secrets.STG_EC2_PUBLIC_IP }}
+  #         TARGET_PATH: /var/www/prd
+  #       run: |
+  #         rsync -avz --delete \
+  #           --chmod=Du=rwx,Dg=rx,Do=rx,Fu=rw,Fg=r,Fo=r \
+  #           --exclude node_modules --exclude .git --exclude .env --exclude uploads --exclude tmp \
+  #           server/ $TARGET_USER@$TARGET_HOST:$TARGET_PATH/
 
-      - name: Install dependencies & restart PM2 safely
-        env:
-          TARGET_USER: ${{ secrets.STG_EC2_USER || 'ec2-user' }}
-          TARGET_HOST: ${{ secrets.STG_EC2_PUBLIC_IP }}
-          PORT: 4001
-        run: |
-          ssh -o StrictHostKeyChecking=no $TARGET_USER@$TARGET_HOST <<'EOF'
-            cd /var/www/prd || { echo "Directory /var/www/prd does not exist"; exit 1; }
+  #     - name: Install dependencies & restart PM2 safely
+  #       env:
+  #         TARGET_USER: ${{ secrets.STG_EC2_USER || 'ec2-user' }}
+  #         TARGET_HOST: ${{ secrets.STG_EC2_PUBLIC_IP }}
+  #         PORT: 4001
+  #       run: |
+  #         ssh -o StrictHostKeyChecking=no $TARGET_USER@$TARGET_HOST <<'EOF'
+  #           cd /var/www/prd || { echo "Directory /var/www/prd does not exist"; exit 1; }
 
-            echo "Installing dependencies..."
-            npm install --no-audit --no-fund --prefer-offline
+  #           echo "Installing dependencies..."
+  #           npm install --no-audit --no-fund --prefer-offline
 
-            echo "Restarting PM2 process 'prd-enp'..."
-            if pm2 restart prd-enp --update-env --time; then
-              echo "PM2 restart successful."
-            else
-              echo "Restart failed — starting 'prd-enp' fresh..."
-              pm2 start index.js --name prd-enp --update-env --time
-            fi
+  #           echo "Restarting PM2 process 'prd-enp'..."
+  #           if pm2 restart prd-enp --update-env --time; then
+  #             echo "PM2 restart successful."
+  #           else
+  #             echo "Restart failed — starting 'prd-enp' fresh..."
+  #             pm2 start index.js --name prd-enp --update-env --time
+  #           fi
 
-            pm2 save
+  #           pm2 save
 
-            echo "Current PM2 status for prd-enp:"
-            pm2 status prd-enp
-          EOF
+  #           echo "Current PM2 status for prd-enp:"
+  #           pm2 status prd-enp
+  #         EOF
 
 
-      - name: Backend Deployed Successfully
-        run: |
-          echo "Backend deployed successfully!"
-          echo "Source: server/ (contents)"
-          echo "Target: /var/www/prd on ${{ secrets.STG_EC2_PUBLIC_IP }}"
-          echo "If anything goes wrong, restore backup from /tmp/prd-backup-<timestamp>.tar.gz on the instance"
+  #     - name: Backend Deployed Successfully
+  #       run: |
+  #         echo "Backend deployed successfully!"
+  #         echo "Source: server/ (contents)"
+  #         echo "Target: /var/www/prd on ${{ secrets.STG_EC2_PUBLIC_IP }}"
+  #         echo "If anything goes wrong, restore backup from /tmp/prd-backup-<timestamp>.tar.gz on the instance"
