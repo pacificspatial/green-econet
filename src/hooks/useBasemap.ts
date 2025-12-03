@@ -1,5 +1,5 @@
 import BasemapContext from "@/context/BasemapProvider";
-import { BasemapContextType } from "@/types/BasemapContext";
+import type { BasemapContextType } from "@/types/BasemapContext";
 import { useContext } from "react";
 
 // Custom hook to use the BasemapContext

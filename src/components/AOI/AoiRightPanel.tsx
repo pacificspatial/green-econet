@@ -1,40 +1,31 @@
 import { Box } from "@mui/system";
-import ToggleButtons from "../utils/ToggleButton";
 import AoiStatistics from "./AoiStatistics";
-import { styled, useTheme } from "@mui/material/styles";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import CustomDropDown from "../utils/CustomDropDown";
-import { Geometry, Region, Regions } from "@/types/Region";
+import { styled } from "@mui/material/styles";
+import { useState, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { getAoiToggleButtons } from "@/constants/aoiToggleButtons";
-import { Button, Typography } from "@mui/material";
-import { fetchAOIStatistics, fetchRegions } from "@/api/lookup";
+import {
+  Button,
+  Tooltip,
+  CircularProgress,
+  Typography,
+  Alert,
+  IconButton,
+} from "@mui/material";
+import AlertBox from "../utils/AlertBox";
+import type { AlertState } from "@/types/AlertState";
 import { useAppDispatch, useAppSelector } from "@/hooks/reduxHooks";
 import {
-  setSelectedLandUseRegion,
-  setSelectedPark,
-  setSelectedRegion,
-} from "@/redux/slices/selectedRegionSlice";
-import { setSelectedAoi } from "@/redux/slices/selectedAoiSlice";
-import {
-  draftAoi,
-  fetchDraftAoi,
-  fetchSavedAoiThunk,
-  saveAoi,
-} from "@/api/project";
+  MAX_AOI_POLYGON_COUNT,
+  MIN_AOI_POLYGON_COUNT,
+} from "@/constants/numberConstants";
 import { useParams } from "react-router-dom";
-import AlertBox from "../utils/AlertBox";
-import debounce from "lodash.debounce";
-import Loader from "../common/Loader";
-import { AlertState } from "@/types/AlertState";
-import { Park, Parks } from "@/types/Park";
-import { InfoOutlined } from "@mui/icons-material";
-import {
-  landUseRegionUsageTypes,
-  parkUsageTypes,
-  regionUsageTypes,
-} from "@/constants/usageTypes";
-import { LandUseRegion, LandUseRegions } from "@/types/LandUseRegion";
+import { getProject, setProjectAoiMock } from "@/api/project";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import ErrorIcon from "@mui/icons-material/Error";
+import { useSocket } from "@/context/SocketContext";
+import { useNavigate } from "react-router-dom";
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import { setSelectedProject, updateProjectById } from "@/redux/slices/projectSlice";
 
 const StyledBox = styled(Box)(({ theme }) => ({
   backgroundColor:
@@ -48,355 +39,258 @@ const StyledBox = styled(Box)(({ theme }) => ({
   position: "relative",
 }));
 
-const StyledGrid = styled("div")(({ theme }) => ({
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  width: "100%",
-  minHeight: "70px",
-  maxHeight: "75px",
-  paddingTop: theme.spacing(0),
-  paddingBottom: theme.spacing(0),
-}));
-
-const StyledTypography = styled(Typography)(({ theme }) => ({
-  backgroundColor: theme.palette.info.light + "22", // subtle tint (added transparency)
-  borderLeft: `4px solid ${theme.palette.info.main}`,
-  padding: theme.spacing(1.5, 2),
-  borderRadius: theme.shape.borderRadius,
-  fontSize: "0.9rem",
-  color: theme.palette.text.secondary,
-  lineHeight: 1.5,
-  marginTop: theme.spacing(2),
-  marginBottom: theme.spacing(1),
-  marginLeft: theme.spacing(1),
-  marginRight: theme.spacing(1),
-}));
-
-const StyledGridBottom = styled("div")(() => ({
+const StyledGridBottom = styled("div")(({ theme }) => ({
   flex: 1,
   width: "100%",
   minHeight: "0px",
+  paddingBottom: theme.spacing(6),
 }));
 
 const StyledConfirmBox = styled(Box)(() => ({
   display: "flex",
+  flexDirection: "column",
   justifyContent: "center",
   alignItems: "center",
   width: "100%",
-  minHeight: "50px",
-  maxHeight: "70px",
   position: "relative",
-  bottom: 5,
+  paddingBottom: 20,
+  gap: 16,
 }));
 
+type PipelineStatus = "idle" | "running" | "success" | "failed" | "partial_failure";
+
+interface LocalStage {
+  stageKey: string;
+  label: string;
+  status: "pending" | "success" | "failed";
+  step: number;
+  totalSteps: number;
+}
+
+// interface PipelineSummary {
+//   totalSteps: number;
+//   succeeded: number;
+//   failed: number;
+// }
+
 const AoiRightPanel = () => {
-  const [regions, setRegions] = useState<Regions>([]);
-  const [fetchRegionsLoading, setFetchRegionsLoading] = useState(false);
-  const [saveAoiLoading, setSaveAoiLoading] = useState(false);
-  const [draftRegionLoading, setDraftRegionLoading] = useState(false);
+  // ✅ incoming-branch alert behaviour
   const [alert, setAlert] = useState<AlertState>({
     open: false,
     message: "",
     severity: "info",
   });
-  const [emptyAoiMessage, setEmptyAoiMessage] = useState("");
 
-  const { isProjectFrozen } = useAppSelector((state) => state.frozenProject);
-  const selectedAoi = useAppSelector((state) => state.selectedAoi.aoiSelected);
-  const selectedAoiPolygon = useAppSelector((state) => state.selectedAoi.geom);
-  const {
-    parkData: selectedPark,
-    regionData: selectedRegion,
-    landUseRegionData: selectedLandUseRegion,
-  } = useAppSelector((state) => state?.selectedRegion);
-  const { currentUsageType } = useAppSelector((state) => state?.projects);
-  const { savedAoi } = useAppSelector((state) => state.savedAoi);
-  
-  const dispatch = useAppDispatch();
-  const { projectId } = useParams();
+  const aoiPolygons = useAppSelector((state) => state.aoi.polygons);
   const { t } = useTranslation();
-  const theme = useTheme();
-  // since now watershed is disabled, we can simplify the selectedAoiValue
-  const selectedAoiValue = useMemo(() => {
-    return selectedAoi === 2 ? "region" : "polygon";
-  }, [selectedAoi]);
+  const { projectId } = useParams<{ projectId: string }>();
+  const { selectedProject } = useAppSelector((state) => state.project);
+  const navigate = useNavigate();
 
-  const handleSetAlert = useCallback(
-    (message: string, severity: "success" | "error" | "info") => {
-      setAlert({ open: true, message, severity });
-    },
-    []
-  );
+  // Inline loading for the POST call
+  const [loading, setLoading] = useState(false);
 
-  //  Fetch the draft region / park AOI and set the selected region / park
-  const fetchDraftRegionAoi = useCallback(async () => {
-    try {
-      const response = await fetchDraftAoi(
-        projectId || "",
-        2,
-        currentUsageType?.value || ""
-      );
-      if (response.success) {
-        const selectedRegion = regions.find(
-          (region) => region.key_code === response?.data[0]?.region_id
-        );
-        if (selectedRegion) {
-          dispatch(setSelectedRegion(selectedRegion));
-        }
-      } else {
-        handleSetAlert(t("app.serverErrorMessage"), "error");
-      }
-    } catch (err) {
-      console.error(err);
-      handleSetAlert(t("app.serverErrorMessage"), "error");
+  // 🧠 local mock pipeline state (driven by socket events)
+  const socket = useSocket();
+  const [pipelineStatus, setPipelineStatus] =
+    useState<PipelineStatus>("idle");
+  const [stages, setStages] = useState<LocalStage[]>([]);
+  // const [summary, setSummary] = useState<PipelineSummary | null>(null);
+  const [currentPipelineId, setCurrentPipelineId] =
+    useState<string | null>(null);
+  const dispatch = useAppDispatch();
+
+  const isRunning = pipelineStatus === "running";
+  const isSuccess = pipelineStatus === "success";
+  const isFailed = pipelineStatus === "failed" || pipelineStatus === "partial_failure";
+
+  // console.log(summary)
+
+  const totalSteps = useMemo(() => {
+    if (stages.length > 0) {
+      return stages[0].totalSteps ?? stages.length;
     }
-  }, [
-    projectId,
-    currentUsageType?.value,
-    regions,
-    dispatch,
-    handleSetAlert,
-    t,
-  ]);
+    return 6; // default mock total
+  }, [stages]);
 
-  const fetchDraftParkOrLandUseRegionAoi = useCallback(
-    async (regionType: "park" | "landUseRegion" = "park") => {
-      if (
-        !currentUsageType ||
-        (!landUseRegionUsageTypes.includes(currentUsageType.value) &&
-          !parkUsageTypes.includes(currentUsageType.value))
-      )
-        return;
-      try {
-        const response = await fetchDraftAoi(
-          projectId || "",
-          2,
-          currentUsageType?.value || ""
-        );
-        if (response.success) {
-          const regionData: Parks | LandUseRegions = [];
-          if (response?.data) {
-            response.data?.map((region: { geom: Geometry; id: number }) => {
-              const formattedPark: Park | LandUseRegion = {
-                geom: region.geom,
-                properties: {
-                  id: region.id,
-                },
-              };
-              regionData.push(formattedPark);
-            });
-            if (regionType === "landUseRegion") {
-              dispatch(setSelectedLandUseRegion(regionData));
-            } else {
-              dispatch(setSelectedPark(regionData));
-            }
-          }
-        } else {
-          handleSetAlert(t("app.serverErrorMessage"), "error");
-        }
-      } catch (err) {
-        console.error(err);
-        handleSetAlert(t("app.serverErrorMessage"), "error");
-      }
-    },
-    [currentUsageType, projectId, dispatch, handleSetAlert, t]
-  );
+  // completed stages (success or failed) – starts at 0
+  const completedSteps = useMemo(() => {
+    if (stages.length === 0) return 0;
+    return stages.filter((s) => s.status !== "pending").length;
+  }, [stages]);
 
-  //fetch and set AOI statistics
-  const fetchAndSetAoiStats = useCallback(
-    async (selectedAoiTab: string) => {
-      if (projectId) {
-        // Dispatch the thunk
-        dispatch(
-          fetchAOIStatistics({
-            projectId: projectId as string,
-            aoiType: selectedAoiTab?.toString() as string,
-          })
-        );
-      }
-    },
-    [dispatch, projectId]
-  );
-
-  //  Debounce the onSelectRegion function
-  const debouncedOnSelectRegion = useMemo(
-    () =>
-      debounce(async (region: Region) => {
-        if (region?.geom) {
-          setDraftRegionLoading(true);
-          try {
-            const response = await draftAoi({
-              geom: region.geom,
-              aoi_type: 2,
-              project_id: projectId || "",
-              region_id: region.key_code,
-            });
-
-            if (response.success) {
-              dispatch(setSelectedRegion(region));
-              if (projectId && selectedAoi === savedAoi?.aoi_type) {
-                const saveResponse = await saveAoi(projectId, {
-                  aoi_type: selectedAoi,
-                  usage_type: currentUsageType?.value || "",
-                });
-                if (saveResponse.success) {
-                  handleSetAlert(t("app.aoiSaveSuccessMessage"), "success");
-                  dispatch(fetchSavedAoiThunk(projectId));
-                } else {
-                  handleSetAlert(t("app.aoiSaveFailedMessage"), "error");
-                }
-              }
-              //fetch and update statistics after selecting a region
-              fetchAndSetAoiStats("2");
-              setAlert({
-                open: true,
-                message: t("app.aoiRegionDraftSuccessMessage"),
-                severity: "success",
-              });
-            } else {
-              setAlert({
-                open: true,
-                message: t("app.aoiRegionDraftFailedMessage"),
-                severity: "error",
-              });
-            }
-          } catch (error) {
-            console.error(error);
-            setAlert({
-              open: true,
-              message: t("app.serverErrorMessage"),
-              severity: "error",
-            });
-          } finally {
-            setDraftRegionLoading(false);
-          }
-        }
-      }, 300),
-    [
-      dispatch,
-      fetchAndSetAoiStats,
-      handleSetAlert,
-      projectId,
-      savedAoi?.aoi_type,
-      selectedAoi,
-      currentUsageType?.value,
-      t,
-    ]
-  );
-
-  //  This function is called when a region is selected
-  const onSelectRegion = useCallback(
-    (region: Region | null) => {
-      if (region) {
-        debouncedOnSelectRegion(region);
-      }
-    },
-    [debouncedOnSelectRegion]
-  );
-
+  // Redirect to results page on success
   useEffect(() => {
-    // usage type road planning disable region AOI option
-    if (currentUsageType && !regionUsageTypes.includes(currentUsageType.value))
-      return;
-    const fetchRegionData = async () => {
-      try {
-        setFetchRegionsLoading(true);
-        const regionsData = await fetchRegions();
-        setRegions(regionsData);
-      } catch (error) {
-        console.error(error);
-        handleSetAlert(t("app.serverErrorMessage"), "error");
-      } finally {
-        setFetchRegionsLoading(false);
-      }
+    if (isSuccess && projectId) {
+      const timer = setTimeout(() => {
+        navigate(`/project/${projectId}/result`);
+      }, 1200); // 1.2 sec delay
+
+      return () => clearTimeout(timer);
+    }
+  }, [isSuccess, projectId, navigate]);
+
+  // 🔌 Socket listeners for AOI events for this project
+  useEffect(() => {
+    if (!socket || !projectId) return;
+    const handleStarted = (payload: any) => {
+      // console.log("[AOI RIGHT] aoi:pipeline_started:", payload);
+      if (payload.projectId !== projectId) return;
+
+      setCurrentPipelineId(payload.pipelineId);
+      setPipelineStatus("running");
+      // setSummary(null);
+
+      const steps = payload.totalSteps ?? 6;
+      const initialStages: LocalStage[] = Array.from(
+        { length: steps },
+        (_, idx) => ({
+          stageKey: `STEP_${idx}`,
+          label: `Stage ${idx}`,
+          status: "pending",
+          step: idx,
+          totalSteps: steps,
+        })
+      );
+      setStages(initialStages);
     };
 
-    fetchRegionData();
-  }, [t, handleSetAlert, currentUsageType]);
+    const handleStage = (payload: any) => {
+      // console.log("[AOI RIGHT] aoi:pipeline_stage:", payload);
+      if (payload.projectId !== projectId) return;
+      if (currentPipelineId && payload.pipelineId !== currentPipelineId) return;
 
-  useEffect(() => {
-    //  Fetch draft region aoi when regions array changes
-    if (
-      regions.length > 0 &&
-      currentUsageType &&
-      regionUsageTypes.includes(currentUsageType.value)
-    ) {
-      fetchDraftRegionAoi();
-    }
-  }, [currentUsageType, fetchDraftRegionAoi, regions]);
+      setPipelineStatus("running");
+      setStages((prev) => {
+        const steps = payload.totalSteps ?? prev[0]?.totalSteps ?? 6;
+        const stepIndex = payload.step ?? 0; // we use 0-based for display
 
-  useEffect(() => {
-    if (selectedAoi !== 2 || !currentUsageType) return;
-    //  Fetch draft region aoi when regions array changes
-    if (parkUsageTypes.includes(currentUsageType?.value)) {
-      fetchDraftParkOrLandUseRegionAoi("park");
-    } else if (landUseRegionUsageTypes.includes(currentUsageType.value)) {
-      fetchDraftParkOrLandUseRegionAoi("landUseRegion");
-    }
-  }, [currentUsageType, fetchDraftParkOrLandUseRegionAoi, selectedAoi]);
+        const copy: LocalStage[] =
+          prev.length === steps
+            ? [...prev]
+            : Array.from({ length: steps }, (_, idx) => {
+                const existing = prev[idx];
+                return (
+                  existing || {
+                    stageKey: `STEP_${idx}`,
+                    label: `Stage ${idx}`,
+                    status: "pending" as const,
+                    step: idx,
+                    totalSteps: steps,
+                  }
+                );
+              });
 
-  const setActiveAoi = useCallback(
-    (value: string) => {
-      setEmptyAoiMessage("");
-      const selectedValue = value === "region" ? 2 : 1;
-      dispatch(setSelectedAoi({ aoiSelected: selectedValue }));
-      fetchAndSetAoiStats(selectedValue.toString());
-    },
-    [dispatch, fetchAndSetAoiStats]
-  );
+        copy[stepIndex] = {
+          stageKey: payload.stageKey ?? copy[stepIndex].stageKey,
+          label: payload.label ?? copy[stepIndex].label,
+          status: payload.status === "failed" ? "failed" : "success",
+          step: stepIndex,
+          totalSteps: steps,
+        };
 
-  const handleConfirmClick = async () => {
-    try {
-      setSaveAoiLoading(true);
-      if (selectedAoi == 1 && !selectedAoiPolygon) {
-        const message = t("app.emptyPolygonAoiMessage");
-        setEmptyAoiMessage(message);
+        return copy;
+      });
+    };
 
-        // Clear the message after 5 seconds
-        setTimeout(() => {
-          setEmptyAoiMessage("");
-        }, 5000);
-      } else if (
-        selectedAoi == 2 &&
-        !selectedRegion &&
-        (!selectedPark || selectedPark.length === 0) &&
-        (!selectedLandUseRegion || selectedLandUseRegion.length === 0)
-      ) {
-        const message = !selectedRegion
-          ? t("app.emptyRegionAoiMessage")
-          : t("app.emptyParkAoiMessage");
-        setEmptyAoiMessage(message);
+    const handleCompleted = async (payload: any) => {
+      // console.log("[AOI RIGHT] aoi:pipeline_completed:", payload);
+      if (payload.projectId !== projectId) return;
+      if (currentPipelineId && payload.pipelineId !== currentPipelineId) return;
 
-        // Clear the message after 5 seconds
-        setTimeout(() => {
-          setEmptyAoiMessage("");
-        }, 5000);
-      } else {
-        if (projectId) {
-          const saveResponse = await saveAoi(projectId, {
-            aoi_type: selectedAoi,
-            usage_type: currentUsageType?.value || "",
-          });
-          if (saveResponse.success) {
-            handleSetAlert(t("app.aoiSaveSuccessMessage"), "success");
-            // Fetch the saved AOI and update Redux using thunk middleware
-            dispatch(fetchSavedAoiThunk(projectId));
-          } else {
-            handleSetAlert(t("app.aoiSaveFailedMessage"), "error");
+      setPipelineStatus(payload.status as PipelineStatus);
+
+      if (payload.status === "success") {
+        try {
+          // Fetch updated project data from API
+          const response = await getProject(projectId);
+          if (response.success && response.data) {            
+            const updatedProject = response.data;
+            
+            // Update project in Redux store
+            dispatch(updateProjectById(updatedProject));
+            
+            // Update selectedProject in Redux store
+            dispatch(setSelectedProject(updatedProject));
           }
+        } catch (error) {
+          console.error("[AOI RIGHT] Error fetching updated project:", error);
         }
       }
+
+      // if (payload.summary) {
+      //   setSummary({
+      //     totalSteps: payload.summary.totalSteps,
+      //     succeeded: payload.summary.succeeded,
+      //     failed: payload.summary.failed,
+      //   });
+      // }
+    };
+    socket.on("aoi:pipeline_started", handleStarted);
+    socket.on("aoi:pipeline_stage", handleStage);
+    socket.on("aoi:pipeline_completed", handleCompleted);
+
+    return () => {
+      socket.off("aoi:pipeline_started", handleStarted);
+      socket.off("aoi:pipeline_stage", handleStage);
+      socket.off("aoi:pipeline_completed", handleCompleted);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [socket, projectId, currentPipelineId]);
+
+  // 🔘 Set AOI handler – hits the **mock** API only
+  const handleConfirmClick = async () => {
+    if (!projectId) {
+      console.warn("[AOI RIGHT] No projectId in route, ignoring Set AOI click");
+      setAlert({
+        open: true,
+        message: t("app.noProjectSelected") || "No project selected",
+        severity: "error",
+      });
+      return;
+    }
+
+    if (pipelineStatus === "running") {
+      // console.log("[AOI RIGHT] Ignoring click: pipeline already running");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      // console.log("[AOI RIGHT] Calling setProjectAoiMock with:", projectId);
+
+      // reset local pipeline state; actual stages arrive via socket
+      setPipelineStatus("running");
+      setStages([]);
+      // setSummary(null);
+      setCurrentPipelineId(null);
+
+      const response = await setProjectAoiMock(projectId);
+
+      if (response?.success && response?.data) {
+        // keep incoming-branch success AlertBox behaviour
+        setAlert({
+          open: true,
+          message: t("app.aoiSetSuccessMessage"),
+          severity: "success",
+        });
+      }
     } catch (error) {
-      console.error("Error while saving AOI", error);
-      handleSetAlert(t("app.serverErrorMessage"), "error");
+      console.error("[AOI RIGHT] Error starting mock AOI pipeline:", error);
+      setPipelineStatus("idle");
+      setAlert({
+        open: true,
+        message: t("app.errorSettingAOI"),
+        severity: "error",
+      });
     } finally {
-      setSaveAoiLoading(false);
+      setLoading(false);
     }
   };
 
   return (
     <StyledBox>
+      {/* ✅ existing AlertBox from incoming branch */}
       {alert.open && (
         <AlertBox
           open={alert.open}
@@ -406,117 +300,117 @@ const AoiRightPanel = () => {
         />
       )}
 
-      <Box
+      <IconButton 
+        onClick={() => navigate(-1)}
         sx={{
-          display: "flex",
-          flexDirection: "column",
-          width: "100%",
-          alignItems: "center",
+          position: "absolute",
+          top: 16,
+          left: 16,
+          zIndex: 10,
         }}
       >
-        <StyledGrid>
-          <ToggleButtons
-            buttons={useMemo(
-              () =>
-                getAoiToggleButtons(t, savedAoi?.aoi_type, currentUsageType),
-              [t, savedAoi, currentUsageType]
-            )}
-            onChange={setActiveAoi}
-            defaultValue={selectedAoiValue}
-          />
-        </StyledGrid>
+        <ArrowBackIcon fontSize="medium" />
+      </IconButton>
 
-        {selectedAoiValue === "region" && (
-          <>
-            <StyledGrid
-              sx={{
-                width: "80%",
-                paddingTop: theme.spacing(1),
-                paddingBottom: theme.spacing(1),
-              }}
-            >
-              {fetchRegionsLoading && (
-                <Loader text={t("app.regionsFetchingLoadingText")} />
-              )}
 
-              <CustomDropDown
-                disabled={
-                  [...landUseRegionUsageTypes, ...parkUsageTypes].includes(
-                    currentUsageType?.value || ""
-                  ) || isProjectFrozen
-                }
-                options={regions}
-                onSelect={onSelectRegion}
-                label={t("app.selectRegion")}
-                value={selectedRegion}
-                getOptionLabel={(option) =>
-                  `${option.city_name}, ${option.s_name}`
-                }
-                getOptionValue={(option) => option.key_code}
-                renderOption={(option) => {
-                  return (
-                    <>
-                      <span style={{ fontWeight: "bold" }}>
-                        {option.city_name}
-                      </span>
-                      <span
-                        style={{
-                          fontStyle: "italic",
-                          fontSize: "10px",
-                          marginLeft: "5px",
-                        }}
-                      >
-                        {option.s_name}
-                      </span>
-                    </>
-                  );
-                }}
-              />
-
-              {draftRegionLoading && (
-                <Loader text={t("app.draftingRegionLoadingText")} />
-              )}
-            </StyledGrid>
-            {currentUsageType &&
-              ((parkUsageTypes.includes(currentUsageType.value) &&
-                (!selectedPark || selectedPark?.length === 0)) ||
-                (landUseRegionUsageTypes.includes(currentUsageType.value) &&
-                  (!selectedLandUseRegion ||
-                    selectedLandUseRegion?.length === 0))) && (
-                <StyledTypography>
-                  <InfoOutlined
-                    fontSize="small"
-                    sx={{ verticalAlign: "middle", mr: 1, color: "info.main" }}
-                  />
-                  {t("app.note")}
-                  {": "}
-                  {t(`app.${currentUsageType.noteLable}`) ||
-                    t("app.parkRegionNote")}
-                </StyledTypography>
-              )}
-          </>
-        )}
-      </Box>
-
-      {/* This section takes the remaining space */}
+      {/* Stats area */}
       <StyledGridBottom>
         <AoiStatistics />
       </StyledGridBottom>
 
-      <Typography color="red" fontSize={14}>
-        {emptyAoiMessage}
-      </Typography>
+      {/* Set AOI button + overall pipeline status + stage counter */}
       <StyledConfirmBox>
-        {saveAoiLoading && <Loader text={t("app.aoiSaveLoadingText")} />}
-        <Button
-          sx={{ position: "fixed", bottom: 5 }}
-          color="primary"
-          variant="contained"
-          onClick={handleConfirmClick}
-          disabled={isProjectFrozen}
+        {/* Status Messages */}
+        {isRunning && (
+          <Alert 
+            severity="info"
+            icon={<CircularProgress size={20} />}
+            sx={{ width: "90%", maxWidth: 500 }}
+          >
+            <Box display="flex" alignItems="center" justifyContent="space-between">
+              <Typography variant="body2">
+                {t("app.runningSetAoi")}
+              </Typography>
+              <Typography variant="body2" fontWeight="bold" sx={{ ml: 2 }}>
+                {completedSteps}/{totalSteps}
+              </Typography>
+            </Box>
+          </Alert>
+        )}
+
+        {isSuccess && (
+          <Alert 
+            severity="success"
+            icon={<CheckCircleIcon />}
+            sx={{ width: "90%", maxWidth: 500 }}
+          >
+            <Typography variant="body2">
+              {t("app.setAoiSuccess")}
+            </Typography>
+          </Alert>
+        )}
+
+        {isFailed && (
+          <Alert 
+            severity="error"
+            icon={<ErrorIcon />}
+            sx={{ width: "90%", maxWidth: 500 }}
+          >
+            <Typography variant="body2">
+              {t("app.setAoiFailed")}
+            </Typography>
+          </Alert>
+        )}
+
+        {/* Button Section */}
+        <Tooltip
+          title={
+            aoiPolygons.length < MIN_AOI_POLYGON_COUNT ||
+            aoiPolygons.length > MAX_AOI_POLYGON_COUNT
+              ? t("app.aoiPolygonsLimitMessage", {
+                  minCount: MIN_AOI_POLYGON_COUNT,
+                  maxCount: MAX_AOI_POLYGON_COUNT,
+                })
+              : ""
+          }
+          disableHoverListener={
+            !(
+              aoiPolygons.length < MIN_AOI_POLYGON_COUNT ||
+              aoiPolygons.length > MAX_AOI_POLYGON_COUNT
+            )
+          }
         >
-          {t("app.confirmAOI")}
-        </Button>
+          <Box display="flex" flexDirection="column" alignItems="center">
+            {loading && (
+              <Alert
+                severity="info"
+                sx={{
+                  width: "100%",
+                  mb: 2,
+                  textAlign: "center",
+                }}
+              >
+                {t("app.settingAoiMessage")}
+              </Alert>
+            )}
+
+            <Button
+              sx={{ px: 4, py: 2 }}
+              color="primary"
+              variant="contained"
+              onClick={handleConfirmClick}
+              disabled={
+                aoiPolygons.length < MIN_AOI_POLYGON_COUNT ||
+                aoiPolygons.length > MAX_AOI_POLYGON_COUNT ||
+                loading ||
+                isRunning || 
+                selectedProject?.processed
+              }
+            >
+              {t("app.setAOI")}
+            </Button>
+          </Box>
+        </Tooltip>
       </StyledConfirmBox>
     </StyledBox>
   );

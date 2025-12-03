@@ -1,53 +1,49 @@
-import { fetchAuthSession } from "aws-amplify/auth";
 import axios from "axios";
+import { store } from "@/redux/store";
+import { setPassword } from "@/redux/slices/authSlice";
 
 const axiosInstance = axios.create({
-  baseURL: `${process.env.REACT_APP_BACKEND_URL}api/v1`,
+  baseURL: `${import.meta.env.VITE_BACKEND_URL}api/v1`,
 });
 
-// Use the interceptor without importing the store
-axiosInstance.interceptors.request.use(
-  async (config) => {
-    const session = await fetchAuthSession();
-    const token = session?.tokens?.accessToken?.toString();
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    } else {
-      console.error("No token found in session.");
-    }
+// REQUEST INTERCEPTOR
+axiosInstance.interceptors.request.use((config) => {
+  const state = store.getState();
+  const pwd = state.auth.password;
 
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
+  if (pwd) {
+    const token = btoa(`user:${pwd}`);
+    config.headers.Authorization = `Basic ${token}`;
   }
-);
+
+  return config;
+});
 
 axiosInstance.interceptors.response.use(
-  (response) => {
-    return response;
-  },
+  (response) => response,
   async (error) => {
-    const originalRequest = error.config;
-    if (
-      error.response &&
-      error.response.status === 401 &&
-      !originalRequest._retry
-    ) {
-      originalRequest._retry = true;
-      try {
-        const session = await fetchAuthSession({ forceRefresh: true });
-        const newAccessToken = session?.tokens?.accessToken?.toString();
-        if (newAccessToken) {
-          originalRequest.headers["Authorization"] = `Bearer ${newAccessToken}`;
-          return axiosInstance(originalRequest);
-        } else {
-          throw new Error("Session is empty. Logging out.");
-        }
-      } catch (authError) {
-        console.error("Error refreshing token:", authError);
+    if (error.response?.status === 401) {
+      alert("パスワードが間違っています！");
+      
+      // Clear Redux & session
+      store.dispatch(setPassword(null));
+      sessionStorage.removeItem("auth_pwd");
+
+      // Ask again
+      const newPwd = prompt("もう一度パスワードを入力してください：");
+
+      if (newPwd) {
+        store.dispatch(setPassword(newPwd));
+        sessionStorage.setItem("auth_pwd", newPwd);
+
+        // re-try the request
+        const token = btoa(`user:${newPwd}`);
+        error.config.headers.Authorization = `Basic ${token}`;
+
+        return axiosInstance(error.config);
       }
     }
+
     return Promise.reject(error);
   }
 );

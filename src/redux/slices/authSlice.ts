@@ -1,58 +1,23 @@
-import { AttributeType } from "@/types/User";
 import { createSlice } from "@reduxjs/toolkit";
+import type { PayloadAction } from "@reduxjs/toolkit";
 
-interface AuthSliceState {
-  isVerified: boolean;
-  isAdmin: boolean;
-  userId: string | null;
-  userData: AttributeType[] | null;
-  token: string | null;
+interface AuthState {
+  password: string | null;
 }
 
-const initialState: AuthSliceState = {
-  isVerified: false,
-  isAdmin: false,
-  userId: null,
-  userData: null,
-  token: null,
+const initialState: AuthState = {
+  password: null,
 };
 
-export const authSlice = createSlice({
+const authSlice = createSlice({
   name: "auth",
-  initialState: initialState,
+  initialState,
   reducers: {
-    setVerificationStatus: (state, action) => {
-      state.isVerified = action.payload;
-    },
-    setAdminStatus: (state, action) => {
-      state.isAdmin = action.payload;
-    },
-    setUserData: (state, action) => {
-      // Add a reducer to set userData
-      state.userData = action.payload;
-    },
-    setUserId: (state, action) => {
-      // Add a reducer to set userId
-      state.userId = action.payload;
-    },
-    setToken: (state, action) => {
-      // Add a reducer to set userId
-      state.token = action.payload;
-    },
-    clearUserData: () => {
-      return initialState;
+    setPassword(state, action: PayloadAction<string | null>) {
+      state.password = action.payload;
     },
   },
 });
 
-export const {
-  setVerificationStatus,
-  setAdminStatus,
-  setUserData,
-  setUserId,
-  setToken,
-  clearUserData,
-} = authSlice.actions;
-
+export const { setPassword } = authSlice.actions;
 export default authSlice.reducer;
-export type { AuthSliceState };

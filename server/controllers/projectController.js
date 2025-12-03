@@ -1,187 +1,186 @@
-import * as projectService from "../services/projectService.js";
-// import { sendEmail } from "../services/awsSesService.js";
+// controllers/projectController.js
 
+import projectService from "../services/projectService.js";
+import pipelineService from "../services/pipelineService.js";
+import { success } from "../utils/response.js";
+
+/**
+ * Create a new project
+ * @route POST /projects
+ * @body { name: string, description: string }
+ * @returns Newly created project object
+ */
 const createProject = async (req, res, next) => {
   try {
-    const newProject = await projectService.createProject(req, res);
-    res.status(201).json(newProject);
-    // sendEmail(req);
+    const newProject = await projectService.createProject(req.body);
+    return success(res, "Project created successfully", newProject, 201);
   } catch (err) {
+    console.log("Error in create project:", err.message);
     next(err);
   }
 };
 
-const listProjects = async (req, res, next) => {
-  try {
-    const projects = await projectService.listProjects(req);
-    res.status(200).json(projects);
-  } catch (err) {
-    next(err);
-  }
-};
-
+/**
+ * Update an existing project
+ * @route PUT /projects/:projectId
+ * @params projectId - UUID of the project to update
+ * @body Fields to update (name, description, etc.)
+ * @returns Updated project object
+ */
 const updateProject = async (req, res, next) => {
   try {
     const updatedProject = await projectService.updateProject(
-      req.params.cartodb_id,
+      req.params.projectId,
       req.body
     );
-    res.status(200).json(updatedProject);
+    return success(res, "Project updated successfully", updatedProject);
   } catch (err) {
+    console.log("Error in update project:", err.message);
     next(err);
   }
 };
 
+/**
+ * Delete a project
+ * @route DELETE /projects/:projectId
+ * @params projectId - UUID of the project to delete
+ * @returns Success message
+ */
 const deleteProject = async (req, res, next) => {
   try {
-    const response = await projectService.deleteProject(
-      req.params.cartodb_id,
-      req.body.clientId,
-      req.app.get("socket")
-    );
-    res.status(200).json(response);
+    await projectService.deleteProject(req.params.projectId);
+    return success(res, "Project deleted successfully", null);
   } catch (err) {
+    console.log("Error in delete project", err.message);
+
     next(err);
   }
 };
 
-const addAoi = async (req, res, next) => {
+/**
+ * Fetch all projects
+ * @route GET /projects
+ * @returns Array of all projects
+ */
+const getAllProjects = async (req, res, next) => {
   try {
-    const aoiShape = await projectService.addAoi(
-      req.params.project_id,
+    const projects = await projectService.getAllProjects();
+    return success(res, "Projects fetched successfully", projects);
+  } catch (err) {
+    console.log("Error in get all projects:", err.message);
+    next(err);
+  }
+};
+
+/**
+ * Fetch a single project by ID
+ * @route GET /projects/:projectId
+ * @params projectId - UUID of the project to fetch
+ * @returns Project object
+ */
+const getProject = async (req, res, next) => {
+  try {
+    const project = await projectService.getProject(req.params.projectId);
+    return success(res, "Project fetched successfully", project);
+  } catch (err) {
+    console.log("Error in get project:", err.message);
+    next(err);
+  }
+};
+
+/**
+ * Create a polygon for a project
+ * @route POST /projects/polygon
+ * @body { project_id: UUID, geom: GeoJSON Polygon, ... }
+ * @returns Newly created polygon object
+ */
+const createProjectPolygon = async (req, res, next) => {
+  try {
+    const polygon = await projectService.createProjectPolygon(req.body);
+    return success(res, "Project polygon created successfully", polygon, 201);
+  } catch (err) {
+    console.log("Error in create project polygon:", err.message);
+    next(err);
+  }
+};
+
+/**
+ * Update a project polygon
+ * @route PUT /projects/polygon/:polygonId
+ * @params polygonId - UUID of the polygon to update
+ * @body Fields to update (geom, etc.)
+ * @returns Updated polygon object
+ */
+const updateProjectPolygon = async (req, res, next) => {
+  try {
+    const updatedPolygon = await projectService.updateProjectPolygon(
+      req.params.polygonId,
       req.body
     );
-    res.status(201).json(aoiShape);
-  } catch (err) {
-    next(err);
-  }
-};
-
-const saveAoi = async (req, res, next) => {
-  try {
-    const aoiShape = await projectService.saveAoi(
-      req.params.project_id,
-      req.body
+    return success(
+      res,
+      "Project polygon updated successfully",
+      updatedPolygon
     );
-    res.status(201).json(aoiShape);
   } catch (err) {
+    console.log("Error in update project polygon:", err.message);
     next(err);
   }
 };
 
-const getAoi = async (req, res, next) => {
+/**
+ * Delete a project polygon
+ * @route DELETE /projects/polygons/:polygonId
+ * @params polygonId - UUID of the polygon to delete
+ * @returns Success message
+ */
+const deleteProjectPolygon = async (req, res, next) => {
   try {
-    const response = await projectService.getAoi(
-      req.params.project_id,
-      req.params.aoi_type,
-      req.query.usageType
+    await projectService.deleteProjectPolygon(req.params.polygonId);
+    return success(res, "Project polygon deleted successfully", null);
+  } catch (err) {
+    console.log("Error in delete project polygon:", err.message);
+    next(err);
+  }
+};
+
+/**
+ * Fetch all polygons of a specific project
+ * @route GET /projects/:projectId/polygons
+ * @params projectId - UUID of the project
+ * @returns Array of polygons for the project
+ */
+const getPolygonsByProject = async (req, res, next) => {
+  try {
+    const polygons = await projectService.getPolygonsByProject(
+      req.params.projectId
     );
-    res.status(200).json(response);
+    return success(res, "Project polygons fetched successfully", polygons);
   } catch (err) {
+    console.log("Error in get polygons by project:", err.message);
     next(err);
   }
 };
 
-const getSavedAoi = async (req, res, next) => {
-  try {
-    const response = await projectService.getSavedAoi(req.params.project_id);
-    res.status(200).json(response);
-  } catch (err) {
-    next(err);
-  }
-};
+const runPipeline = async (req, res, next) => {
+  const { projectId } = req?.params;
+  const io = req.app.get("socket");
 
-const removeAoi = async (req, res, next) => {
-  try {
-    const { aoi_type, regionId } = req.body;
-    const response = await projectService.removeAoi(
-      req.params.project_id,
-      aoi_type,
-      regionId
-    );
-    res.status(200).json(response);
-  } catch (err) {
-    next(err);
-  }
-};
+  console.log("[CONTROLLER] /mock-set-aoi called for project:", projectId);
 
-// shapes section
-const addShape = async (req, res, next) => {
-  try {
-    const shape = await projectService.addShape(
-      req.params.project_id,
-      req.body.shape
-    );
-    res.status(201).json(shape);
-  } catch (err) {
-    next(err);
-  }
-};
-
-const getShapes = async (req, res, next) => {
-  try {
-    const response = await projectService.getShapes(req.params.project_id);
-    res.status(200).json(response);
-  } catch (err) {
-    next(err);
-  }
-};
-
-const updateShape = async (req, res, next) => {
-  try {
-    const { project_id, shape_id } = req.params;
-    const { geom } = req.body;
-
-    const response = await projectService.updateShape(
-      project_id,
-      shape_id,
-      geom
-    );
-
-    res.status(response.success ? 200 : 400).json(response);
-  } catch (error) {
-    console.error("Error updating shape:", error.message);
-    next(error);
-  }
-};
-
-const deleteShape = async (req, res, next) => {
-  try {
-    const { project_id, shape_id } = req.params;
-
-    const response = await projectService.deleteShape(project_id, shape_id);
-    res.status(response.success ? 200 : 400).json(response);
-  } catch (error) {
-    console.error("Error deleting shape:", error.message);
-    next(error);
-  }
-};
-
-const getLocationArea = async (req, res, next) => {
-  try {
-    const response = await projectService.getLocationArea(
-      req.params.project_id
-    );
-    res.status(200).json(response);
-  } catch (err) {
-    next(err);
-  }
+  pipelineService.runPipeline({ projectId, io });
+  return success(res, "Pipeline started successfully", null);
 };
 
 export default {
   createProject,
-  listProjects,
   updateProject,
   deleteProject,
-  addAoi,
-  getAoi,
-  removeAoi,
-  saveAoi,
-  getSavedAoi,
-  addShape,
-  getShapes,
-  updateShape,
-  deleteShape,
-  getLocationArea,
+  getAllProjects,
+  getProject,
+  createProjectPolygon,
+  updateProjectPolygon,
+  deleteProjectPolygon,
+  getPolygonsByProject,
+  runPipeline,
 };
-

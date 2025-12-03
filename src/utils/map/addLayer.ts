@@ -1,100 +1,101 @@
-import {
-  aoiLayerVisibility,
-  resultLayerVisibility,
-  simulationLayerVisibility,
-} from "@/config/layers/initialLayerVisibility";
-import { LandUseRegion, LandUseRegions } from "@/types/LandUseRegion";
-import { Park, Parks } from "@/types/Park";
-import { Geometry, FeatureCollection } from "geojson";
+import maplibregl from "maplibre-gl";
+import { PMTiles, Protocol } from "pmtiles";
+import { getS3PreSignedUrl } from "@/api/s3";
+import { layerVisibilityConfig } from "@/config/layers/initialLayerVisibility";
+import type { LayerConfig } from "@/types/Layers";
+import { appEnvs } from "@/constants/appEnvWhitelist";
 
-// Types for layer configuration
-type LayerType =
-  | "fill"
-  | "line"
-  | "symbol"
-  | "circle"
-  | "heatmap"
-  | "fill-extrusion";
-
-interface LayerStyle {
-  type: LayerType;
-  paint: mapboxgl.PaintSpecification;
-  layout?: mapboxgl.LayoutSpecification;
-  minzoom?: number;
-  maxzoom?: number;
+export interface Metadata {
+  vector_layers: { id: string }[];
 }
+const APP_ENV = import.meta.env.VITE_APP_ENV;
+const ENV = appEnvs.includes(APP_ENV) ? APP_ENV : "development";
+const DOMAIN = import.meta.env.VITE_DOMAIN || "";
 
-interface LayerConfig {
-  id: string;
-  style: LayerStyle;
-  beforeId?: string;
-}
+// Global pmtiles protocol instance (register once per app)
+let pmtilesProtocol: Protocol | null = null;
 
-// Interface for layer data
-export interface LayerData {
-  geom: Geometry;
-  properties?: Record<string, string | number | boolean | null>;
-  [key: string]: unknown;
-}
-
-const moveLocationPointsToTop = (map: mapboxgl.Map) => {
-  if (map.getLayer("location-points")) {
-    map.moveLayer("location-points");
+function ensurePmTilesProtocol() {
+  if (!pmtilesProtocol) {
+    pmtilesProtocol = new Protocol();
+    try {
+      // register "pmtiles://" scheme with MapLibre
+      maplibregl.addProtocol(
+        "pmtiles",
+        pmtilesProtocol.tile.bind(pmtilesProtocol)
+      );
+    } catch (err) {
+      // if already registered, ignore
+      console.debug("pmtiles protocol already registered (or failed):", err);
+    }
   }
-};
+}
 
+async function waitForStyle(map: maplibregl.Map) {
+  if (map.isStyleLoaded()) return;
+  await new Promise<void>((resolve) => {
+    const on = () => {
+      if (map.isStyleLoaded()) {
+        map.off("styledata", on);
+        resolve();
+      }
+    };
+    map.on("styledata", on);
+  });
+}
+
+/**
+ * Add a styled vector layer backed by a PMTiles file from S3.
+ */
 export const addStyledLayer = async (
-  map: mapboxgl.Map | null,
+  map: maplibregl.Map | null,
   layerConfig: LayerConfig,
-  data: LayerData[] | Parks | LandUseRegions,
-  selectedTab?: string, // Explicit tab types
-  selectedAoiType?: number
+  fileName: string
 ): Promise<void> => {
   if (!map) return;
 
   try {
+    await waitForStyle(map);
     await removeStyledLayer(map, layerConfig.id);
+
+    let tileUrl = "";
+    //if env is development then get the presigned url otherwise call directly
+    if (ENV === "development") {
+      const res = await getS3PreSignedUrl({ fileName: `tiles/${fileName}`, bucketName: "tile" });
+
+      if (res.success) {
+        tileUrl = res.data;
+      }
+    } else {
+      tileUrl = `${DOMAIN}/tiles/${fileName}`;
+    }
+
+    // Ensure pmtiles protocol is registered with MapLibre
+    ensurePmTilesProtocol();
+
+    // Read metadata to grab vector_layers[0].id for source-layer
+    const pmtiles = new PMTiles(tileUrl);
+    const metadata = (await pmtiles.getMetadata()) as Metadata;
+    const sourceLayer = metadata?.vector_layers?.[0]?.id;
 
     const sourceId = `source-${layerConfig.id}`;
     const layerId = `layer-${layerConfig.id}`;
 
-    const geoJsonData: FeatureCollection = {
-      type: "FeatureCollection",
-      features: data?.map((feature: LayerData | Park | LandUseRegion) => ({
-        type: "Feature",
-        geometry: feature.geom,
-        properties: feature.properties || {},
-      })),
-    };
-
-    // Add or update source
     if (!map.getSource(sourceId)) {
       map.addSource(sourceId, {
-        type: "geojson",
-        data: geoJsonData,
-      });
-    } else {
-      const source = map.getSource(sourceId) as mapboxgl.GeoJSONSource;
-      source.setData(geoJsonData);
+        type: "vector",
+        // use pmtiles protocol
+        url: `pmtiles://${tileUrl}`,
+      } as any);
     }
 
-    const visibilityConfig =
-      selectedTab === "aoi"
-        ? aoiLayerVisibility
-        : selectedTab === "simulation"
-          ? simulationLayerVisibility
-          : resultLayerVisibility;
+    const isVisible = layerVisibilityConfig[layerId] ?? true;
 
-    let isVisible = visibilityConfig[layerId] ?? true;
-    if (["layer-parkLayer", "layer-landUseRegion"].includes(layerId)) {
-      isVisible = selectedAoiType === 2 && selectedTab === "aoi" ? true : false;
-    }
-
-    // Add layer with proper visibility
-    const layerOptions: mapboxgl.LayerSpecification = {
+    const layerOptions: any = {
       id: layerId,
-      source: sourceId,
       type: layerConfig.style.type,
+      source: sourceId,
+      "source-layer": sourceLayer,
       paint: layerConfig.style.paint,
       layout: {
         ...layerConfig.style.layout,
@@ -109,15 +110,12 @@ export const addStyledLayer = async (
         map.addLayer(layerOptions);
       }
     } else {
-      // Update visibility if layer already exists
       map.setLayoutProperty(
         layerId,
         "visibility",
         isVisible ? "visible" : "none"
       );
     }
-
-    moveLocationPointsToTop(map);
   } catch (error) {
     console.error(`Error adding layer ${layerConfig.id}:`, error);
     throw error;
@@ -125,7 +123,7 @@ export const addStyledLayer = async (
 };
 
 export const removeStyledLayer = async (
-  map: mapboxgl.Map,
+  map: maplibregl.Map,
   layerId: string
 ): Promise<void> => {
   if (!map) return;
@@ -146,3 +144,39 @@ export const removeStyledLayer = async (
     throw error;
   }
 };
+
+/**
+ * Generic GeoJSON layer helpers (used for clipped_* & project layers)
+ */
+export async function addLayer(
+  map: maplibregl.Map,
+  layerId: string,
+  source: any,
+  layer: any
+) {
+  await waitForStyle(map);
+
+  if (map.getLayer(layerId)) {
+    map.removeLayer(layerId);
+  }
+  if (map.getSource(layerId)) {
+    map.removeSource(layerId);
+  }
+
+  map.addSource(layerId, source);
+
+  map.addLayer({
+    id: layerId,
+    source: layerId,
+    ...layer,
+  } as any);
+}
+
+export function removeLayer(map: maplibregl.Map, layerId: string): void {
+  if (map.getLayer(layerId)) {
+    map.removeLayer(layerId);
+  }
+  if (map.getSource(layerId)) {
+    map.removeSource(layerId);
+  }
+}

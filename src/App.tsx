@@ -1,44 +1,51 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import { useCallback, useEffect, useState } from "react";
 import routes from "@/routes/Routes";
-
-import { I18n } from "aws-amplify/utils";
-import { translations } from "@aws-amplify/ui-react";
-import enTranslation from "@/i18n/locales/en/translation.json";
-import jaTranslation from "@/i18n/locales/ja/translation.json";
-
 import { useTranslation } from "react-i18next";
-import { TFunction } from "i18next";
-
-I18n.putVocabularies(translations);
+import type { TFunction } from "i18next";
+import { useEffect, useState } from "react";
+import { useAppDispatch } from "./hooks/reduxHooks";
+import { setPassword } from "./redux/slices/authSlice";
 
 function App() {
-  const [currentLanguage, setCurrentLanguage] = useState("ja");
-  const [loading, setLoading] = useState(true);
   const { t } = useTranslation();
-
-  useEffect(() => {
-    const langParam = new URLSearchParams(window.location.search).get("lang");
-    if (langParam && ["en", "ja"].includes(langParam)) {
-      setCurrentLanguage(langParam);
-    }
-    setLoading(false);
-  }, []);
-
-  useEffect(() => {
-    const translations = currentLanguage === "en" ? enTranslation.auth : jaTranslation.auth;
-    I18n.putVocabularies({ [currentLanguage]: translations });
-    I18n.setLanguage(currentLanguage);
-  }, [currentLanguage]);
-
   return (
     <Router>
-      <MyAppRoutes
-        loading={loading}
-        t={t}
-      />
+      <AuthWrapper>
+        <MyAppRoutes loading={false} t={t} />
+      </AuthWrapper>
     </Router>
   );
+}
+
+function AuthWrapper({ children }: { children: React.ReactNode }) {
+  const [authorized, setAuthorized] = useState(false);
+  const dispatch = useAppDispatch();
+
+  useEffect(() => {
+    const saved = sessionStorage.getItem("auth_pwd");
+
+    if (saved) {
+      dispatch(setPassword(saved));
+      setAuthorized(true);
+      return;
+    }
+
+    askPassword();
+  }, []);
+
+  const askPassword = () => {
+    const pwd = prompt("パスワードを入力してください");
+
+    if (!pwd) return;
+
+    sessionStorage.setItem("auth_pwd", pwd);
+    dispatch(setPassword(pwd));
+    setAuthorized(true);
+  };
+
+  if (!authorized) return null;
+
+  return <>{children}</>;
 }
 
 interface MyAppRoutesProps {
@@ -46,16 +53,14 @@ interface MyAppRoutesProps {
   t: TFunction<"translation", undefined>;
 }
 
-function MyAppRoutes({
-  loading,
-  t,
-}: MyAppRoutesProps) {
+function MyAppRoutes({ loading, t }: MyAppRoutesProps) {
   if (loading) {
     return <div>{t("app.loading")}...</div>;
   }
+
   return (
     <Routes>
-      {routes().map((route, index) => (
+      {routes.map((route, index) => (
         <Route key={index} path={route.path} element={route.element} />
       ))}
     </Routes>

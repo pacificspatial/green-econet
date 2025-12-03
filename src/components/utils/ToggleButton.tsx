@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Button } from "@mui/material";
-import { styled, Theme } from "@mui/material/styles";
+import { styled } from "@mui/material/styles";
+import type { Theme } from "@mui/material/styles";
 
 interface ToggleButtonProps {
   buttons: {
@@ -115,7 +116,9 @@ const ToggleButtons: React.FC<ToggleButtonProps> = ({
         {buttons.map((button) => (
           <div
             key={button.value}
-            className={`tab-item ${selectedValue === button.value ? "active" : ""}`}
+            className={`tab-item ${
+              selectedValue === button.value ? "active" : ""
+            }`}
             onClick={() => handleClick(button.value)}
             title={button.label}
           >

@@ -1,37 +1,36 @@
-import { configureStore } from "@reduxjs/toolkit";
+import { configureStore, combineReducers } from "@reduxjs/toolkit";
+import aoiReducer from "./slices/aoiSlice";
 import projectReducer from "./slices/projectSlice";
-import shapeReducer from "./slices/shapeSlice";
-import selectedRegionReducer from "./slices/selectedRegionSlice";
-import selectedAoiReducer from "./slices/selectedAoiSlice";
-import frozenProject from "./slices/frozenProjectSlice";
-import authReducer from './slices/authSlice';
-import aoiStatistics from "./slices/aoiStatistics";
-import savedAoi from "./slices/savedAoi";
-import { persistStore } from 'redux-persist';
+import aoiPipelineReducer from "./slices/aoiPipelineSlice";
+import authReducer from "./slices/authSlice";
 
+import storage from "redux-persist/lib/storage";
+import { persistReducer, persistStore } from "redux-persist";
 
+const projectPersistConfig = {
+  key: "project",
+  storage,
+  whitelist: ["projects", "selectedProject"],
+};
+
+const rootReducer = combineReducers({
+  aoi: aoiReducer,
+  project: persistReducer(projectPersistConfig, projectReducer),
+  aoiPipeline: aoiPipelineReducer,
+  auth: authReducer
+});
 
 export const store = configureStore({
-    reducer: {
-        projects: projectReducer,
-        selectedRegion: selectedRegionReducer, 
-        selectedAoi: selectedAoiReducer,
-        savedAoi: savedAoi,
-        shapes:shapeReducer,
-        frozenProject: frozenProject,
-        auth: authReducer,
-        aoiStatistics: aoiStatistics,
-    },
-    middleware: (getDefaultMiddleware) =>
-        getDefaultMiddleware({
-            serializableCheck: {
-                ignoredActions: ['persist/PERSIST', 'persist/REHYDRATE'],
-            },
-        }),
+  reducer: rootReducer,
+  middleware: (getDefaultMiddleware) =>
+    getDefaultMiddleware({
+      serializableCheck: {
+        ignoredActions: ["persist/PERSIST", "persist/REHYDRATE"],
+      },
+    }),
 });
 
 export const persistor = persistStore(store);
-
 
 export type RootState = ReturnType<typeof store.getState>;
 export type AppDispatch = typeof store.dispatch;

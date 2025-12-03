@@ -1,14 +1,21 @@
-import { Geometry } from "./Region";
+import type { Geometry } from "geojson";
 
-export interface Project {
-  project_id?: string;
-  usage_type: string;
+// PROJECT TYPES
+export interface ProjectData {
+  id: string;
   name: string;
-  description: string;
-  date_created?: string;
-  date_modified?: string;
-  owner?: string;
-  note: string;
-  geom?: Geometry,
-  aoi_type?: number
+  description?: string;
+  config?: Object;
+  aoi_centroid?: Geometry;
+  geom?: Geometry;
+  createdAt?: string;
+  updatedAt?: string;
+  processed: boolean
+}
+
+export interface ProjectPolygon {
+  id: string;
+  geom: Geometry;
+  area_m2: number;
+  perimeter_m: number;
 }

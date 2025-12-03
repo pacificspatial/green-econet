@@ -1,0 +1,32 @@
+service: econet-plateau-infrastructure
+frameworkVersion: ">=2.25.0"
+provider:
+  name: aws
+  runtime: nodejs18.x
+  stage: ${opt:stage, 'stg'}
+  region: ${opt:region, 'ap-northeast-1'}
+  profile: ${self:provider.stage}
+  deploymentBucket:
+    name: ${self:custom.environment.DEPLOYMENT_BUCKET_NAME}
+    blockPublicAccess: true
+    maxPreviousDeploymentArtifacts: 5
+  stackName: ${self:provider.stage}-${self:service}
+  stackPolicy:
+    - Effect: Allow
+      Principal: "*"
+      Action: "Update:*"
+      Resource: "*"
+custom:
+  environment: ${file(./environment.yml):${self:provider.stage}}
+  namespace: econetplateau
+  namespaceShort: enp
+  # cognitoUserPoolName: enp
+  # cognitoClientName: app
+  # cognitoIdentityPoolName: enp-identity-pool
+
+resources:
+ 
+  - ${file(./resources-s3.yml)}
+  - ${file(./resources-cloudfront.yml)}
+  - ${file(./resources-dns.yml)}
+

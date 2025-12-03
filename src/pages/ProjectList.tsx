@@ -1,17 +1,51 @@
-import React, { useState } from "react";
-import { Box, Grid, Paper, IconButton, Tooltip } from "@mui/material";
+import React, { useEffect, useState } from "react";
+import { Box, Paper, IconButton, Tooltip } from "@mui/material";
+import Grid from "@mui/material/Grid";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import { useTheme } from "@mui/material/styles";
 import { useTranslation } from "react-i18next";
 import Map from "@/components/maps/Map";
 import LeftPanel from "@/components/common/LeftPanel";
+import { useAppDispatch } from "@/hooks/reduxHooks";
+import { getAllProjects } from "@/api/project";
+import { setProjects } from "@/redux/slices/projectSlice";
+import type { AlertState } from "@/types/AlertState";
+import AlertBox from "@/components/utils/AlertBox";
+import { mapCenter, mapZoom } from "@/constants/mapConstants";
 
-const ProjectsList = () => {
+const ProjectsList: React.FC = () => {
   const [collapsed, setCollapsed] = useState<boolean>(false);
+  const [isProjectListLoading, setIsProjectListLoading] = useState(true);
+  const [alertState, setAlertState] = useState<AlertState>({
+    open: false,
+    message: "",
+    severity: "success",
+  });
   const theme = useTheme();
   const { t } = useTranslation();
-  const center: [number, number] = [139.6917, 35.6895];
-  const zoom = 12;
+
+  const dispatch = useAppDispatch();
+
+  useEffect(() => {
+    const fetchAll = async () => {
+      try {
+        setIsProjectListLoading(true);
+
+        const response = await getAllProjects();
+        dispatch(setProjects(response.data));
+      } catch (err: any) {
+        setAlertState({
+          open: true,
+          message: err?.response?.data?.message || "Failed to load projects",
+          severity: "error",
+        });
+      } finally {
+        setIsProjectListLoading(false);
+      }
+    };
+
+    fetchAll();
+  }, [dispatch]);
 
   return (
     <Box sx={{ display: "flex", flex: 1, overflow: "hidden" }}>
@@ -19,9 +53,7 @@ const ProjectsList = () => {
         {/* Left Panel */}
         {!collapsed && (
           <Grid
-            item
-            xs={12}
-            md={3}
+            size={{ xs: 12, md: 3 }}
             sx={{ display: "flex", flexDirection: "column", height: "100%" }}
           >
             <Paper
@@ -32,15 +64,18 @@ const ProjectsList = () => {
                 overflow: "hidden",
               }}
             >
-              <LeftPanel collapsed={collapsed} setCollapsed={setCollapsed} />
+              <LeftPanel
+                collapsed={collapsed}
+                setCollapsed={setCollapsed}
+                isProjectListLoading={isProjectListLoading}
+                setAlertState={setAlertState}
+              />            
             </Paper>
           </Grid>
         )}
         {/* Map Component */}
         <Grid
-          item
-          xs={12}
-          md={collapsed ? 12 : 9}
+          size={{ xs: 12, md: collapsed ? 12 : 9 }}
           sx={{
             display: "flex",
             flexDirection: "column",
@@ -56,7 +91,7 @@ const ProjectsList = () => {
                 width: "100%",
               }}
             >
-              <Map center={center} zoom={zoom} collapsed={collapsed} />
+              <Map center={mapCenter} zoom={mapZoom} collapsed={collapsed} />
             </Box>
           </Paper>
         </Grid>
@@ -93,6 +128,15 @@ const ProjectsList = () => {
           </Tooltip>
         </Box>
       )}
+
+      <AlertBox
+        open={alertState.open}
+        onClose={() =>
+          setAlertState((prev) => ({ ...prev, open: false, message: "" }))
+        }
+        message={alertState.message}
+        severity={alertState.severity}
+      />
     </Box>
   );
 };

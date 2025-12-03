@@ -1,6 +1,7 @@
 import { basemapStyles } from "@/constants/basemapStyles";
-import { BasemapContextType } from "@/types/BasemapContext";
-import React, { createContext, useEffect, useState, ReactNode } from "react";
+import type { BasemapContextType } from "@/types/BasemapContext";
+import React, { createContext, useEffect, useState } from "react";
+import type { ReactNode } from "react";
 
 const BasemapContext = createContext<BasemapContextType | undefined>(undefined);
 

@@ -1,7 +1,9 @@
+import "./loadEnv.js";
+
 import http from "http";
 import app from "./config/server.js";
 import { Server as SocketServer } from "socket.io";
-import connectDB from "./db/connect.js";
+import { connectDB } from "./db/connect.js";
 
 const server = http.createServer(app);
 
@@ -14,12 +16,10 @@ const io = new SocketServer(server, {
 
 async function initApp() {
   try {
-    // await connectDB();
-
-    const port = process.env.PORT || 3000;
-
+    await connectDB();
+    const port = process.env.PORT || 4000;
     server.listen(port, () => {
-      console.log("Habitat API listening on port:", port);
+      console.log("Econet plateau API listening on port:", port);
     });
   } catch (error) {
     console.log("Failed to start server...", error);

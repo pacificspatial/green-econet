@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
   AppBar,
   Toolbar,
@@ -8,20 +8,17 @@ import {
   Select,
   styled,
   useTheme,
-  SelectChangeEvent,
   IconButton,
 } from "@mui/material";
+import type { SelectChangeEvent } from '@mui/material';
 import { useTranslation } from "react-i18next";
 import NavDrawer from "./NavDrawer";
 import { useBasemap } from "@/hooks/useBasemap";
 import { basemapStyles } from "@/constants/basemapStyles";
 import { useThemeContext } from "@/hooks/useThemeContext";
 import MenuIcon from "@mui/icons-material/Menu";
-import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useAppSelector } from "@/hooks/reduxHooks";
-import { Project } from "@/types/ProjectData";
-// import { logout } from "@/utils/authUtils/logout";
-// import { useAuthenticator } from "@aws-amplify/ui-react";
 
 const StyledAppBar = styled(AppBar)(({ theme }) => ({
   backgroundColor:
@@ -79,17 +76,14 @@ const StyledSelect = styled(Select)(({ theme }) => ({
 const Header = () => {
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [selectedProject, setSelectedProject] = useState<string | undefined>("");
-  
+
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const { t } = useTranslation();
   const theme = useTheme();
   const { basemap, setBasemap } = useBasemap();
   const { theme: currentTheme, toggleTheme } = useThemeContext();
-  const { projectId } = useParams();
-  const projects = useAppSelector((state) => state.projects.projects);
-  // const { signOut } = useAuthenticator((context) => [context.user]);
+  const { selectedProject } = useAppSelector((state) => state.project);
 
   const isDarkMode = currentTheme === "dark";
 
@@ -109,25 +103,10 @@ const Header = () => {
     setDrawerOpen(!drawerOpen);
   };
 
-  useEffect(() => {
-    if (projectId) {
-      const selectedProject = projects.find(
-        (project: Project) => project.project_id == projectId
-      );
-      setSelectedProject(selectedProject?.name);
-    }
-  }, [projects, projectId]);
-
   const handleMenuItemClick = (item: string) => {
     switch (item) {
       case "Home":
         navigate("/");
-        break;
-      case "Dashboard":
-        navigate("/dashboard");
-        break;
-      case "About Us":
-        navigate("/about");
         break;
       case "Sign Out":
         // logout(signOut);
@@ -148,7 +127,7 @@ const Header = () => {
       pathname.includes("/project") &&
       pathname.split("/").length > 2
     ) {
-      return selectedProject;
+      return selectedProject?.name;
     }
     return "";
   };
@@ -177,7 +156,7 @@ const Header = () => {
               cursor: "pointer",
             }}
           >
-            Rain Garden
+            {t('app.title')}
           </Typography>
         </Box>
         <RightContainer>

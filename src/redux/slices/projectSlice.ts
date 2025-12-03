@@ -1,165 +1,72 @@
-// features/projectSlice.ts
-import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-import {
-  fetchProjects,
-  addProject,
-  updateProject,
-  removeProject,
-} from "@/api/project";
-// import { Project } from "@/types/ProjectData";
-import { persistReducer } from "redux-persist";
-import storage from "redux-persist/lib/storage";
-import { UsageType } from "@/types/UsageType";
-import { usageTypes } from "@/constants/usageTypes";
+import type { Geometry } from 'geojson';
+import { createSlice } from "@reduxjs/toolkit";
+import type { PayloadAction } from "@reduxjs/toolkit";
+
+export interface Project {
+  id: string;
+  name: string;
+  description?: string;
+  created_at?: string;
+  updated_at?: string;
+  processed: boolean;
+  geom?: Geometry;
+  indexa?: string;
+  indexb?: string;
+  indexba?: string;
+}
 
 interface ProjectState {
   projects: Project[];
-  loading: boolean;
-  error: string | null;
-  currentProject: Project | null;
-  currentUsageType: UsageType | null;
-}
-
-export interface Project {
-  project_id?: string;
-  name: string;
-  usage_type: string;
-  description: string;
-  date_created?: string;
-  date_modified?: string;
-  owner?: string;
-  note: string;
-  aoi_type?: number;
+  selectedProject: Project | null;
 }
 
 const initialState: ProjectState = {
   projects: [],
-  loading: false,
-  error: null,
-  currentProject: null,
-  currentUsageType: null,
+  selectedProject: null,
 };
 
-const projectSlice = createSlice({
-  name: "projects",
+export const projectSlice = createSlice({
+  name: "project",
   initialState,
   reducers: {
-    clearError(state) {
-      state.error = null;
+    setProjects: (state, action: PayloadAction<Project[]>) => {
+      state.projects = action.payload.map(p => ({
+        ...p,
+        processed: p.processed ?? false,
+      }));
     },
-    clearProjects: () => {
-      return initialState;
+
+    addProject: (state, action: PayloadAction<Project>) => {
+      state.projects.unshift({
+        ...action.payload,
+        processed: action.payload.processed ?? false,
+      });
     },
-    addProjectDirect(state, action: PayloadAction<Project>) {
-      state.projects.unshift(action.payload);
-    },
-    removeProjectDirect: (state, action: PayloadAction<string>) => {
-      state.projects = state.projects.filter(
-        (p) => p.project_id != action.payload
+
+    updateProjectById: (state, action: PayloadAction<Project>) => {
+      state.projects = state.projects.map((p) =>
+        p.id === action.payload.id ? action.payload : p
       );
     },
-    setCurrentProject(state, action: PayloadAction<Project | null>) {
-      state.currentProject = action.payload;
-      if (action.payload?.usage_type) {
-        state.currentUsageType = usageTypes[action.payload?.usage_type];
-      } else {
-        state.currentUsageType = null;
-      }
+
+    deleteProjectById: (state, action: PayloadAction<string>) => {
+      state.projects = state.projects.filter(
+        (p) => p.id !== action.payload
+      );
     },
-  },
-  extraReducers: (builder) => {
-    // Fetch Projects
-    builder.addCase(fetchProjects.pending, (state) => {
-      state.loading = true;
-      state.error = null;
-    });
-    builder.addCase(
-      fetchProjects.fulfilled,
-      (state, action: PayloadAction<Project[]>) => {
-        state.loading = false;
-        state.projects = action.payload;
-      }
-    );
-    builder.addCase(fetchProjects.rejected, (state, action) => {
-      state.loading = false;
-      state.error = action.payload as string;
-    });
 
-    // Add Project
-    builder.addCase(addProject.pending, (state) => {
-      state.loading = true;
-    });
-    builder.addCase(
-      addProject.fulfilled,
-      (state, action: PayloadAction<Project>) => {
-        state.loading = false;
-        state.projects.unshift(action.payload);
-      }
-    );
-    builder.addCase(addProject.rejected, (state, action) => {
-      state.loading = false;
-      state.error = action.payload as string;
-    });
-
-    // Update Project
-    builder.addCase(updateProject.pending, (state) => {
-      state.loading = true;
-    });
-    builder.addCase(
-      updateProject.fulfilled,
-      (state, action: PayloadAction<Project>) => {
-        state.loading = false;
-        const index = state.projects.findIndex(
-          (p) => p.project_id === action.payload.project_id
-        );
-        if (index !== -1) {
-          state.projects[index] = action.payload;
-        }
-      }
-    );
-    builder.addCase(updateProject.rejected, (state, action) => {
-      state.loading = false;
-      state.error = action.payload as string;
-    });
-
-    // Remove Project
-    builder.addCase(removeProject.pending, (state) => {
-      state.loading = true;
-    });
-    builder.addCase(
-      removeProject.fulfilled,
-      (state, action: PayloadAction<string>) => {
-        state.loading = false;
-        state.projects = state.projects.filter(
-          (p) => p.project_id !== action.payload
-        );
-      }
-    );
-    builder.addCase(removeProject.rejected, (state, action) => {
-      state.loading = false;
-      state.error = action.payload as string;
-    });
+    setSelectedProject: (state, action: PayloadAction<Project | null>) => {
+      state.selectedProject = action.payload;
+    },
   },
 });
 
-const persistConfig = {
-  key: "projects",
-  storage,
-  whitelist: ["projects"], // Only persist the projects array
-};
-
-// Create persisted reducer
-const persistedProjectReducer = persistReducer(
-  persistConfig,
-  projectSlice.reducer
-);
-
 export const {
-  clearError,
-  clearProjects,
-  addProjectDirect,
-  removeProjectDirect,
-  setCurrentProject,
+  setProjects,
+  addProject,
+  updateProjectById,
+  deleteProjectById,
+  setSelectedProject,
 } = projectSlice.actions;
-export default persistedProjectReducer;
-export type { ProjectState };
+
+export default projectSlice.reducer;

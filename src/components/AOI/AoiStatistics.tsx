@@ -1,15 +1,14 @@
-import { Box, styled, Typography, useTheme, Skeleton } from "@mui/material";
+import { Box, styled, Typography, useTheme, Divider } from "@mui/material";
 import { useTranslation } from "react-i18next";
-import AOIStatsDataWrapper from "./AOIStatsData";
 import { useAppSelector } from "@/hooks/reduxHooks";
+import { List, ListItem, ListItemIcon, ListItemText } from "@mui/material";
+import CircleIcon from "@mui/icons-material/Circle";
 
 const StyledTypography = styled(Typography)(({ theme }) => ({
   color: theme.palette.text.primary,
-  textAlign: "center",
-  padding: theme.spacing(0),
 }));
 
-const StyledBox = styled(Box)(({ theme }) => ({
+const ScrollBox = styled(Box)(({ theme }) => ({
   "&::-webkit-scrollbar": {
     width: "2px",
     backgroundColor: "transparent",
@@ -24,151 +23,271 @@ const StyledBox = styled(Box)(({ theme }) => ({
   "&:hover::-webkit-scrollbar-thumb": {
     backgroundColor: theme.palette.primary.light,
   },
-  height: "100%",
-  overflowY: "scroll",
+  height: "calc(100% - 100px)",
+  overflowY: "auto",
   overflowX: "hidden",
 }));
 
-const AoiStatistics = () => {
+const StatItem = styled(Box)(({ theme }) => ({
+  display: "flex",
+  justifyContent: "space-between",
+  padding: theme.spacing(1, 0),
+  borderBottom: `1px solid ${theme.palette.divider}`,
+  "&:last-child": {
+    borderBottom: "none",
+  },
+}));
+
+interface AoiStatisticsProps {
+  showResultMetrics?: boolean;
+}
+
+const AoiStatistics = ({ showResultMetrics = false }: AoiStatisticsProps) => {
   const { t } = useTranslation();
   const theme = useTheme();
-  const aoiStatistics = useAppSelector((state) => state.aoiStatistics);
-  const selectedAoi = useAppSelector((state) => state.selectedAoi.aoiSelected);
-  // Get current AOI status
-  const currentAoiStats = aoiStatistics[selectedAoi];
-  const loading = currentAoiStats?.loading || false;
-  const error = currentAoiStats?.error || null;
-  const statsDatas = currentAoiStats?.data || null;
+  const aoiPolygons = useAppSelector((state) => state.aoi.polygons);
+  const selectedProject = useAppSelector(
+    (state) => state.project.selectedProject
+  );
 
-  // Transform the data if it exists and is not "no_stats"
-  const transformedData =
-    statsDatas && statsDatas !== "no_stats"
-      ? Object.entries(statsDatas).map(([title, value]) => ({
-          title,
-          value: value as number,
-        }))
-      : [];
+  // Get indices from selected project
+  const indexBA = selectedProject?.indexba
+    ? parseFloat(selectedProject.indexba)
+    : 0;
+  const indexA = selectedProject?.indexa
+    ? parseFloat(selectedProject.indexa)
+    : 0;
+  const indexB = selectedProject?.indexb
+    ? parseFloat(selectedProject.indexb)
+    : 0;
+
+  // Total values now come from stored area/perimeter
+  const totalArea = aoiPolygons
+    ? aoiPolygons.reduce((sum, p) => sum + Number(p.area || 0), 0)
+    : 0;
+
+  const totalPerimeter = aoiPolygons
+    ? aoiPolygons.reduce((sum, p) => sum + Number(p.perimeter || 0), 0)
+    : 0;
+
+  // Calculate height for scrollbox based on whether metrics are shown
+  const scrollBoxHeight = showResultMetrics
+    ? "calc(100% - 240px)"
+    : "calc(100% - 100px)";
 
   return (
     <Box
       sx={{
         maxWidth: "400px",
-        height: "90%",
+        height: "100%",
         margin: "0 auto",
         padding: "20px",
-        color: theme.palette.mode === "light" ? "#333" : "#fff",
+        px:"5px",
+        pb: "100px",
+        position: "relative",
       }}
     >
+      {/* Heading */}
       <StyledTypography
         variant="h6"
         fontSize={20}
+        fontWeight="bold"
+        textAlign="center"
         gutterBottom
-        fontWeight={"bold"}
       >
-        {t("app.aoiStatisticsHeading")}
+        {t("app.statsTitle")}
       </StyledTypography>
-      <StyledBox>
-        {loading ? (
-          <Box
-            display="flex"
-            flexDirection="column"
-            alignItems="start"
-            paddingLeft={3}
-          >
-            <Skeleton variant="text" width="30%" height={30} />
-            <Skeleton
-              variant="text"
-              width="80%"
-              height={30}
-              sx={{ marginTop: 2 }}
-            />
-            <Skeleton
-              variant="text"
-              width="30%"
-              height={30}
-              sx={{ marginTop: 2 }}
-            />
-            <Skeleton
-              variant="text"
-              width="80%"
-              height={30}
-              sx={{ marginTop: 2 }}
-            />
-            <Skeleton
-              variant="text"
-              width="30%"
-              height={30}
-              sx={{ marginTop: 2 }}
-            />
-            <Skeleton
-              variant="text"
-              width="80%"
-              height={30}
-              sx={{ marginTop: 2 }}
-            />
-            <Skeleton
-              variant="text"
-              width="30%"
-              height={30}
-              sx={{ marginTop: 2 }}
-            />
-            <Skeleton
-              variant="text"
-              width="80%"
-              height={30}
-              sx={{ marginTop: 2 }}
-            />
-            <Skeleton
-              variant="text"
-              width="30%"
-              height={30}
-              sx={{ marginTop: 2 }}
-            />
-            <Skeleton
-              variant="text"
-              width="80%"
-              height={30}
-              sx={{ marginTop: 2 }}
-            />
-            <Skeleton
-              variant="text"
-              width="30%"
-              height={30}
-              sx={{ marginTop: 2 }}
-            />
-            <Skeleton
-              variant="text"
-              width="80%"
-              height={30}
-              sx={{ marginTop: 2 }}
-            />
-          </Box>
-        ) : error ? (
+
+      {/* Scrollable shape list */}
+      <ScrollBox sx={{ height: scrollBoxHeight }}>
+        {aoiPolygons.length === 0 ? (
           <Box
             display="flex"
             justifyContent="center"
             alignItems="center"
-            pt={15}
+            pt={10}
           >
-            <StyledTypography textAlign="center" color="error">
-              {t("app.errorFetchingStatistics")}
-            </StyledTypography>
+            <StyledTypography>{t("app.statsAreNotAvailable")}</StyledTypography>
           </Box>
-        ) : statsDatas && statsDatas !== "no_stats" ? (
-          <AOIStatsDataWrapper items={transformedData} />
         ) : (
-          <Box
-            display="flex"
-            justifyContent="center"
-            alignItems="center"
-            pt={15}
-          >
-            <StyledTypography textAlign="center">
-              {t("app.staticsticsAreNotAvailable")}
-            </StyledTypography>
-          </Box>
+          aoiPolygons.map((polygon, idx) => {
+            const area = polygon.area;
+            const perimeter = polygon.perimeter;
+
+            const rawName = polygon.geom?.properties?.name || "";
+
+            const [label, number] = rawName.split(" ");
+            const translatedLabel = t(`app.${label?.toLowerCase()}`);
+
+            return (
+              <Box
+                key={polygon.geom.id || idx}
+                sx={{
+                  px: 3,
+                  py: 2,
+                }}
+              >
+                <StyledTypography fontWeight="bold" fontSize={17} pb={1}>
+                  {translatedLabel} {number}
+                </StyledTypography>
+                <List disablePadding>
+                  <ListItem disableGutters sx={{ py: 0.3 }}>
+                    <ListItemIcon sx={{ minWidth: 24 }}>
+                      <CircleIcon sx={{ fontSize: 8 }} />
+                    </ListItemIcon>
+                    <ListItemText
+                      primaryTypographyProps={{
+                        fontSize: "16px",
+                        color: theme.palette.text.primary,
+                      }}
+                      primary={`${t("app.area")}: ${Number(area).toFixed(
+                        2
+                      )} m²`}
+                    />
+                  </ListItem>
+
+                  <ListItem disableGutters sx={{ py: 0.3 }}>
+                    <ListItemIcon sx={{ minWidth: 24 }}>
+                      <CircleIcon sx={{ fontSize: 8 }} />
+                    </ListItemIcon>
+                    <ListItemText
+                      primaryTypographyProps={{
+                        fontSize: "16px",
+                        color: theme.palette.text.primary,
+                      }}
+                      primary={`${t("app.perimeter")}: ${Number(
+                        perimeter
+                      ).toFixed(2)} m`}
+                    />
+                  </ListItem>
+                </List>
+
+                {idx !== aoiPolygons.length - 1 && <Divider sx={{ mt: 3 }} />}
+              </Box>
+            );
+          })
         )}
-      </StyledBox>
+      </ScrollBox>
+
+      {/* Fixed TOTAL section */}
+      {/* Fixed TOTAL section */}
+      {aoiPolygons.length > 0 && (
+        <Box
+          sx={{
+            width: "100%",
+            px: 3,
+            py: 3,
+            background:
+              theme.palette.mode === "light"
+                ? "#fff"
+                : theme.palette.background.paper,
+            borderTop: `1px solid ${theme.palette.divider}`,
+            minHeight: showResultMetrics ? "180px" : "auto",
+          }}
+        >
+          {/* Heading */}
+          <StyledTypography
+            sx={{ fontWeight: "bold", fontSize: "17px", pb: 1 }}
+          >
+            {t("app.total")}
+          </StyledTypography>
+
+          {/* Items list (uniform size) */}
+          <List disablePadding>
+            <ListItem disableGutters sx={{ py: 0.3 }}>
+              <ListItemIcon sx={{ minWidth: 24 }}>
+                <CircleIcon sx={{ fontSize: 8 }} />
+              </ListItemIcon>
+              <ListItemText
+                primaryTypographyProps={{
+                  fontSize: "16px",
+                  color: theme.palette.text.primary,
+                }}
+                primary={`${t("app.area")}: ${Number(totalArea).toFixed(2)} m²`}
+              />
+            </ListItem>
+
+            <ListItem disableGutters sx={{ py: 0.3 }}>
+              <ListItemIcon sx={{ minWidth: 24 }}>
+                <CircleIcon sx={{ fontSize: 8 }} />
+              </ListItemIcon>
+              <ListItemText
+                primaryTypographyProps={{
+                  fontSize: "16px",
+                  color: theme.palette.text.primary,
+                }}
+                primary={`${t("app.perimeter")}: ${Number(
+                  totalPerimeter
+                ).toFixed(2)} m`}
+              />
+            </ListItem>
+          </List>
+
+          {showResultMetrics && (
+            <>
+              <Divider sx={{ my: 2 }} />
+
+              {/* Secondary heading */}
+              <StyledTypography
+                sx={{ fontWeight: "bold", fontSize: "17px", pb: 1 }}
+              >
+                {t("app.indexValue")}
+              </StyledTypography>
+
+              <StatItem>
+                <Typography
+                  sx={{ fontSize: "14px", color: theme.palette.text.primary }}
+                >
+                  {t("app.indexa")}
+                </Typography>
+                <Typography
+                  sx={{
+                    fontSize: "14px",
+                    fontWeight: 500,
+                    color: theme.palette.text.primary,
+                  }}
+                >
+                  {indexA.toFixed(3)}
+                </Typography>
+              </StatItem>
+
+              <StatItem>
+                <Typography
+                  sx={{ fontSize: "14px", color: theme.palette.text.primary }}
+                >
+                  {t("app.indexb")}
+                </Typography>
+                <Typography
+                  sx={{
+                    fontSize: "14px",
+                    fontWeight: 500,
+                    color: theme.palette.text.primary,
+                  }}
+                >
+                  {indexB.toFixed(3)}
+                </Typography>
+              </StatItem>
+
+              <StatItem>
+                <Typography
+                  sx={{ fontSize: "14px", color: theme.palette.text.primary }}
+                >
+                  {t("app.indexba")}
+                </Typography>
+                <Typography
+                  sx={{
+                    fontSize: "14px",
+                    fontWeight: 500,
+                    color: theme.palette.text.primary,
+                  }}
+                >
+                  {indexBA.toFixed(3)}
+                </Typography>
+              </StatItem>
+            </>
+          )}
+        </Box>
+      )}
     </Box>
   );
 };

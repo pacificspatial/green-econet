@@ -1,7 +1,8 @@
-import { createContext, useState, useMemo, ReactNode } from "react";
+import { createContext, useState, useMemo } from "react";
+import type { ReactNode } from "react";
 import { ThemeProvider } from "@mui/material/styles";
 import { defaultTheme, darkTheme } from "@/themes/index";
-import { ThemeContextType } from "@/types/ThemeContext";
+import type { ThemeContextType } from "@/types/ThemeContext";
 
 // Create the context
 const ThemeContext = createContext<ThemeContextType | null>(null);

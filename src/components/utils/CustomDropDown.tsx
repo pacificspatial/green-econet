@@ -2,11 +2,11 @@ import React, { useMemo } from "react";
 import {
   Select,
   FormControl,
-  SelectChangeEvent,
   InputLabel,
   MenuItem,
   FormHelperText,
 } from "@mui/material";
+import type { SelectChangeEvent } from "@mui/material";
 
 interface CustomDropDownProps<T> {
   options: T[];
