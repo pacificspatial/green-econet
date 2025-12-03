@@ -31,6 +31,8 @@ env:
   VITE_MAPBOX_TOKEN: ${{ secrets.VITE_MAPBOX_TOKEN }}
   VITE_BACKEND_URL: ${{ secrets.VITE_BACKEND_URL }}
   VITE_EP_SOCKET_PORT: ${{ secrets.VITE_EP_SOCKET_PORT }}
+  VITE_APP_ENV: ${{ secrets.VITE_APP_ENV }}
+  VITE_DOMAIN: ${{ secrets.VITE_DOMAIN }}
 
 jobs:
   frontend:

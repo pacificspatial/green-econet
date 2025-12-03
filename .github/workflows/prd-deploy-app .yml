@@ -31,6 +31,9 @@ env:
   VITE_MAPBOX_TOKEN: ${{ secrets.VITE_MAPBOX_TOKEN }}
   VITE_BACKEND_URL: ${{ secrets.VITE_BACKEND_URL_PRD }}
   VITE_EP_SOCKET_PORT: ${{ secrets.VITE_EP_SOCKET_PORT_PRD }}
+  VITE_APP_ENV: ${{ secrets.VITE_APP_ENV }}
+  VITE_DOMAIN: ${{ secrets.VITE_DOMAIN_PRD }}
+
 jobs:
   frontend:
     name: Frontend CI/CD -> S3
@@ -133,7 +136,7 @@ jobs:
         env:
           TARGET_USER: ${{ secrets.STG_EC2_USER || 'ec2-user' }}
           TARGET_HOST: ${{ secrets.STG_EC2_PUBLIC_IP }}
-          PORT: 4000
+          PORT: 4001
         run: |
           ssh -o StrictHostKeyChecking=no $TARGET_USER@$TARGET_HOST <<'EOF'
             cd /var/www/prd || { echo "Directory /var/www/prd does not exist"; exit 1; }
