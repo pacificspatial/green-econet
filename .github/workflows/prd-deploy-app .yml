@@ -77,7 +77,7 @@ jobs:
           aws s3 sync "${{ env.FRONTEND_BUILD_DIR }}" "s3://$S3_BUCKET/" --delete --acl private
 
       - name: Invalidate CloudFront cache
-        if: env.CLOUDFRONT_DISTRIBUTION_ID_ != ''
+        if: env.CLOUDFRONT_DISTRIBUTION_ID != ''
         run: |
           aws cloudfront create-invalidation \
             --distribution-id "$CLOUDFRONT_DISTRIBUTION_ID" \
