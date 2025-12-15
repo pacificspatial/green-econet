@@ -112,9 +112,9 @@ export const createPdfFile = async (projectId) => {
       );
 
       const projectName = project.name;
-      const valueA = Number(project.indexa)?.toFixed(2) || 0;
-      const valueB = Number(project.indexb)?.toFixed(2) || 0;
-      const valueBA = Number(project.indexba)?.toFixed(2) || 0;
+      const valueA = Number(project.indexa)?.toFixed(3) || 0;
+      const valueB = Number(project.indexb)?.toFixed(3) || 0;
+      const valueBA = Number(project.indexba)?.toFixed(3) || 0;
 
       // Initialize PDF first
       const doc = new PDFDocument({
