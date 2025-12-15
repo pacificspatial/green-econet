@@ -10,9 +10,9 @@ async function handleExcelExport(projectId) {
     const project = await projectService.getProject(projectId);
     const buffer = await createExcelFile({
       projectName: project.name,
-      valueBA: project.indexba,
-      valueA: project.indexa,
-      valueB: project.indexb,
+      valueBA: Number(project.indexba)?.toFixed(3) || 0,
+      valueA: Number(project.indexa)?.toFixed(3) || 0,
+      valueB: Number(project.indexb)?.toFixed(3) || 0,
     });
 
     const fileName = `${projectId}_excel.xlsx`;
