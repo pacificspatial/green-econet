@@ -80,254 +80,469 @@
 <h1 id="環境構築手順書">環境構築手順書</h1>
 
 <h1 id="1-本書について">1 本書について</h1>
-<p>本書では、カーボンニュートラル施策推進支援システム（以下「本システム」という。）の利用環境構築手順について記載しています。本システムの構成や仕様の詳細については以下も参考にしてください。</p>
-<p><a href="https://www.mlit.go.jp/plateau/file/libraries/doc/plateau_tech_doc_0030_ver01.pdf">技術検証レポート</a></p>
+<p>本書では、Green Econet（グリーン・エコネット）システム（以下「本システム」という。）の開発環境構築手順について記載しています。本システムの構成や仕様の詳細については以下も参考にしてください。</p>
+<p><a href="https://github.com/pacificspatial/green-econet">GitHubリポジトリ</a></p>
 <h1 id="2-動作環境">2 動作環境</h1>
 <p>本システムの動作環境は以下のとおりです。</p>
+<h2 id="2-1-サーバー開発環境">2-1 サーバー（開発環境）</h2>
 <table>
 <thead>
 <tr>
 <th>項目</th>
-<th>最小動作環境</th>
-<th>推奨動作環境</th>
+<th>バージョン</th>
+<th>備考</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td>OS</td>
-<td>Microsoft Windows 10 または 11</td>
-<td>同左</td>
+<td>Ubuntu 22.04 LTS / macOS 13以降 / Windows 11 (WSL2)</td>
+<td>Linux 推奨</td>
 </tr>
 <tr>
-<td>CPU</td>
-<td>Intel Core i3以上</td>
-<td>Intel Core i5以上</td>
+<td>Node.js</td>
+<td>18.x LTS 以上（CI/CDでは20.x使用）</td>
+<td>フロントエンド・バックエンド共通</td>
 </tr>
 <tr>
-<td>メモリ</td>
-<td>4GB以上</td>
-<td>8GB以上</td>
+<td>npm</td>
+<td>9.x 以上</td>
+<td>Node.js に同梱</td>
 </tr>
 <tr>
-<td>ディスプレイ解像度</td>
-<td>1024×768以上</td>
-<td>同左</td>
+<td>PostgreSQL</td>
+<td>14 以上（本番環境は17.7）</td>
+<td>PostGIS 3.x 必須</td>
 </tr>
 <tr>
-<td>ネットワーク</td>
-<td>【解析・シミュレーション】<br>不要<br><br>【集計・適地判定】<br>範囲選択機能を使用しない場合はネットワーク環境は不要<br>範囲選択機能を使用する場合、以下のURLを閲覧できる環境が必要<br>・地理院地図（国土地理院）　<br>http://cyberjapandata.gsi.go.jp<br>・地図表示のため標準地図<br>https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png</td>
-<td>同左</td>
+<td>Git</td>
+<td>2.30 以上</td>
+<td></td>
+</tr>
+<tr>
+<td>GDAL / ogr2ogr</td>
+<td>3.x 以上</td>
+<td>空間データ投入時に使用（任意）</td>
 </tr>
 </tbody>
 </table>
-<h1 id="3-インストール手順">3 インストール手順</h1>
-<p><a href="https://github.com/Project-PLATEAU/UC22-013-SolarPotential/releases/">こちら</a>
-からアプリケーションをダウンロードします。</p>
-<p>ダウンロード後、zipファイルを右クリックし、「すべて展開」を選択することで、zipファイルを展開します。</p>
-<p>展開されたフォルダ内の「SolarPotential.exe」をダブルクリックすることで、アプリケーションが起動します。</p>
-<p><img src="../resources/userMan/tutorial_028.png" alt=""></p>
-<h1 id="4-ビルド手順">4 ビルド手順</h1>
-<p>自身でソースファイルをダウンロードしビルドを行うことで、実行ファイルを生成することができます。<br>
-ソースファイルは
-<a href="https://github.com/Project-PLATEAU/UC22-013-SolarPotential/">こちら</a>
-からダウンロード可能です。</p>
-<p>GitHubからダウンロードしたソースファイルの構成は以下のようになっています。</p>
-<p><img src="../resources/devMan/tutorial_028.png" alt=""></p>
-<p>（1）本システムのソリューションファイル（SolarPotential.sln）をVisualStudio2019で開きます。</p>
-<p>ソリューションファイルはSRC\EXE\SolarPotential-CS\SolarPotentialに格納されています。</p>
-<p>（2）SolarPotential.slnをVisualStudio2019で開くと、ソリューション'SolarPotential'に6つのプロジェクトが表示されます。</p>
-<p>以下の赤枠部分のように、ソリューション構成を【Release】に、ソリューションプラットフォームを【x64】に設定します。</p>
-<p><img src="../resources/devMan/tutorial_029.png" alt=""></p>
-<p>（3）以下の赤枠部分のように、[ソリューションのビルド]を選択し、ソリューション全体をビルドします。</p>
-<p><img src="../resources/devMan/tutorial_030.png" alt=""></p>
-<p>（4）ビルドが正常に終了すると、ソリューションファイルと同じフォルダにあるbin\Releaseフォルダに実行ファイルが生成されます。</p>
-<p><img src="../resources/devMan/tutorial_031.png" alt=""></p>
-<p>※ダウンロードしたソリューションをビルドする際に、ビルドエラーとなり、次のメッセージが出力されるケースがあります。</p>
-<p>「（ファイル名）を処理できませんでした。インターネットまたは制限付きゾーン内にあるか、ファイルに
-Web のマークがあるためです。これらのファイルを処理するには、Web
-のマークを削除してください。」</p>
-<p>この場合は該当するファイルのプロパティを開き、全般タブ内の「セキュリティ」の項目について[許可する]にチェックを入れてください。</p>
-<p><img src="../resources/devMan/tutorial_032.png" alt=""></p>
-<p>【参考】</p>
-<p>ソースファイルの構成と機能は以下のようになっています。コードを修正する際の参考としてください。</p>
-<p><img src="../resources/devMan/tutorial_033.png" alt=""></p>
-<h1 id="5-準備物一覧">5 準備物一覧</h1>
-<p>アプリケーションを利用するために以下のデータを入手します。</p>
+<h2 id="2-2-クライアントブラウザ">2-2 クライアント（ブラウザ）</h2>
 <table>
 <thead>
 <tr>
-<th></th>
-<th>データ種別</th>
-<th>機能</th>
+<th>ブラウザ</th>
+<th>バージョン</th>
+<th>備考</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Google Chrome</td>
+<td>最新安定版</td>
+<td>推奨</td>
+</tr>
+<tr>
+<td>Microsoft Edge</td>
+<td>最新安定版</td>
+<td>Chromium ベース</td>
+</tr>
+<tr>
+<td>Mozilla Firefox</td>
+<td>最新安定版</td>
+<td></td>
+</tr>
+<tr>
+<td>Safari</td>
+<td>16 以上</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>MapLibre GL を使用した地図描画に WebGL 2.0 が必要です。GPU ドライバを最新の状態に保ち、ブラウザの WebGL が有効であることを確認してください。</p>
+<h2 id="2-3-awsサービス構成本番ステージング環境">2-3 AWSサービス構成（本番・ステージング環境）</h2>
+<p>本番・ステージング環境は以下のAWSサービスで構成されています。ローカル開発ではAWS環境は必須ではありませんが、S3連携機能を使用する場合はバケットとIAMキーの準備が必要です。</p>
+<table>
+<thead>
+<tr>
+<th>AWSサービス</th>
 <th>用途</th>
-<th>入力方法</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>①</td>
-<td>3D都市モデル(CityGML)G空間情報センターから取得します。<br> <a href="https://front.geospatial.jp/">https://front.geospatial.jp/</a></td>
-<td>全般</td>
-<td>全般</td>
-<td>格納フォルダパス指定</td>
+<td>Amazon RDS (PostgreSQL 17)</td>
+<td>本番データベース（PostGIS拡張）</td>
 </tr>
 <tr>
-<td>②</td>
-<td>月毎の可照時間国立天文台 こよみの計算Webページから取得します。<br> <a href="https://eco.mtk.nao.ac.jp/cgi-bin/koyomi/koyomix.cgi">https://eco.mtk.nao.ac.jp/cgi-bin/koyomi/koyomix.cgi</a></td>
-<td>発電ポテンシャル推計</td>
-<td>日射量の推計</td>
-<td>CSVファイルを手動作成しファイルパス指定</td>
+<td>Amazon EC2</td>
+<td>バックエンド（Node.js / PM2）ホスティング</td>
 </tr>
 <tr>
-<td>③</td>
-<td>毎月の平均日照時間気象庁 過去の気象データ・ダウンロードから取得します。<br> <a href="https://www.data.jma.go.jp/gmd/risk/obsdl/index.php">https://www.data.jma.go.jp/gmd/risk/obsdl/index.php</a></td>
-<td>発電ポテンシャル推計</td>
-<td>日射量の推計</td>
-<td>CSVファイルをダウンロードしファイルパス指定</td>
+<td>Amazon S3</td>
+<td>フロントエンド静的ファイル配信・ファイルアップロード</td>
 </tr>
 <tr>
-<td>④</td>
-<td>月毎の積雪深NEDO 日射量データベース閲覧システム METPV-20から取得します。<br> <a href="https://appww2.infoc.nedo.go.jp/appww/index.html">https://appww2.infoc.nedo.go.jp/appww/index.html</a></td>
-<td>発電ポテンシャル推計</td>
-<td>日射量の推計</td>
-<td>CSVファイルを手動作成しファイルパス指定</td>
+<td>Amazon CloudFront</td>
+<td>S3 CDN配信</td>
 </tr>
 <tr>
-<td>⑤</td>
-<td>3D都市モデル(DEMデータ)G空間情報センターから取得します。<br> <a href="https://front.geospatial.jp/">https://front.geospatial.jp/</a></td>
-<td>発電ポテンシャル推計</td>
-<td>日射量の推計</td>
-<td>格納フォルダパス指定</td>
+<td>Amazon Cognito</td>
+<td>ユーザー認証（JWT発行）</td>
 </tr>
 <tr>
-<td>⑥</td>
-<td>制限区域データ（シェープファイル）<br>（加賀市　景観整備区域・石川県　石川県眺望計画）</td>
-<td>パネル設置適地判定</td>
-<td>パネル設置適地判定</td>
-<td>シェープファイルパス指定</td>
-</tr>
-<tr>
-<td>⑦</td>
-<td>気象関連データ（積雪）(国土数値情報の平年値（気候）メッシュ)</td>
-<td>パネル設置適地判定</td>
-<td>パネル設置適地判定</td>
-<td>シェープファイルをダウンロードしファイルパス指定</td>
+<td>AWS Secrets Manager</td>
+<td>DB認証情報管理</td>
 </tr>
 </tbody>
 </table>
-<p>本システムでは、3D都市モデルの建築物モデルの形状（LOD1、LOD2）と属性を活用します。</p>
-<p>地形を考慮した解析を行う場合は、地形（LOD1）も活用してください。</p>
+<h1 id="3-事前準備">3 事前準備</h1>
+<h2 id="3-1-必要ツールの確認">3-1 必要ツールの確認</h2>
+<p>以下のコマンドで各ツールのバージョンを確認します。</p>
+<pre><code class="lang-bash">node --version    # v18.x 以上
+npm --version     # 9.x 以上
+git --version     # 2.30 以上
+psql --version    # PostgreSQL 14 以上
+</code></pre>
+<h2 id="3-2-nodejs-のインストール">3-2 Node.js のインストール</h2>
+<p>nvm（Node Version Manager）を使ったインストールを推奨します。</p>
+<pre><code class="lang-bash"># nvm のインストール（未インストールの場合）
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+source ~/.bashrc
+
+# Node.js 20 LTS のインストールと有効化
+nvm install 20
+nvm use 20
+nvm alias default 20
+
+node --version   # v20.x.x が表示されること
+</code></pre>
+<h2 id="3-3-postgresql--postgis-のインストール">3-3 PostgreSQL / PostGIS のインストール</h2>
+<h3 id="ubuntu-2204-の場合">Ubuntu 22.04 の場合</h3>
+<pre><code class="lang-bash"># PostgreSQL 公式リポジトリの追加
+sudo apt-get install -y postgresql-common
+sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh
+
+# PostgreSQL 17 と PostGIS のインストール
+sudo apt-get install -y postgresql-17 postgresql-17-postgis-3
+
+# サービスの起動と自動起動設定
+sudo systemctl start postgresql
+sudo systemctl enable postgresql
+psql --version
+</code></pre>
+<h3 id="macos-の場合homebrew">macOS の場合（Homebrew）</h3>
+<pre><code class="lang-bash">brew install postgresql@17 postgis
+
+# PATH の設定
+echo 'export PATH=&quot;/opt/homebrew/opt/postgresql@17/bin:$PATH&quot;' &gt;&gt; ~/.zshrc
+source ~/.zshrc
+
+# サービスの起動
+brew services start postgresql@17
+</code></pre>
+<h3 id="データベースとユーザーの作成">データベースとユーザーの作成</h3>
+<pre><code class="lang-bash">sudo -u postgres psql
+</code></pre>
+<pre><code class="lang-sql">CREATE USER georoot WITH PASSWORD 'your_password';
+CREATE DATABASE green_econet OWNER georoot;
+\c green_econet
+GRANT ALL PRIVILEGES ON DATABASE green_econet TO georoot;
+\q
+</code></pre>
+<h2 id="3-4-mapbox-アクセストークンの取得">3-4 Mapbox アクセストークンの取得</h2>
+<p>フロントエンドはMapLibre GLをMapbox GL互換モードで使用しています（<code>vite.config.ts</code> にて <code>mapbox-gl</code> → <code>maplibre-gl</code> エイリアス設定済）。地図タイルの表示にMapboxアクセストークンが必要です。</p>
 <table>
 <thead>
 <tr>
-<th>地物</th>
-<th>地物型</th>
-<th>属性区分</th>
-<th>属性名</th>
-<th>内容</th>
+<th>サービス</th>
+<th>環境変数名</th>
+<th>用途</th>
+<th>取得先</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>建築物LOD2</td>
-<td>bldg:Building</td>
-<td>空間属性</td>
-<td>bldg:RoofSurface</td>
-<td>建築物のLOD2の屋根面</td>
+<td>Mapbox</td>
+<td><code>VITE_MAPBOX_TOKEN</code></td>
+<td>ベースマップタイル配信</td>
+<td><a href="https://account.mapbox.com/%EF%BC%88%E7%84%A1%E6%96%99%E3%83%97%E3%83%A9%E3%83%B3%E3%81%82%E3%82%8A%EF%BC%89">https://account.mapbox.com/（無料プランあり）</a></td>
 </tr>
 <tr>
-<td></td>
-<td></td>
-<td></td>
-<td>bldg:WallSurface</td>
-<td>建築物のLOD2の壁面</td>
-</tr>
-<tr>
-<td></td>
-<td></td>
-<td>主題属性</td>
-<td>bldg:measuredHeight</td>
-<td>計測高さ</td>
-</tr>
-<tr>
-<td></td>
-<td></td>
-<td></td>
-<td>uro:buildingDisasterRiskAttribute</td>
-<td>災害リスク</td>
-</tr>
-<tr>
-<td></td>
-<td></td>
-<td></td>
-<td>uro:buildingID</td>
-<td>建物ID</td>
-</tr>
-<tr>
-<td></td>
-<td></td>
-<td></td>
-<td>uro:buildingStructureType</td>
-<td>構造種別</td>
-</tr>
-<tr>
-<td></td>
-<td></td>
-<td></td>
-<td>uro:buildingStructureOrgType</td>
-<td>構造種別（独自）</td>
-</tr>
-<tr>
-<td></td>
-<td></td>
-<td></td>
-<td>uro:BuildingRiverFloodingRiskAttribute</td>
-<td>洪水浸水リスク</td>
-</tr>
-<tr>
-<td></td>
-<td></td>
-<td></td>
-<td>uro:depth</td>
-<td>浸水深</td>
-</tr>
-<tr>
-<td></td>
-<td></td>
-<td></td>
-<td>uro:BuildingTsunamiRiskAttribute</td>
-<td>津波浸水リスク</td>
-</tr>
-<tr>
-<td></td>
-<td></td>
-<td></td>
-<td>uro:depth</td>
-<td>浸水深</td>
-</tr>
-<tr>
-<td></td>
-<td></td>
-<td></td>
-<td>uro:BuildingLandSlideRiskAttribute</td>
-<td>土砂災害リスク</td>
-</tr>
-<tr>
-<td>建築物LOD1</td>
-<td>bldg:Building</td>
-<td>空間属性</td>
-<td>bldg:lod1Solid</td>
-<td>建築物のLOD1の立体</td>
-</tr>
-<tr>
-<td>地形LOD1</td>
-<td>dem:ReliefFeature</td>
-<td>空間属性</td>
-<td>dem:tin</td>
-<td>地形LOD1の面</td>
+<td>AWS S3</td>
+<td><code>AWS_ACCESS_KEY_ID</code> 等</td>
+<td>ファイルアップロード・ダウンロード</td>
+<td>AWSコンソールでバケットとIAMキーを作成</td>
 </tr>
 </tbody>
 </table>
+<p>ローカル開発でS3連携を使わない場合、AWS関連の環境変数は未設定でも地図表示・ポリゴン描画・DB保存の基本機能を確認できます。</p>
+<h1 id="4-インストール手順">4 インストール手順</h1>
+<h2 id="4-1-リポジトリの取得">4-1 リポジトリの取得</h2>
+<pre><code class="lang-bash">git clone https://github.com/pacificspatial/green-econet.git
+cd green-econet
+</code></pre>
+<h2 id="4-2-環境変数の設定">4-2 環境変数の設定</h2>
+<p>リポジトリには <code>sample.env</code>（フロントエンド用）と <code>server/sample.env</code>（バックエンド用）が用意されています。それぞれをコピーして <code>.env</code> を作成し、必要な値を設定します。</p>
+<h3 id="フロントエンド用-envリポジトリルート">フロントエンド用 .env（リポジトリルート）</h3>
+<pre><code class="lang-bash">cp sample.env .env
+</code></pre>
+<p><code>.env</code> を開き、以下の値を設定します。</p>
+<pre><code>VITE_PORT=3000
+VITE_MAPBOX_TOKEN=pk.eyJ1Ijoixxxxxxxx...     # Mapbox アクセストークン
+
+VITE_BACKEND_URL=http://localhost:4000/       # バックエンド API の URL
+VITE_EP_SOCKET_PORT=http://localhost:4000     # Socket.IO 接続先
+</code></pre>
+<p><code>VITE_</code> プレフィックスが付いた変数のみViteによってフロントエンドに公開されます。機密情報を <code>VITE_</code> 付きで設定しないよう注意してください。</p>
+<h3 id="バックエンド用-envserver-ディレクトリ">バックエンド用 .env（server/ ディレクトリ）</h3>
+<pre><code class="lang-bash">cp server/sample.env server/.env
+</code></pre>
+<p><code>server/.env</code> を開き、以下の値を設定します。</p>
+<pre><code># サーバー基本設定
+PORT=4000
+NODE_ENV=development
+
+# API 認証（Basic認証パスワード）
+AUTH_PASS=your_api_password_here
+
+# フロントエンドの CORS 許可 URL
+FRONT_END_URL=http://localhost:3000
+
+# PostgreSQL 接続設定
+DB_USER=georoot
+DB_HOST=localhost
+DB_NAME=green_econet
+DB_PASSWORD=your_db_password_here
+DB_PORT=5432
+DB_DATABASE=green_econet
+
+# JWT シークレット（ローカル開発用）
+JWT_SECRET=your_local_jwt_secret_here
+
+# AWS S3（S3連携機能を使用する場合のみ設定）
+AWS_REGION=ap-northeast-1
+AWS_ACCESS_KEY_ID=AKIA...
+AWS_SECRET_ACCESS_KEY=...
+S3_BUCKET_NAME=your-bucket-name
+</code></pre>
+<p><code>AUTH_PASS</code> はバックエンドAPIへのBasic認証パスワードです。フロントエンドからのAPIリクエストはすべてこのパスワードで認証されます。ローカル開発でも必ず設定してください。未設定の場合、APIが401エラーを返します。</p>
+<p>ローカルのPostgreSQLではSSL接続が不要な場合があります。接続エラーが発生する場合は <code>server/config/dbConfig.js</code> の <code>ssl: { require: true }</code> を <code>false</code> に変更してください。</p>
+<p><code>.env</code> ファイルは <code>.gitignore</code> で管理対象外となっています。誤ってGitにコミットしないよう注意してください。</p>
+<h2 id="4-3-フロントエンドのセットアップ">4-3 フロントエンドのセットアップ</h2>
+<p>リポジトリルートで依存パッケージをインストールします。</p>
+<pre><code class="lang-bash">npm install
+</code></pre>
+<p>フロントエンド単体で起動する場合は以下を実行します。</p>
+<pre><code class="lang-bash">npm run start
+</code></pre>
+<p>ブラウザで <code>http://localhost:3000</code> にアクセスして画面が表示されることを確認します。</p>
+<h2 id="4-4-バックエンドのセットアップ">4-4 バックエンドのセットアップ</h2>
+<p><code>server/</code> ディレクトリで依存パッケージをインストールします。</p>
+<pre><code class="lang-bash">cd server
+npm install
+</code></pre>
+<p>バックエンドサーバーを起動します。</p>
+<pre><code class="lang-bash"># 開発モード（nodemon でファイル変更を自動検知）
+npm run monitor
+
+# または通常起動
+npm run start
+</code></pre>
+<p>別ターミナルから <code>/ping</code> エンドポイントにアクセスし、起動を確認します。</p>
+<pre><code class="lang-bash">curl http://localhost:4000/ping
+# → pong  が返ってくれば正常起動
+</code></pre>
+<h2 id="4-5-フロントエンドバックエンドの同時起動">4-5 フロントエンド・バックエンドの同時起動</h2>
+<p>ルートの <code>package.json</code> には <code>concurrently</code> を使った同時起動スクリプトが定義されています。通常の開発はこちらを使用します。</p>
+<pre><code class="lang-bash"># リポジトリルートで実行
+npm run dev
+</code></pre>
+<p>これにより以下が同時起動します。</p>
+<ul>
+<li>フロントエンド（Vite HMR）：<code>http://localhost:3000</code></li>
+<li>バックエンド（nodemon）：<code>http://localhost:4000</code></li>
+</ul>
+<p>ポート競合が発生する場合は、<code>vite.config.ts</code> の <code>server.port</code>（デフォルト3000）と <code>server/.env</code> の <code>PORT</code>（デフォルト4000）が他のプロセスで使用されていないか確認してください。</p>
+<h1 id="5-初期データの投入">5 初期データの投入</h1>
+<p>データベースにテーブル・スキーマ・ストアドプロシージャを作成し、空間分析に必要な静的レイヤデータを投入します。</p>
+<h2 id="5-1-スキーマテーブルの作成">5-1 スキーマ・テーブルの作成</h2>
+<p>DDLファイル <code>server/docs/econet_plateau_schema.sql</code> を実行します。このファイルは以下を行います。</p>
+<ul>
+<li>PostgreSQL拡張（<code>postgis</code>、<code>uuid-ossp</code>）の有効化</li>
+<li><code>layers</code> スキーマ・<code>processing</code> スキーマの作成</li>
+<li>全テーブルおよび空間インデックスの作成</li>
+</ul>
+<pre><code class="lang-bash">psql -U georoot -d green_econet -f server/docs/econet_plateau_schema.sql
+</code></pre>
+<p>作成されるテーブルの一覧は以下のとおりです。</p>
+<table>
+<thead>
+<tr>
+<th>スキーマ</th>
+<th>テーブル</th>
+<th>説明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>public</code></td>
+<td><code>projects</code></td>
+<td>プロジェクト管理（AOIジオメトリ・解析結果インデックスを含む）</td>
+</tr>
+<tr>
+<td><code>public</code></td>
+<td><code>project_polygons</code></td>
+<td>ユーザーが描画したポリゴン（プロジェクトあたり最大5件）</td>
+</tr>
+<tr>
+<td><code>layers</code></td>
+<td><code>enp_green</code></td>
+<td>静的グリーンレイヤ（緑地ポリゴン）</td>
+</tr>
+<tr>
+<td><code>layers</code></td>
+<td><code>enp_buffer125_green</code></td>
+<td>125mバッファ付きグリーンレイヤ</td>
+</tr>
+<tr>
+<td><code>processing</code></td>
+<td><code>clipped_green</code></td>
+<td>プロジェクト別にクリップされた緑地</td>
+</tr>
+<tr>
+<td><code>processing</code></td>
+<td><code>clipped_buffer125_green</code></td>
+<td>プロジェクト別にクリップされたバッファ緑地</td>
+</tr>
+<tr>
+<td><code>processing</code></td>
+<td><code>merged_green</code></td>
+<td>ユーザーポリゴン＋クリップ緑地のマージ結果</td>
+</tr>
+<tr>
+<td><code>processing</code></td>
+<td><code>buffer125_merged_green</code></td>
+<td>マージ緑地から生成した125mバッファ（UID付き）</td>
+</tr>
+<tr>
+<td><code>processing</code></td>
+<td><code>clipped_green_joined</code></td>
+<td>クリップ緑地とバッファのジョイン結果</td>
+</tr>
+<tr>
+<td><code>processing</code></td>
+<td><code>merged_green_joined</code></td>
+<td>マージ緑地とバッファのジョイン結果</td>
+</tr>
+</tbody>
+</table>
+<p>作成結果を確認します。</p>
+<pre><code class="lang-sql">-- スキーマの確認
+\dn
+-- → public / layers / processing が一覧に表示されること
+
+-- テーブルの確認
+\dt public.*
+\dt layers.*
+\dt processing.*
+</code></pre>
+<h2 id="5-2-ストアドプロシージャの登録">5-2 ストアドプロシージャの登録</h2>
+<p>空間処理（AOI生成・クリッピング・バッファ処理・UIDジョインなど）はPostgreSQLのストアドプロシージャで実装されています。<code>server/docs/sql_stored_procedures.sql</code> を実行して登録します。</p>
+<pre><code class="lang-bash">psql -U georoot -d green_econet -f server/docs/sql_stored_procedures.sql
+</code></pre>
+<p>登録されたプロシージャを確認します。</p>
+<pre><code class="lang-sql">\df processing.*
+-- 以下の関数が表示されることを確認する
+-- processing.set_aoi              … AOI（1000mバッファ）の計算・更新
+-- processing.clip_green           … 緑地レイヤをAOIでクリップ
+-- processing.clip_buffer125_green … バッファ緑地をAOIでクリップ
+</code></pre>
+<h2 id="5-3-空間レイヤデータの投入">5-3 空間レイヤデータの投入</h2>
+<p>分析に使用する空間レイヤデータを <code>layers</code> スキーマのテーブルに投入します。</p>
+<table>
+<thead>
+<tr>
+<th>テーブル</th>
+<th>元データ（例）</th>
+<th>ジオメトリ型</th>
+<th>座標系</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>layers.enp_green</code></td>
+<td><code>green.parquet</code>（緑地ポリゴン）</td>
+<td>MULTIPOLYGON</td>
+<td>EPSG:4326</td>
+</tr>
+<tr>
+<td><code>layers.enp_buffer125_green</code></td>
+<td><code>buffer125_green.parquet</code>（125mバッファ付き緑地）</td>
+<td>MULTIPOLYGON</td>
+<td>EPSG:4326</td>
+</tr>
+</tbody>
+</table>
+<p>元データ（Parquetファイル等）はリポジトリには含まれていません。プロジェクト担当者またはデータ管理者から入手してください。</p>
+<h3 id="方法ageojson-から投入するogr2ogr-使用">方法A：GeoJSON から投入する（ogr2ogr 使用）</h3>
+<pre><code class="lang-bash"># ogr2ogr のインストール（GDAL に含まれる）
+sudo apt-get install -y gdal-bin    # Ubuntu
+brew install gdal                   # macOS
+
+# GeoJSON → layers.enp_green に投入
+ogr2ogr \
+  -f &quot;PostgreSQL&quot; \
+  PG:&quot;host=localhost port=5432 dbname=green_econet user=georoot password=your_password&quot; \
+  green.geojson \
+  -nln layers.enp_green \
+  -nlt MULTIPOLYGON \
+  -t_srs EPSG:4326 \
+  -overwrite
+
+# GeoJSON → layers.enp_buffer125_green に投入
+ogr2ogr \
+  -f &quot;PostgreSQL&quot; \
+  PG:&quot;host=localhost port=5432 dbname=green_econet user=georoot password=your_password&quot; \
+  buffer125_green.geojson \
+  -nln layers.enp_buffer125_green \
+  -nlt MULTIPOLYGON \
+  -t_srs EPSG:4326 \
+  -overwrite
+</code></pre>
+<h3 id="方法bgeoparquet-から投入するpython--geopandas-使用">方法B：GeoParquet から投入する（Python / GeoPandas 使用）</h3>
+<pre><code class="lang-bash"># 必要ライブラリのインストール
+pip install geopandas pyarrow sqlalchemy psycopg2-binary
+</code></pre>
+<pre><code class="lang-python">import geopandas as gpd
+from sqlalchemy import create_engine
+
+engine = create_engine(
+    &quot;postgresql://georoot:your_password@localhost:5432/green_econet&quot;
+)
+
+# layers.enp_green へ投入
+gdf_green = gpd.read_parquet(&quot;green.parquet&quot;)
+gdf_green = gdf_green.set_crs(epsg=4326)
+gdf_green.to_postgis(&quot;enp_green&quot;, engine, schema=&quot;layers&quot;, if_exists=&quot;replace&quot;)
+
+# layers.enp_buffer125_green へ投入
+gdf_buf = gpd.read_parquet(&quot;buffer125_green.parquet&quot;)
+gdf_buf = gdf_buf.set_crs(epsg=4326)
+gdf_buf.to_postgis(&quot;enp_buffer125_green&quot;, engine, schema=&quot;layers&quot;, if_exists=&quot;replace&quot;)
+
+print(&quot;レイヤデータの投入が完了しました&quot;)
+</code></pre>
+<h3 id="投入結果の確認">投入結果の確認</h3>
+<pre><code class="lang-sql">-- レコード件数の確認
+SELECT COUNT(*) FROM layers.enp_green;
+SELECT COUNT(*) FROM layers.enp_buffer125_green;
+
+-- ジオメトリの確認（座標系がEPSG:4326であること）
+SELECT ST_SRID(geom), ST_GeometryType(geom)
+FROM layers.enp_green
+LIMIT 1;
+</code></pre>
+<p>レイヤデータ投入後、アプリケーション上でプロジェクトを作成してポリゴンを描画し、解析処理を実行すると <code>processing</code> スキーマ配下のテーブル（<code>clipped_green</code>、<code>merged_green</code> 等）にデータが自動的に生成されます。</p>
 
 </article>
           </div>
