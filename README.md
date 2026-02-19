@@ -39,18 +39,15 @@
 #### ①文書管理（リスト表示）
 - 3D都市モデルやPDF等の関連データの登録、検索、リストを表示します。
 
+
 ## 5. 利用技術
 
-| 種別            | 名称                                                     | バージョン          | 内容                                      |
-| ------------- | ------------------------------------------------------ | -------------- | --------------------------------------- |
-| オープンソースソフトウェア | [Apache HTTP Server](https://httpd.apache.org/)        | 2.4.58         | Webアプリで配信を行うためのWebサーバーソフトウェア            |
-|               | [PostGIS](https://github.com/postgis/postgis)          | 3.4.1          | PostgreSQLで位置情報を扱うことを可能とする拡張機能          |
-| オープンソースライブラリ  | [CesiumJS](https://github.com/CesiumGS/cesium)         | 1.115          | 3Dビューワ上にデータを描画するためのライブラリ                |
-|               | [React.js](https://github.com/facebook/react/releases) | 18.2.0         | JavaScriptのフレームワーク内で機能するUIを構築するためのライブラリ |
-| オープンソースRDBMS  | [PostgreSQL](https://github.com/postgres/postgres)     | 16.2           | 各種配信するデータを格納するリレーショナルデータベース             |
-| 商用ソフトウェア      | [Cesium ion](https://cesium.com/platform/cesium-ion/)  | -              | 3Dデータの変換と配信のクラウドサービス                    |
-| 商用ライブラリ       | [AG Grid](https://ag-grid.com/)                        | 31.1.1         | JavaScriptで集計、フィルタリング等を行うためのライブラリ       |
-| クラウドサービス      | [Firebase](https://firebase.google.com/)               | -              | 認証機能を提供するクラウドサービス         |
+| 種別 | 名称 | バージョン | 内容 |
+| --- | --- | --- | --- |
+| オープンソースソフトウェア | [PostGIS](https://github.com/postgis/postgis) | 3.x | PostgreSQLで位置情報を扱うことを可能とする拡張機能 |
+| オープンソースライブラリ | [React](https://github.com/facebook/react) | 19.2.0 | UIを構築するためのJavaScriptライブラリ |
+| オープンソースRDBMS | [PostgreSQL](https://github.com/postgres/postgres) | 14以上（本番17.7） | 空間データを含む各種データを格納するリレーショナルデータベース |
+| 商用ライブラリ | [Mapbox GL](https://github.com/mapbox/mapbox-gl-js) | 3.16.0 | ベースマップタイル配信 |
 
 
 ## 6. 動作環境 
@@ -64,42 +61,48 @@
 | フォルダ名                              | 詳細                   |
 | ---------------------------------- | -------------------- |
 | img                                | スクリーンショット    |
-| public                  | 公開用静的ファイル     |
-| public/favicon.png      | favicon画像     |
-| src                     | アプリケーションソース   |
-| src/App.jsx             | ルートコンポーネント    |
-| src/main.jsx            | エントリーポイント     |
-| src/main.css            | 全体スタイル        |
-| src/core.jsx            | アプリコア処理       |
-| src/dispatcher.js       | イベント管理        |
-| src/error.jsx           | エラー表示UI       |
-| src/assets              | 画像等アセット       |
-| src/components          | 共通UIコンポーネント   |
-| src/components/cesium   | Cesium関連UI    |
-| src/components/mapbox   | Mapbox描画UI    |
-| src/manager             | API通信・ユーティリティ |
-| src/map                 | 地図描画処理        |
-| src/map/cesium          | Cesiumレイヤ処理   |
-| src/map/mapbox          | Mapboxレイヤ処理   |
-| src/map/styles          | 地図スタイル定義      |
-| src/resources           | 静的リソース        |
-| src/resources/fonts     | フォント          |
-| src/resources/map_style | MapスタイルJSON   |
-| src/views               | 画面UI          |
-| src/views/auth.jsx      | 認証画面          |
-| src/views/login.jsx     | ログイン画面        |
-| src/views/header.jsx    | ヘッダーUI        |
-| src/views/loading.jsx   | ローディングUI      |
-| src/views/main          | メイン画面UI       |
-| src/views/project       | プロジェクト画面群     |
-| src/views/project/map   | 地図表示UI        |
-| index.html              | HTMLテンプレート    |
-| package.json            | 依存ライブラリ定義     |
-| package-lock.json       | 依存固定定義        |
-| eslint.config.js        | Lint設定        |
-| vite.config.js          | Vite設定        |
-| tsconfig.json           | TypeScript設定  |
-| tsconfig.node.json      | Node用TS設定     |
+| .github/workflows | CI/CDワークフロー定義 |
+| aws-infrastructure | フロントエンド・インフラ定義（Serverless Framework） |
+| aws-rds | データベースインフラ定義（RDS / Secrets Manager） |
+| public | 公開用静的ファイル |
+| server | バックエンド（Node.js / Express） |
+| server/assets/fonts | PDF出力用日本語フォント |
+| server/config | DB・サーバー設定 |
+| server/controllers | APIコントローラ |
+| server/db/models | Sequelize ORMモデル |
+| server/docs | DBスキーマ・ストアドプロシージャSQL定義 |
+| server/helpers | エクスポートファイル生成ヘルパー |
+| server/middlewares | 認証・エラーハンドリングミドルウェア |
+| server/routes | APIルーティング定義 |
+| server/services | ビジネスロジック・空間解析サービス |
+| server/utils | 空間演算・レスポンス整形ユーティリティ |
+| server/validators | 入力値バリデーション |
+| src | フロントエンド（React / TypeScript） |
+| src/api | APIクライアント（Axios） |
+| src/assets | 静的アセット |
+| src/components/AOI | AOI設定・統計表示コンポーネント |
+| src/components/common | 共通UIコンポーネント |
+| src/components/layout | ヘッダー・ナビゲーションコンポーネント |
+| src/components/maps | 地図・凡例コンポーネント |
+| src/components/result | 解析結果表示コンポーネント |
+| src/components/utils | 汎用UIコンポーネント |
+| src/config/layers | レイヤ表示・スタイル設定 |
+| src/constants | 定数定義（地図・レイヤ・数値等） |
+| src/context | Reactコンテキスト（ベースマップ・Socket・テーマ） |
+| src/hooks | カスタムReact hooks |
+| src/i18n | 多言語対応（日本語・英語） |
+| src/layout | アプリ共通レイアウト |
+| src/pages | 画面コンポーネント（プロジェクト一覧・AOI・結果） |
+| src/redux | Redux Store・スライス定義 |
+| src/routes | ルーティング・認証ガード |
+| src/themes | MUIテーマ定義（ライト・ダーク） |
+| src/types | TypeScript型定義 |
+| src/utils | ユーティリティ（描画・ジオメトリ・地図・統計） |
+| index.html | HTMLテンプレート |
+| package.json | 依存ライブラリ定義 |
+| sample.env | フロントエンド環境変数サンプル |
+| vite.config.ts | Vite設定 |
+| tsconfig.json | TypeScript設定 |
 
 
 ## 8. ライセンス
