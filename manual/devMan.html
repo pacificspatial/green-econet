@@ -162,43 +162,6 @@
 </tr>
 </tbody>
 </table>
-<p>MapLibre GL を使用した地図描画に WebGL 2.0 が必要です。GPU ドライバを最新の状態に保ち、ブラウザの WebGL が有効であることを確認してください。</p>
-<h2 id="2-3-awsサービス構成本番ステージング環境">2-3 AWSサービス構成（本番・ステージング環境）</h2>
-<p>本番・ステージング環境は以下のAWSサービスで構成されています。ローカル開発ではAWS環境は必須ではありませんが、S3連携機能を使用する場合はバケットとIAMキーの準備が必要です。</p>
-<table>
-<thead>
-<tr>
-<th>AWSサービス</th>
-<th>用途</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Amazon RDS (PostgreSQL 17)</td>
-<td>本番データベース（PostGIS拡張）</td>
-</tr>
-<tr>
-<td>Amazon EC2</td>
-<td>バックエンド（Node.js / PM2）ホスティング</td>
-</tr>
-<tr>
-<td>Amazon S3</td>
-<td>フロントエンド静的ファイル配信・ファイルアップロード</td>
-</tr>
-<tr>
-<td>Amazon CloudFront</td>
-<td>S3 CDN配信</td>
-</tr>
-<tr>
-<td>Amazon Cognito</td>
-<td>ユーザー認証（JWT発行）</td>
-</tr>
-<tr>
-<td>AWS Secrets Manager</td>
-<td>DB認証情報管理</td>
-</tr>
-</tbody>
-</table>
 <h1 id="3-事前準備">3 事前準備</h1>
 <h2 id="3-1-必要ツールの確認">3-1 必要ツールの確認</h2>
 <p>以下のコマンドで各ツールのバージョンを確認します。</p>
@@ -279,7 +242,6 @@ GRANT ALL PRIVILEGES ON DATABASE green_econet TO georoot;
 </tr>
 </tbody>
 </table>
-<p>ローカル開発でS3連携を使わない場合、AWS関連の環境変数は未設定でも地図表示・ポリゴン描画・DB保存の基本機能を確認できます。</p>
 <h1 id="4-インストール手順">4 インストール手順</h1>
 <h2 id="4-1-リポジトリの取得">4-1 リポジトリの取得</h2>
 <pre><code class="lang-bash">git clone https://github.com/pacificspatial/green-econet.git
