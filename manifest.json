@@ -85,6 +85,16 @@
     },
     {
       "type": "Resource",
+      "source_relative_path": "resources/userMan/c000.png",
+      "output": {
+        "resource": {
+          "relative_path": "resources/userMan/c000.png"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Resource",
       "source_relative_path": "resources/userMan/c001.png",
       "output": {
         "resource": {
