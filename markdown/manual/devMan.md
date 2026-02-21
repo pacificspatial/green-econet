@@ -34,21 +34,6 @@
 | Mozilla Firefox | 最新安定版 | |
 | Safari | 16 以上 | |
 
-MapLibre GL を使用した地図描画に WebGL 2.0 が必要です。GPU ドライバを最新の状態に保ち、ブラウザの WebGL が有効であることを確認してください。
-
-## 2-3 AWSサービス構成（本番・ステージング環境）
-
-本番・ステージング環境は以下のAWSサービスで構成されています。ローカル開発ではAWS環境は必須ではありませんが、S3連携機能を使用する場合はバケットとIAMキーの準備が必要です。
-
-| AWSサービス | 用途 |
-| - | - |
-| Amazon RDS (PostgreSQL 17) | 本番データベース（PostGIS拡張） |
-| Amazon EC2 | バックエンド（Node.js / PM2）ホスティング |
-| Amazon S3 | フロントエンド静的ファイル配信・ファイルアップロード |
-| Amazon CloudFront | S3 CDN配信 |
-| Amazon Cognito | ユーザー認証（JWT発行） |
-| AWS Secrets Manager | DB認証情報管理 |
-
 # 3 事前準備
 
 ## 3-1 必要ツールの確認
@@ -132,8 +117,6 @@ GRANT ALL PRIVILEGES ON DATABASE green_econet TO georoot;
 | - | - | - | - |
 | Mapbox | `VITE_MAPBOX_TOKEN` | ベースマップタイル配信 | https://account.mapbox.com/（無料プランあり） |
 | AWS S3 | `AWS_ACCESS_KEY_ID` 等 | ファイルアップロード・ダウンロード | AWSコンソールでバケットとIAMキーを作成 |
-
-ローカル開発でS3連携を使わない場合、AWS関連の環境変数は未設定でも地図表示・ポリゴン描画・DB保存の基本機能を確認できます。
 
 # 4 インストール手順
 
