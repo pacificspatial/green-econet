@@ -36,289 +36,111 @@
 
 # 3 事前準備
 
-## 3-1 必要ツールの確認
+本システムで利用する下記のソフトウェアおよびサービスを準備します。
 
-以下のコマンドで各ツールのバージョンを確認します。
+（1）Node.js のインストール
 
-```bash
-node --version    # v18.x 以上
-npm --version     # 9.x 以上
-git --version     # 2.30 以上
-psql --version    # PostgreSQL 14 以上
-```
+[こちら](https://nodejs.org/)から Node.js（v18.x LTS 以上）をインストールします。nvm（Node Version Manager）を使ったインストールを推奨します。
 
-## 3-2 Node.js のインストール
+（2）PostgreSQL / PostGIS のインストール
 
-nvm（Node Version Manager）を使ったインストールを推奨します。
+[こちら](https://www.postgresql.org/)から PostgreSQL（14 以上）をインストールしてサービスを起動します。その上で、位置情報を扱うための拡張機能である PostGIS をインストールします。インストール後、データベースおよびユーザーを作成してください。
 
-```bash
-# nvm のインストール（未インストールの場合）
-curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
-source ~/.bashrc
+（3）Mapbox アクセストークンの取得
 
-# Node.js 20 LTS のインストールと有効化
-nvm install 20
-nvm use 20
-nvm alias default 20
+[こちら](https://account.mapbox.com/)から Mapbox のアカウントを作成し、アクセストークンを取得します。無料プランでも利用可能です。
 
-node --version   # v20.x.x が表示されること
-```
+（4）Amazon S3 の準備（任意）
 
-## 3-3 PostgreSQL / PostGIS のインストール
-
-### Ubuntu 22.04 の場合
-
-```bash
-# PostgreSQL 公式リポジトリの追加
-sudo apt-get install -y postgresql-common
-sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh
-
-# PostgreSQL 17 と PostGIS のインストール
-sudo apt-get install -y postgresql-17 postgresql-17-postgis-3
-
-# サービスの起動と自動起動設定
-sudo systemctl start postgresql
-sudo systemctl enable postgresql
-psql --version
-```
-
-### macOS の場合（Homebrew）
-
-```bash
-brew install postgresql@17 postgis
-
-# PATH の設定
-echo 'export PATH="/opt/homebrew/opt/postgresql@17/bin:$PATH"' >> ~/.zshrc
-source ~/.zshrc
-
-# サービスの起動
-brew services start postgresql@17
-```
-
-### データベースとユーザーの作成
-
-```bash
-sudo -u postgres psql
-```
-
-```sql
-CREATE USER georoot WITH PASSWORD 'your_password';
-CREATE DATABASE green_econet OWNER georoot;
-\c green_econet
-GRANT ALL PRIVILEGES ON DATABASE green_econet TO georoot;
-\q
-```
-
-## 3-4 Mapbox アクセストークンの取得
-
-フロントエンドはMapLibre GLをMapbox GL互換モードで使用しています（`vite.config.ts` にて `mapbox-gl` → `maplibre-gl` エイリアス設定済）。地図タイルの表示にMapboxアクセストークンが必要です。
-
-| サービス | 環境変数名 | 用途 | 取得先 |
-| - | - | - | - |
-| Mapbox | `VITE_MAPBOX_TOKEN` | ベースマップタイル配信 | https://account.mapbox.com/（無料プランあり） |
-| AWS S3 | `AWS_ACCESS_KEY_ID` 等 | ファイルアップロード・ダウンロード | AWSコンソールでバケットとIAMキーを作成 |
+ファイルのアップロード・ダウンロード機能を使用する場合は、[こちら](https://aws.amazon.com/s3/)から AWS アカウントを取得し、本システムで使用するバケットを作成します。利用するデータサイズに応じたストレージクラスを選択してください。
 
 # 4 インストール手順
 
-## 4-1 リポジトリの取得
+（1）リポジトリの取得
 
-```bash
-git clone https://github.com/pacificspatial/green-econet.git
-cd green-econet
-```
+[こちら](https://github.com/pacificspatial/green-econet)からリポジトリをクローンします。
 
-## 4-2 環境変数の設定
+（2）環境変数の設定
 
-リポジトリには `sample.env`（フロントエンド用）と `server/sample.env`（バックエンド用）が用意されています。それぞれをコピーして `.env` を作成し、必要な値を設定します。
+リポジトリには `sample.env`（フロントエンド用）と `server/sample.env`（バックエンド用）が用意されています。それぞれをコピーして `.env` を作成し、以下の値を設定します。
 
-### フロントエンド用 .env（リポジトリルート）
-
-```bash
-cp sample.env .env
-```
-
-`.env` を開き、以下の値を設定します。
+フロントエンド用（リポジトリルート）：
 
 ```
 VITE_PORT=3000
-VITE_MAPBOX_TOKEN=pk.eyJ1Ijoixxxxxxxx...     # Mapbox アクセストークン
-
-VITE_BACKEND_URL=http://localhost:4000/       # バックエンド API の URL
-VITE_EP_SOCKET_PORT=http://localhost:4000     # Socket.IO 接続先
+VITE_MAPBOX_TOKEN=<Mapbox アクセストークン>
+VITE_BACKEND_URL=<バックエンド API の URL>
+VITE_EP_SOCKET_PORT=<Socket.IO 接続先>
 ```
 
-`VITE_` プレフィックスが付いた変数のみViteによってフロントエンドに公開されます。機密情報を `VITE_` 付きで設定しないよう注意してください。
-
-### バックエンド用 .env（server/ ディレクトリ）
-
-```bash
-cp server/sample.env server/.env
-```
-
-`server/.env` を開き、以下の値を設定します。
+バックエンド用（`server/` ディレクトリ）：
 
 ```
-# サーバー基本設定
 PORT=4000
 NODE_ENV=development
-
-# API 認証（Basic認証パスワード）
-AUTH_PASS=your_api_password_here
-
-# フロントエンドの CORS 許可 URL
-FRONT_END_URL=http://localhost:3000
-
-# PostgreSQL 接続設定
-DB_USER=georoot
-DB_HOST=localhost
-DB_NAME=green_econet
-DB_PASSWORD=your_db_password_here
+AUTH_PASS=<API 認証パスワード>
+FRONT_END_URL=<フロントエンドの URL>
+DB_USER=<DBユーザー名>
+DB_HOST=<DBホスト>
+DB_NAME=<DB名>
+DB_PASSWORD=<DBパスワード>
 DB_PORT=5432
-DB_DATABASE=green_econet
-
-# JWT シークレット（ローカル開発用）
-JWT_SECRET=your_local_jwt_secret_here
-
-# AWS S3（S3連携機能を使用する場合のみ設定）
-AWS_REGION=ap-northeast-1
-AWS_ACCESS_KEY_ID=AKIA...
-AWS_SECRET_ACCESS_KEY=...
-S3_BUCKET_NAME=your-bucket-name
+JWT_SECRET=<JWTシークレット>
+AWS_REGION=<AWSリージョン>（S3使用時のみ）
+AWS_ACCESS_KEY_ID=<AWSアクセスキー>（S3使用時のみ）
+AWS_SECRET_ACCESS_KEY=<AWSシークレットキー>（S3使用時のみ）
+S3_BUCKET_NAME=<S3バケット名>（S3使用時のみ）
 ```
-
-`AUTH_PASS` はバックエンドAPIへのBasic認証パスワードです。フロントエンドからのAPIリクエストはすべてこのパスワードで認証されます。ローカル開発でも必ず設定してください。未設定の場合、APIが401エラーを返します。
-
-ローカルのPostgreSQLではSSL接続が不要な場合があります。接続エラーが発生する場合は `server/config/dbConfig.js` の `ssl: { require: true }` を `false` に変更してください。
 
 `.env` ファイルは `.gitignore` で管理対象外となっています。誤ってGitにコミットしないよう注意してください。
 
-## 4-3 フロントエンドのセットアップ
+（3）フロントエンドのセットアップ
 
-リポジトリルートで依存パッケージをインストールします。
+リポジトリルートで依存パッケージをインストールし、サーバーを起動します。
 
 ```bash
 npm install
-```
-
-フロントエンド単体で起動する場合は以下を実行します。
-
-```bash
 npm run start
 ```
 
-ブラウザで `http://localhost:3000` にアクセスして画面が表示されることを確認します。
+（4）バックエンドのセットアップ
 
-## 4-4 バックエンドのセットアップ
-
-`server/` ディレクトリで依存パッケージをインストールします。
+`server/` ディレクトリで依存パッケージをインストールし、サーバーを起動します。
 
 ```bash
 cd server
 npm install
-```
-
-バックエンドサーバーを起動します。
-
-```bash
-# 開発モード（nodemon でファイル変更を自動検知）
-npm run monitor
-
-# または通常起動
 npm run start
 ```
 
-別ターミナルから `/ping` エンドポイントにアクセスし、起動を確認します。
+（5）フロントエンド・バックエンドの同時起動
+
+通常の開発では、リポジトリルートで以下のコマンドを実行することでフロントエンドとバックエンドを同時に起動できます。
 
 ```bash
-curl http://localhost:4000/ping
-# → pong  が返ってくれば正常起動
-```
-
-## 4-5 フロントエンド・バックエンドの同時起動
-
-ルートの `package.json` には `concurrently` を使った同時起動スクリプトが定義されています。通常の開発はこちらを使用します。
-
-```bash
-# リポジトリルートで実行
 npm run dev
 ```
-
-これにより以下が同時起動します。
-
-- フロントエンド（Vite HMR）：`http://localhost:3000`
-- バックエンド（nodemon）：`http://localhost:4000`
-
-ポート競合が発生する場合は、`vite.config.ts` の `server.port`（デフォルト3000）と `server/.env` の `PORT`（デフォルト4000）が他のプロセスで使用されていないか確認してください。
 
 # 5 初期データの投入
 
 データベースにテーブル・スキーマ・ストアドプロシージャを作成し、空間分析に必要な静的レイヤデータを投入します。
 
-## 5-1 スキーマ・テーブルの作成
+（1）スキーマ・テーブルの作成
 
-DDLファイル `server/docs/econet_plateau_schema.sql` を実行します。このファイルは以下を行います。
-
-- PostgreSQL拡張（`postgis`、`uuid-ossp`）の有効化
-- `layers` スキーマ・`processing` スキーマの作成
-- 全テーブルおよび空間インデックスの作成
+`server/docs/econet_plateau_schema.sql` を実行してテーブルおよび空間インデックスを作成します。
 
 ```bash
 psql -U georoot -d green_econet -f server/docs/econet_plateau_schema.sql
 ```
 
-作成されるテーブルの一覧は以下のとおりです。
+（2）ストアドプロシージャの登録
 
-| スキーマ | テーブル | 説明 |
-| - | - | - |
-| `public` | `projects` | プロジェクト管理（AOIジオメトリ・解析結果インデックスを含む） |
-| `public` | `project_polygons` | ユーザーが描画したポリゴン（プロジェクトあたり最大5件） |
-| `layers` | `enp_green` | 静的グリーンレイヤ（緑地ポリゴン） |
-| `layers` | `enp_buffer125_green` | 125mバッファ付きグリーンレイヤ |
-| `processing` | `clipped_green` | プロジェクト別にクリップされた緑地 |
-| `processing` | `clipped_buffer125_green` | プロジェクト別にクリップされたバッファ緑地 |
-| `processing` | `merged_green` | ユーザーポリゴン＋クリップ緑地のマージ結果 |
-| `processing` | `buffer125_merged_green` | マージ緑地から生成した125mバッファ（UID付き） |
-| `processing` | `clipped_green_joined` | クリップ緑地とバッファのジョイン結果 |
-| `processing` | `merged_green_joined` | マージ緑地とバッファのジョイン結果 |
-
-作成結果を確認します。
-
-```sql
--- スキーマの確認
-\dn
--- → public / layers / processing が一覧に表示されること
-
--- テーブルの確認
-\dt public.*
-\dt layers.*
-\dt processing.*
-```
-
-## 5-2 ストアドプロシージャの登録
-
-空間処理（AOI生成・クリッピング・バッファ処理・UIDジョインなど）はPostgreSQLのストアドプロシージャで実装されています。`server/docs/sql_stored_procedures.sql` を実行して登録します。
+`server/docs/sql_stored_procedures.sql` を実行してストアドプロシージャを登録します。
 
 ```bash
 psql -U georoot -d green_econet -f server/docs/sql_stored_procedures.sql
 ```
 
-登録されたプロシージャを確認します。
+（3）空間レイヤデータの投入
 
-```sql
-\df processing.*
--- 以下の関数が表示されることを確認する
--- processing.set_aoi              … AOI（1000mバッファ）の計算・更新
--- processing.clip_green           … 緑地レイヤをAOIでクリップ
--- processing.clip_buffer125_green … バッファ緑地をAOIでクリップ
-```
-
-## 5-3 空間レイヤデータの投入
-
-分析に使用する空間レイヤデータを `layers` スキーマのテーブルに投入します。
-
-| テーブル | 元データ（例） | ジオメトリ型 | 座標系 |
-| - | - | - | - |
-| `layers.enp_green` | `green.parquet`（緑地ポリゴン） | MULTIPOLYGON | EPSG:4326 |
-| `layers.enp_buffer125_green` | `buffer125_green.parquet`（125mバッファ付き緑地） | MULTIPOLYGON | EPSG:4326 |
-
-レイヤデータ投入後、アプリケーション上でプロジェクトを作成してポリゴンを描画し、解析処理を実行すると `processing` スキーマ配下のテーブル（`clipped_green`、`merged_green` 等）にデータが自動的に生成されます。
+分析に使用する空間レイヤデータ（緑地ポリゴンおよび125mバッファ付き緑地）を `layers` スキーマのテーブルに投入します。レイヤデータ投入後、アプリケーション上でプロジェクトを作成してポリゴンを描画し、解析処理を実行すると `processing` スキーマ配下のテーブルにデータが自動的に生成されます。
