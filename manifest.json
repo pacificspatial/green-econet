@@ -84,6 +84,66 @@
       "version": ""
     },
     {
+      "type": "Resource",
+      "source_relative_path": "resources/userMan/c001.png",
+      "output": {
+        "resource": {
+          "relative_path": "resources/userMan/c001.png"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Resource",
+      "source_relative_path": "resources/userMan/c002.png",
+      "output": {
+        "resource": {
+          "relative_path": "resources/userMan/c002.png"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Resource",
+      "source_relative_path": "resources/userMan/c003.png",
+      "output": {
+        "resource": {
+          "relative_path": "resources/userMan/c003.png"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Resource",
+      "source_relative_path": "resources/userMan/c004.png",
+      "output": {
+        "resource": {
+          "relative_path": "resources/userMan/c004.png"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Resource",
+      "source_relative_path": "resources/userMan/index1.png",
+      "output": {
+        "resource": {
+          "relative_path": "resources/userMan/index1.png"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Resource",
+      "source_relative_path": "resources/userMan/index2.png",
+      "output": {
+        "resource": {
+          "relative_path": "resources/userMan/index2.png"
+        }
+      },
+      "version": ""
+    },
+    {
       "type": "Toc",
       "source_relative_path": "toc.yml",
       "output": {
