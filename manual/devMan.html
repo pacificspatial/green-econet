@@ -80,8 +80,12 @@
 <h1 id="環境構築手順書">環境構築手順書</h1>
 
 <h1 id="1-本書について">1 本書について</h1>
-<p>本書では、生態系ネットワーク解析機能（以下「本システム」という。）の開発環境構築手順について記載しています。本システムの構成や仕様の詳細については以下も参考にしてください。</p>
-<p><a href="www.mlit.go.jp/plateau/file/libraries/doc/">技術検証レポート</a></p>
+<p>本書では、「生態系ネットワーク指標値算出機能」は優良緑地確保計画認定制度(TSUNAG)など国の制度との連携を想定し、緑化の評価指標を算出し、指定したエリア内での生態系ネットワーク指標値を算出する機能を提供します。</p>
+<p>本システムは、3D都市モデルを活用した樹木管理機能及び緑の効果の定量的評価を支援する取り組みである「樹木データを活用した温熱環境シミュレータの開発」の一部として開発されたWebアプリケーションです。</p>
+<p>本システムの構成や仕様の詳細については以下も参考にしてください.</p>
+<ul>
+<li><a href="https://www.mlit.go.jp/plateau/file/libraries/doc/plateau_tech_doc_0136_ver01.pdf">技術検証レポート</a></li>
+</ul>
 <h1 id="2-動作環境">2 動作環境</h1>
 <p>本システムの動作環境は以下のとおりです。</p>
 <h2 id="2-1-サーバー開発環境">2-1 サーバー（開発環境）</h2>
@@ -483,65 +487,6 @@ npm run dev
 </tr>
 </tbody>
 </table>
-<p>元データ（Parquetファイル等）はリポジトリには含まれていません。プロジェクト担当者またはデータ管理者から入手してください。</p>
-<h3 id="方法ageojson-から投入するogr2ogr-使用">方法A：GeoJSON から投入する（ogr2ogr 使用）</h3>
-<pre><code class="lang-bash"># ogr2ogr のインストール（GDAL に含まれる）
-sudo apt-get install -y gdal-bin    # Ubuntu
-brew install gdal                   # macOS
-
-# GeoJSON → layers.enp_green に投入
-ogr2ogr \
-  -f &quot;PostgreSQL&quot; \
-  PG:&quot;host=localhost port=5432 dbname=green_econet user=georoot password=your_password&quot; \
-  green.geojson \
-  -nln layers.enp_green \
-  -nlt MULTIPOLYGON \
-  -t_srs EPSG:4326 \
-  -overwrite
-
-# GeoJSON → layers.enp_buffer125_green に投入
-ogr2ogr \
-  -f &quot;PostgreSQL&quot; \
-  PG:&quot;host=localhost port=5432 dbname=green_econet user=georoot password=your_password&quot; \
-  buffer125_green.geojson \
-  -nln layers.enp_buffer125_green \
-  -nlt MULTIPOLYGON \
-  -t_srs EPSG:4326 \
-  -overwrite
-</code></pre>
-<h3 id="方法bgeoparquet-から投入するpython--geopandas-使用">方法B：GeoParquet から投入する（Python / GeoPandas 使用）</h3>
-<pre><code class="lang-bash"># 必要ライブラリのインストール
-pip install geopandas pyarrow sqlalchemy psycopg2-binary
-</code></pre>
-<pre><code class="lang-python">import geopandas as gpd
-from sqlalchemy import create_engine
-
-engine = create_engine(
-    &quot;postgresql://georoot:your_password@localhost:5432/green_econet&quot;
-)
-
-# layers.enp_green へ投入
-gdf_green = gpd.read_parquet(&quot;green.parquet&quot;)
-gdf_green = gdf_green.set_crs(epsg=4326)
-gdf_green.to_postgis(&quot;enp_green&quot;, engine, schema=&quot;layers&quot;, if_exists=&quot;replace&quot;)
-
-# layers.enp_buffer125_green へ投入
-gdf_buf = gpd.read_parquet(&quot;buffer125_green.parquet&quot;)
-gdf_buf = gdf_buf.set_crs(epsg=4326)
-gdf_buf.to_postgis(&quot;enp_buffer125_green&quot;, engine, schema=&quot;layers&quot;, if_exists=&quot;replace&quot;)
-
-print(&quot;レイヤデータの投入が完了しました&quot;)
-</code></pre>
-<h3 id="投入結果の確認">投入結果の確認</h3>
-<pre><code class="lang-sql">-- レコード件数の確認
-SELECT COUNT(*) FROM layers.enp_green;
-SELECT COUNT(*) FROM layers.enp_buffer125_green;
-
--- ジオメトリの確認（座標系がEPSG:4326であること）
-SELECT ST_SRID(geom), ST_GeometryType(geom)
-FROM layers.enp_green
-LIMIT 1;
-</code></pre>
 <p>レイヤデータ投入後、アプリケーション上でプロジェクトを作成してポリゴンを描画し、解析処理を実行すると <code>processing</code> スキーマ配下のテーブル（<code>clipped_green</code>、<code>merged_green</code> 等）にデータが自動的に生成されます。</p>
 
 </article>
