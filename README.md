@@ -1,4 +1,4 @@
-# 生態系ネットワーク解析機能
+# 生態系ネットワーク指標値算出機能
 
 ![概要](./img/greeneconet_001.png)
 
@@ -13,7 +13,7 @@
 
 「生態系ネットワーク解析機能」は、優良緑地確保計画認定制度（TSUNAG）の申請時に活用することを想定して開発されたWebアプリケーションです
 
-## 2. 「生態系ネットワーク解析機能」について 
+## 2. 「生態系ネットワーク指標値算出機能」について 
 「生態系ネットワーク指標値算出機能」は優良緑地確保計画認定制度(TSUNAG)など国の制度との連携を想定し、国土交通省「都市における生物多様性指標（簡易版）」に基づき、生態系ネットワーク指標値を算出する機能を提供します。
 
 本システムの詳細については[技術検証レポート](https://www.mlit.go.jp/plateau/file/libraries/doc/plateau_tech_doc_0136_ver01.pdf)を参照してください。
@@ -39,7 +39,7 @@
 | 種別 | 名称 | バージョン | 内容 |
 | --- | --- | --- | --- |
 | オープンソースソフトウェア | [PostGIS](https://github.com/postgis/postgis) | 3.x | PostgreSQLで位置情報を扱うことを可能とする拡張機能 |
-| オープンソースライブラリ | [React](https://github.com/facebook/react) | 19.2.0 | UIを構築するためのJavaScriptライブラリ |
+| オープンソースライブラリ | [React.js](https://github.com/facebook/react) | 19.2.0 | UIを構築するためのJavaScriptライブラリ |
 | オープンソースRDBMS | [PostgreSQL](https://github.com/postgres/postgres) | 14以上（本番17.7） | 空間データを含む各種データを格納するリレーショナルデータベース |
 | 商用ライブラリ | [Mapbox GL](https://github.com/mapbox/mapbox-gl-js) | 3.16.0 | ベースマップタイル配信 |
 
