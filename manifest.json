@@ -134,26 +134,6 @@
       "version": ""
     },
     {
-      "type": "Resource",
-      "source_relative_path": "resources/userMan/index1.png",
-      "output": {
-        "resource": {
-          "relative_path": "resources/userMan/index1.png"
-        }
-      },
-      "version": ""
-    },
-    {
-      "type": "Resource",
-      "source_relative_path": "resources/userMan/index2.png",
-      "output": {
-        "resource": {
-          "relative_path": "resources/userMan/index2.png"
-        }
-      },
-      "version": ""
-    },
-    {
       "type": "Toc",
       "source_relative_path": "toc.yml",
       "output": {

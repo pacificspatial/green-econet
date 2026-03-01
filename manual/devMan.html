@@ -81,84 +81,82 @@
 
 <h1 id="1-本書について">1 本書について</h1>
 <p>本書では、「生態系ネットワーク指標値算出機能」は優良緑地確保計画認定制度(TSUNAG)など国の制度との連携を想定し、国土交通省「都市における生物多様性指標（簡易版）」に基づき、指定したエリア内での生態系ネットワーク指標値を算出する機能を提供します。</p>
-<p>本システムは、3D都市モデルを活用した樹木管理機能及び緑の効果の定量的評価を支援する取り組みである「樹木データを活用した温熱環境シミュレータの開発」の一部として開発されたWebアプリケーションです。</p>
-<p>本システムの構成や仕様の詳細については以下も参考にしてください.</p>
-<ul>
-<li><a href="https://www.mlit.go.jp/plateau/file/libraries/doc/plateau_tech_doc_0136_ver01.pdf">技術検証レポート</a></li>
-</ul>
+<p>本システムは、Project PLATEAUの令和7年度のユースケース開発業務の一部であるUC25-11「樹木データを活用した温熱環境シミュレータの開発」で開発されたWebアプリケーションです。</p>
 <h1 id="2-動作環境">2 動作環境</h1>
-<p>本システムの動作環境は以下のとおりです。</p>
-<h2 id="2-1-サーバー開発環境">2-1 サーバー（開発環境）</h2>
 <table>
 <thead>
 <tr>
 <th>項目</th>
-<th>バージョン</th>
-<th>備考</th>
+<th>最小動作環境</th>
+<th>推奨動作環境</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td>OS</td>
-<td>Ubuntu 22.04 LTS / macOS 13以降 / Windows 11 (WSL2)</td>
-<td>Linux 推奨</td>
+<td>Amazon Linux 2023 以上（AWS EC2）</td>
+<td>同左</td>
 </tr>
 <tr>
-<td>Node.js</td>
-<td>18.x LTS 以上（CI/CDでは20.x使用）</td>
-<td>フロントエンド・バックエンド共通</td>
+<td>CPU</td>
+<td>EC2 インスタンスタイプに依存</td>
+<td>同左</td>
 </tr>
 <tr>
-<td>npm</td>
-<td>9.x 以上</td>
-<td>Node.js に同梱</td>
+<td>メモリ</td>
+<td>EC2 インスタンスタイプに依存（4GB 以上）</td>
+<td>同左</td>
 </tr>
 <tr>
-<td>PostgreSQL</td>
-<td>14 以上（本番環境は17.7）</td>
-<td>PostGIS 3.x 必須</td>
-</tr>
-<tr>
-<td>Git</td>
-<td>2.30 以上</td>
-<td></td>
-</tr>
-<tr>
-<td>GDAL / ogr2ogr</td>
-<td>3.x 以上</td>
-<td>空間データ投入時に使用（任意）</td>
+<td>ストレージ</td>
+<td>AWS S3</td>
+<td>同左</td>
 </tr>
 </tbody>
 </table>
-<h2 id="2-2-クライアントブラウザ">2-2 クライアント（ブラウザ）</h2>
+<p>クライアント（ブラウザ）の動作環境は以下のとおりです。</p>
 <table>
 <thead>
 <tr>
-<th>ブラウザ</th>
-<th>バージョン</th>
-<th>備考</th>
+<th>項目</th>
+<th>動作環境</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Google Chrome</td>
-<td>最新安定版</td>
-<td>推奨</td>
+<td>ブラウザ</td>
+<td>Google Chrome 最新版</td>
+</tr>
+</tbody>
+</table>
+<p>本システムで使用するソフトウェアおよびサービスの一覧は以下のとおりです。</p>
+<table>
+<thead>
+<tr>
+<th>種別</th>
+<th>名称</th>
+<th>バージョン</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>オープンソースソフトウェア</td>
+<td><a href="https://github.com/postgis/postgis">PostGIS</a></td>
+<td>3.x</td>
+<td>PostgreSQLで位置情報を扱うことを可能とする拡張機能</td>
 </tr>
 <tr>
-<td>Microsoft Edge</td>
-<td>最新安定版</td>
-<td>Chromium ベース</td>
+<td>オープンソースRDBMS</td>
+<td><a href="https://github.com/postgres/postgres">PostgreSQL</a></td>
+<td>14以上（本番17.7）</td>
+<td>空間データを含む各種データを格納するリレーショナルデータベース</td>
 </tr>
 <tr>
-<td>Mozilla Firefox</td>
-<td>最新安定版</td>
-<td></td>
-</tr>
-<tr>
-<td>Safari</td>
-<td>16 以上</td>
-<td></td>
+<td>商用ライブラリ</td>
+<td><a href="https://github.com/mapbox/mapbox-gl-js">MapboxGL JS</a></td>
+<td>3.16.0</td>
+<td>ベースマップタイル配信</td>
 </tr>
 </tbody>
 </table>
@@ -170,11 +168,11 @@
 <p><a href="https://www.postgresql.org/">こちら</a>から PostgreSQL（14 以上）をインストールしてサービスを起動します。その上で、位置情報を扱うための拡張機能である PostGIS をインストールします。インストール後、データベースおよびユーザーを作成してください。</p>
 <p>（3）Mapbox アクセストークンの取得</p>
 <p><a href="https://account.mapbox.com/">こちら</a>から Mapbox のアカウントを作成し、アクセストークンを取得します。無料プランでも利用可能です。</p>
-<p>（4）Amazon S3 の準備（任意）</p>
-<p>ファイルのアップロード・ダウンロード機能を使用する場合は、<a href="https://aws.amazon.com/s3/">こちら</a>から AWS アカウントを取得し、本システムで使用するバケットを作成します。利用するデータサイズに応じたストレージクラスを選択してください。</p>
+<p>（4）Amazon S3 の準備</p>
+<p>ファイルのダウンロード機能を使用する場合は、<a href="https://aws.amazon.com/s3/">こちら</a>から AWS アカウントを取得し、本システムで使用するバケットを作成します。</p>
 <h1 id="4-インストール手順">4 インストール手順</h1>
 <p>（1）リポジトリの取得</p>
-<p><a href="https://github.com/pacificspatial/green-econet">こちら</a>からリポジトリをクローンします。</p>
+<p><a href="https://github.com/pacificspatial/green-econet">こちら</a>からソースコードをダウンロードします。</p>
 <p>（2）環境変数の設定</p>
 <p>リポジトリには <code>sample.env</code>（フロントエンド用）と <code>server/sample.env</code>（バックエンド用）が用意されています。それぞれをコピーして <code>.env</code> を作成し、以下の値を設定します。</p>
 <p>フロントエンド用（リポジトリルート）：</p>
@@ -199,7 +197,6 @@ AWS_ACCESS_KEY_ID=&lt;AWSアクセスキー&gt;（S3使用時のみ）
 AWS_SECRET_ACCESS_KEY=&lt;AWSシークレットキー&gt;（S3使用時のみ）
 S3_BUCKET_NAME=&lt;S3バケット名&gt;（S3使用時のみ）
 </code></pre>
-<p><code>.env</code> ファイルは <code>.gitignore</code> で管理対象外となっています。誤ってGitにコミットしないよう注意してください。</p>
 <p>（3）フロントエンドのセットアップ</p>
 <p>リポジトリルートで依存パッケージをインストールし、サーバーを起動します。</p>
 <pre><code class="lang-bash">npm install
@@ -225,8 +222,8 @@ npm run start
 <p><code>server/docs/sql_stored_procedures.sql</code> を実行してストアドプロシージャを登録します。</p>
 <pre><code class="lang-bash">psql -U georoot -d green_econet -f server/docs/sql_stored_procedures.sql
 </code></pre>
-<p>（3）空間レイヤデータの投入</p>
-<p>分析に使用する空間レイヤデータ（緑地ポリゴンおよび125mバッファ付き緑地）を <code>layers</code> スキーマのテーブルに投入します。レイヤデータ投入後、アプリケーション上でプロジェクトを作成してポリゴンを描画し、解析処理を実行すると <code>processing</code> スキーマ配下のテーブルにデータが自動的に生成されます。</p>
+<p>（3）緑地データの投入</p>
+<p>分析に使用する緑地データ（JAXA土地利用被覆図の緑地ポリゴン）を <code>layers</code> スキーマのテーブルに投入します。レイヤデータ投入後、アプリケーション上でプロジェクトを作成してポリゴンを描画し、解析処理を実行すると <code>processing</code> スキーマ配下のテーブルにデータが自動的に生成されます。</p>
 
 </article>
           </div>
