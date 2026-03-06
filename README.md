@@ -9,11 +9,11 @@
 
 
 ## 1. 概要 
-本リポジトリでは、Project PLATEAUの令和7年度のユースケース開発業務の一部であるUC25-11「樹木データを活用した温熱環境シミュレータの開発」について、その成果物である「生態系ネットワーク解析機能」のソースコードを公開しています。
+本リポジトリでは、Project PLATEAUの令和7年度のユースケース開発業務の一部であるUC25-11「樹木データを活用した温熱環境シミュレータの開発」について、その成果物である「生態系ネットワーク指標値算出機能」のソースコードを公開しています。
 
 「生態系ネットワーク指標値算出機能」は、優良緑地確保計画認定制度（TSUNAG）の申請時に活用することを想定して開発されたWebアプリケーションです。
 
-「樹木データを活用した温熱環境シミュレータの開発」では、「生態系ネットワーク解析機能」以外に３つのアプリケーションをOSSとして公開しています。樹木データは共有して利用することが可能です。
+「樹木データを活用した温熱環境シミュレータの開発」では、「生態系ネットワーク指標値算出機能」以外に３つのアプリケーションをOSSとして公開しています。樹木データは共有して利用することが可能です。
 - [樹木管理ダッシュボード](https://github.com/Project-PLATEAU/green-dashboard) :地方公共団体や民間企業が保有する緑地関連データを一元的に管理するWebアプリケーションです。
 - [緑の評価指標算出機能](https://github.com/Project-PLATEAU/green-indicator):優良緑地確保計画認定制度（TSUNAG）との連携を想定して、緑の評価指標を算出するWebアプリケーションです。
 - [温熱環境シミュレーション機能](https://github.com/Project-PLATEAU/green-thermal-simulation)
@@ -22,7 +22,7 @@
 ## 2. 「生態系ネットワーク指標値算出機能」について 
 「生態系ネットワーク指標値算出機能」は優良緑地確保計画認定制度(TSUNAG)など国の制度との連携を想定し、国土交通省「都市における生物多様性指標（簡易版）」に基づき、生態系ネットワーク指標値を算出する機能を提供します。
 
-本システムの詳細については[技術検証レポート](https://www.mlit.go.jp/plateau/file/libraries/doc/plateau_tech_doc_0136_ver01.pdf)を参照してください。
+本システムの詳細については[技術検証レポート](https://www.mlit.go.jp/plateau/file/libraries/doc/plateau_tech_doc_0135_ver01.pdf)を参照してください。
 
 ## 3. 利用手順 
 本システムの構築手順及び利用手順については[利用チュートリアル](https://project-plateau.github.io/green-econet)を参照してください。
@@ -116,5 +116,5 @@
 - 本リポジトリの利用により生じた損失及び損害等について、国土交通省はいかなる責任も負わないものとします。
 
 ## 10. 参考資料
-- 技術検証レポート: https://www.mlit.go.jp/plateau/file/libraries/doc/plateau_tech_doc_0136_ver01.pdf
+- 技術検証レポート: https://www.mlit.go.jp/plateau/file/libraries/doc/plateau_tech_doc_0135_ver01.pdf
 - PLATEAU WebサイトのUse caseページ「樹木データを活用した温熱環境シミュレータの開発」: https://www.mlit.go.jp/plateau/use-case/uc25-11/
